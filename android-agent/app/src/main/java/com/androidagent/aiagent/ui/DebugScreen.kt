@@ -1,9 +1,7 @@
 package com.androidagent.aiagent.ui
 
+import android.content.Context
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,20 +10,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -44,7 +45,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.androidagent.aiagent.agent.AgentEvent
 import com.androidagent.aiagent.agent.AgentStatus
 import com.androidagent.aiagent.agent.AgentState
@@ -62,7 +62,7 @@ fun DebugScreen(
 
     if (copyToastShown) {
         LaunchedEffect(Unit) {
-            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Debug report copied to clipboard", Toast.LENGTH_SHORT).show()
             copyToastShown = false
         }
     }
@@ -71,191 +71,186 @@ fun DebugScreen(
     val lastObservation = state.history.filterIsInstance<AgentEvent.Observation>().lastOrNull()
 
     val statusColor = when (state.status) {
-        AgentStatus.IDLE -> AppColors.TextSecondary
-        AgentStatus.THINKING -> AppColors.AccentBlue
-        AgentStatus.EXECUTING -> AppColors.WarningAmber
-        AgentStatus.WAITING_FOR_USER -> AppColors.AccentBlue
-        AgentStatus.WAITING_FOR_CONFIRMATION -> AppColors.WarningAmber
-        AgentStatus.VERIFYING -> AppColors.AccentBlue
-        AgentStatus.COMPLETED -> AppColors.SuccessGreen
-        AgentStatus.FAILED -> AppColors.ErrorRed
-        AgentStatus.CANCELLED -> AppColors.TextSecondary
+        AgentStatus.IDLE -> AppColors.Secondary
+        AgentStatus.THINKING -> AppColors.Primary
+        AgentStatus.EXECUTING -> AppColors.Warning
+        AgentStatus.WAITING_FOR_USER -> AppColors.Primary
+        AgentStatus.WAITING_FOR_CONFIRMATION -> AppColors.Warning
+        AgentStatus.VERIFYING -> AppColors.Primary
+        AgentStatus.COMPLETED -> AppColors.Success
+        AgentStatus.FAILED -> AppColors.Error
+        AgentStatus.CANCELLED -> AppColors.Secondary
     }
 
     Scaffold(
         topBar = {
-            // Minimal top bar
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(AppColors.Background)
-                    .padding(start = 4.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.size(40.dp)
-                    ) {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Debug",
+                        color = AppColors.TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = AppColors.TextSecondary,
-                            modifier = Modifier.size(20.dp)
+                            tint = AppColors.TextSecondary
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Debug",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = AppColors.TextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = -0.5.sp
-                    )
-                }
-            }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = AppColors.Surface
+                )
+            )
         },
-        containerColor = AppColors.Background
+        containerColor = AppColors.DarkBackground
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Section: Agent
-            SectionHeader(label = "AGENT")
-
-            DebugInfoCard(
-                label = "Status",
-                value = state.status.name,
-                valueColor = statusColor
-            )
-
+            // Current Package / Activity
             DebugInfoCard(
                 label = "Current Package",
-                value = state.currentPackage?.ifBlank { "—" } ?: "—",
-                isMono = true
+                value = state.currentPackage?.ifBlank { "N/A" } ?: "N/A"
             )
 
+            // Agent Status
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Agent Status",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = AppColors.TextMuted,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = state.status.name,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = statusColor,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            // Step Count
             DebugInfoCard(
                 label = "Step Count",
-                value = "${state.stepNumber} / ${state.maxSteps}",
+                value = "${state.stepNumber} / ${state.maxSteps}"
+            )
+
+            // Last Tool Name
+            DebugInfoCard(
+                label = "Last Tool",
+                value = lastToolEvent?.toolName ?: "N/A"
+            )
+
+            // Last Tool Arguments (truncated)
+            DebugInfoCard(
+                label = "Last Tool Arguments",
+                value = truncate(lastToolEvent?.arguments ?: "N/A", 200),
                 isMono = true
             )
 
+            // Last Tool Result (success/failure)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Last Tool Result",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = AppColors.TextMuted,
+                        fontWeight = FontWeight.Bold
+                    )
+                    val isSuccess = lastToolEvent?.result?.success == true
+                    Text(
+                        text = if (lastToolEvent == null) "N/A" else if (isSuccess) "Success" else "Failed",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (lastToolEvent == null) AppColors.TextMuted
+                        else if (isSuccess) AppColors.Success
+                        else AppColors.Error,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            // Observation Summary
+            DebugInfoCard(
+                label = "Observation Summary",
+                value = lastObservation?.summary ?: "N/A",
+                isMono = true
+            )
+
+            // Model Latency
             DebugInfoCard(
                 label = "Model Latency",
-                value = "${state.modelLatencyMs}ms",
-                isMono = true
+                value = "${state.modelLatencyMs}ms"
             )
 
+            // History Size
             DebugInfoCard(
                 label = "History Events",
-                value = "${state.history.size}",
-                isMono = true
+                value = "${state.history.size}"
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Section: Last Tool
-            SectionHeader(label = "LAST TOOL")
-
-            DebugInfoCard(
-                label = "Tool Name",
-                value = lastToolEvent?.toolName ?: "—",
-                valueColor = if (lastToolEvent != null) AppColors.AccentBlue else AppColors.TextPrimary,
-                isMono = true
-            )
-
-            DebugInfoCard(
-                label = "Arguments",
-                value = truncate(lastToolEvent?.arguments ?: "—", 300),
-                isMono = true
-            )
-
-            val isSuccess = lastToolEvent?.result?.success == true
-            DebugInfoCard(
-                label = "Result",
-                value = if (lastToolEvent == null) "—" else if (isSuccess) "Success" else "Failed",
-                valueColor = if (lastToolEvent == null) AppColors.TextMuted
-                else if (isSuccess) AppColors.SuccessGreen
-                else AppColors.ErrorRed
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Section: Observation
-            SectionHeader(label = "OBSERVATION")
-
-            DebugInfoCard(
-                label = "Summary",
-                value = lastObservation?.summary ?: "—",
-                isMono = true
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Section: Errors
-            SectionHeader(label = "ERRORS")
-
+            // Last Error
             DebugInfoCard(
                 label = "Last Error",
                 value = state.lastError ?: "None",
-                valueColor = state.lastError?.let { AppColors.ErrorRed } ?: AppColors.SuccessGreen
+                valueColor = state.lastError?.let { AppColors.Error } ?: AppColors.Success
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Copy Debug Report button
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(AppColors.AccentBlue)
-                    .clickable {
-                        val report = buildDebugReport(state, lastToolEvent, lastObservation)
-                        clipboardManager.setText(AnnotatedString(report))
-                        copyToastShown = true
-                    }
-                    .padding(vertical = 14.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+            // Copy Debug Report
+            Button(
+                onClick = {
+                    val report = buildDebugReport(state, lastToolEvent, lastObservation)
+                    clipboardManager.setText(AnnotatedString(report))
+                    copyToastShown = true
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppColors.Primary
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
                     contentDescription = null,
-                    tint = androidx.compose.ui.graphics.Color.White,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.padding(end = 8.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Copy Debug Report",
-                    color = androidx.compose.ui.graphics.Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
-                )
+                Text("Copy Debug Report")
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
-}
-
-@Composable
-private fun SectionHeader(label: String) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelMedium,
-        color = AppColors.TextMuted,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 2.sp,
-        modifier = Modifier.padding(bottom = 2.dp)
-    )
 }
 
 @Composable
@@ -265,36 +260,37 @@ private fun DebugInfoCard(
     isMono: Boolean = false,
     valueColor: androidx.compose.ui.graphics.Color = AppColors.TextPrimary
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(AppColors.Surface)
-            .border(1.dp, AppColors.SurfaceBorder, RoundedCornerShape(10.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = AppColors.TextMuted,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 0.5.sp
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = valueColor,
-            fontFamily = if (isMono) FontFamily.Monospace else FontFamily.Default,
-            maxLines = 10,
-            overflow = TextOverflow.Ellipsis,
-            lineHeight = 20.sp
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = AppColors.TextMuted,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = valueColor,
+                fontFamily = if (isMono) FontFamily.Monospace else FontFamily.Default,
+                maxLines = 8,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
 private fun truncate(text: String, maxLen: Int): String {
-    return if (text.length > maxLen) text.take(maxLen) + "…" else text
+    return if (text.length > maxLen) text.take(maxLen) + "..." else text
 }
 
 private fun buildDebugReport(
@@ -303,7 +299,7 @@ private fun buildDebugReport(
     lastObservation: AgentEvent.Observation?
 ): String {
     return buildString {
-        appendLine("=== TaskFlow Debug Report ===")
+        appendLine("=== Android AI Agent Debug Report ===")
         appendLine()
         appendLine("--- Agent State ---")
         appendLine("Status: ${state.status}")
