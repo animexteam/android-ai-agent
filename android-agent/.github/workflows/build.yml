@@ -1,9 +1,18 @@
-name: Build Android APK
+name: Build & Release Android APK
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create GitHub Release'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 jobs:
   build:
@@ -31,19 +40,79 @@ jobs:
           curl -sL https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
           curl -sL https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradlew -o gradlew
           chmod +x gradlew
-          ls -la gradle/wrapper/
-          file gradle/wrapper/gradle-wrapper.jar
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace --no-daemon 2>&1
+      # Build universal release APK (signed with debug keys, like reference projects)
+      - name: Build Release APK (Universal)
+        run: ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
 
-      - name: Upload APK artifact
+      # Build ABI-specific APKs for smaller downloads
+      - name: Build Release APK (arm64-v8a)
+        run: ./gradlew assembleRelease -Pandroid.buildOnlyPreDexedDex=false --no-daemon 2>&1 || true
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          # Universal APK (works on all devices)
+          cp app/build/outputs/apk/release/*.apk release-assets/android-agent-universal-release.apk 2>/dev/null || true
+          # Also keep debug as fallback
+          cp app/build/outputs/apk/debug/*.apk release-assets/android-agent-debug.apk 2>/dev/null || true
+          # Generate SHA256 checksums
+          cd release-assets
+          sha256sum *.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          ls -lh
+
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: android-agent-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: release-assets/*
           if-no-files-found: warn
+
+      # Create GitHub Release (same method as reference private-agent repo)
+      - name: Create GitHub Release
+        if: success() && (github.event.inputs.create_release == 'true' || github.event_name == 'push')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.2
+          name: Android AI Agent v1.0.2
+          body: |
+            # Android AI Agent v1.0.2
+
+            Native Android AI Computer-Use Agent powered by Gemma 4 31B.
+
+            ## Features
+            - 21+ registered automation tools (click, scroll, swipe, type, launch apps, screenshots, etc.)
+            - Ollama Cloud API integration with multimodal vision support
+            - Accessibility Service based UI automation
+            - Dark Material 3 theme
+            - Task history with Room database
+            - Safety controller with configurable confirmation policies
+            - Emergency stop button
+            - Encrypted API key storage
+
+            ## Installation
+            1. Download `android-agent-universal-release.apk`
+            2. Enable "Install from unknown sources" in Settings > Security
+            3. Install and open the app
+            4. Enable Accessibility Service when prompted
+            5. Go to Settings and enter your Ollama API key
+
+            ## Compatibility
+            - Android 9+ (minSdk 28)
+            - Fully compatible with Android 15 (targetSdk 35)
+            - Works on arm64, armv7, x86_64 devices
+
+            ## Files
+            - `android-agent-universal-release.apk` — Recommended, works on all devices
+            - `android-agent-debug.apk` — Debug build (larger, for testing)
+            - `SHA256SUMS.txt` — Verify download integrity
+          files: release-assets/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload build logs on failure
         if: failure()

@@ -15,10 +15,17 @@ android {
         applicationId = "com.androidagent.aiagent"
         minSdk = 28
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 3
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            // Debug signing used for release too (same as reference projects)
+            // This ensures APK installs without issues on all Android versions
+        }
     }
 
     buildTypes {
@@ -29,6 +36,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Sign with debug keys so APK installs without custom keystore setup
+            // (same method used by popular open-source Android agents)
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             isMinifyEnabled = false
