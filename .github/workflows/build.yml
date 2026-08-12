@@ -8,74 +8,34 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: android-agent
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Generate Gradle Wrapper
+      - uses: android-actions/setup-android@v3
+      - name: Build
         run: |
+          cd android-agent
           GRADLE_VERSION=8.11.1
           mkdir -p gradle/wrapper
           curl -sL https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
           curl -sL https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradlew -o gradlew
           chmod +x gradlew
-
-      - name: Generate Release Keystore
-        run: |
-          keytool -genkeypair -v \
-            -keystore app/release.keystore \
-            -alias taskflow \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass taskflow2025 -keypass taskflow2025 \
-            -dname "CN=TaskFlow, OU=Dev, O=TaskFlow, L=Unknown, ST=Unknown, C=US"
-
-      - name: Build Release APK
-        env:
-          KEYSTORE_PATH: release.keystore
-          KEYSTORE_PASSWORD: taskflow2025
-          KEY_ALIAS: taskflow
-          KEY_PASSWORD: taskflow2025
-        run: ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
-
-      - name: Prepare release assets
-        run: |
+          keytool -genkeypair -v -keystore app/release.keystore -alias taskflow -keyalg RSA -keysize 2048 -validity 10000 -storepass taskflow2025 -keypass taskflow2025 -dname "CN=TaskFlow,OU=Dev,O=TaskFlow,L=Unknown,ST=Unknown,C=US"
+          ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
           mkdir -p release-assets
           cp app/build/outputs/apk/release/*.apk release-assets/TaskFlow-v2.0.0.apk
-          cd release-assets
-          sha256sum *.apk > SHA256SUMS.txt
-          ls -lh
-
-      - name: Upload APK artifacts
+          cd release-assets && sha256sum *.apk > SHA256SUMS.txt && ls -lh
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: taskflow-apk
           path: android-agent/release-assets/*
           if-no-files-found: warn
-
-      - name: Delete old release
-        env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
-        run: |
-          gh release delete v2.0.0 --yes 2>/dev/null || true
-          git tag -d v2.0.0 2>/dev/null || true
-          git push origin :refs/tags/v2.0.0 2>/dev/null || true
-
       - name: Create GitHub Release
         if: success()
         uses: softprops/action-gh-release@v2
@@ -84,33 +44,20 @@ jobs:
           name: TaskFlow v2.0.0
           token: ${{ secrets.PAT_TOKEN }}
           body: |
-            # TaskFlow v2.0.0 — Complete Rewrite
-
-            A modern Android task automation agent with beautiful UI and intelligent tool execution.
-
-            ## What's New
-            - **Complete UI Redesign**: Ultra-minimalist monochrome design with collapsible step cards
-            - **Auto Node Recovery**: Agent automatically re-observes screen when UI changes and retries
-            - **Smart Tool Resolution**: Fuzzy matching + 30+ aliases handle AI model tool name mistakes
-            - **Background Execution**: Foreground service keeps agent running when you switch apps
-            - **Complete Tool Catalog**: All 21 tools listed in prompt with exact names
-
+            # TaskFlow v2.0.0
             ## Installation (OPPO/ColorOS)
-            1. **Settings > Password & security > Install unknown apps** > Enable your browser
-            2. **Play Store > Profile > Play Protect > Gear > Turn OFF** scanning temporarily
-            3. Download `TaskFlow-v2.0.0.apk` and install
+            1. Settings > Password & security > Install unknown apps > Enable your browser
+            2. Play Store > Profile > Play Protect > Gear > Turn OFF scanning temporarily
+            3. Download TaskFlow-v2.0.0.apk and install
             4. Re-enable Play Protect after install
-            5. Open app > Enable Screen Control Service in Settings
-            6. Enter your API key and model name
-
+            5. Open app > Enable Screen Control Service > Enter API key
             ## Compatibility
             - Android 9+ (minSdk 28), Android 15 (targetSdk 35)
             - Tested on OPPO A3 Pro 5G (ColorOS 15.0)
           files: android-agent/release-assets/*
           draft: false
           prerelease: false
-
-      - name: Upload build logs on failure
+      - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
