@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.Display
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.annotation.RequiresApi
 import java.util.concurrent.CountDownLatch

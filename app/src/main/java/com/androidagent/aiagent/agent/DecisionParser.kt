@@ -1,6 +1,10 @@
 package com.androidagent.aiagent.agent
 
 import com.androidagent.aiagent.tools.AgentDecision
+import com.androidagent.aiagent.tools.AskUserDecision
+import com.androidagent.aiagent.tools.ErrorDecisionData
+import com.androidagent.aiagent.tools.FinishDecisionData
+import com.androidagent.aiagent.tools.MessageDecision
 import com.androidagent.aiagent.tools.ToolCallDecision
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -27,13 +31,13 @@ object DecisionParser {
                 "ask_user" -> parseAskUser(obj)
                 "finish" -> parseFinish(obj)
                 "error" -> parseError(obj)
-                else -> AgentDecision.ErrorDecisionData(
+                else -> ErrorDecisionData(
                     type = "error",
                     message = "Unknown decision type: '$type'. Response was: $jsonStr"
                 )
             }
         } catch (e: Exception) {
-            AgentDecision.ErrorDecisionData(
+            ErrorDecisionData(
                 type = "error",
                 message = "Failed to parse model response: ${e.message}. Response was: ${jsonStr.take(300)}"
             )
@@ -68,7 +72,7 @@ object DecisionParser {
     private fun parseToolCall(obj: JsonObject): AgentDecision {
         val toolName = obj["tool_name"]?.jsonPrimitive?.contentOrNull
             ?: obj["toolName"]?.jsonPrimitive?.contentOrNull
-            ?: return AgentDecision.ErrorDecisionData(
+            ?: return ErrorDecisionData(
                 type = "error",
                 message = "tool_call decision missing 'tool_name' field"
             )
@@ -86,7 +90,7 @@ object DecisionParser {
 
     private fun parseMessage(obj: JsonObject): AgentDecision {
         val content = obj["content"]?.jsonPrimitive?.contentOrNull ?: ""
-        return AgentDecision.MessageDecision(
+        return MessageDecision(
             type = "message",
             content = content
         )
@@ -94,11 +98,11 @@ object DecisionParser {
 
     private fun parseAskUser(obj: JsonObject): AgentDecision {
         val question = obj["question"]?.jsonPrimitive?.contentOrNull
-            ?: return AgentDecision.ErrorDecisionData(
+            ?: return ErrorDecisionData(
                 type = "error",
                 message = "ask_user decision missing 'question' field"
             )
-        return AgentDecision.AskUserDecision(
+        return AskUserDecision(
             type = "ask_user",
             question = question
         )
@@ -107,7 +111,7 @@ object DecisionParser {
     private fun parseFinish(obj: JsonObject): AgentDecision {
         val success = obj["success"]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: false
         val message = obj["message"]?.jsonPrimitive?.contentOrNull ?: "Task finished."
-        return AgentDecision.FinishDecisionData(
+        return FinishDecisionData(
             type = "finish",
             success = success,
             message = message
@@ -117,7 +121,7 @@ object DecisionParser {
     private fun parseError(obj: JsonObject): AgentDecision {
         val message = obj["message"]?.jsonPrimitive?.contentOrNull
             ?: "Model reported an error with no message."
-        return AgentDecision.ErrorDecisionData(
+        return ErrorDecisionData(
             type = "error",
             message = message
         )
