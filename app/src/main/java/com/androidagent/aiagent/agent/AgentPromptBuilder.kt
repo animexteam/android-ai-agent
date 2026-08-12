@@ -65,7 +65,7 @@ class AgentPromptBuilder {
             sb.appendLine("## Current Screen State")
             sb.appendLine("Package: ${observation.packageName}")
             sb.appendLine("Activity: ${observation.activityName}")
-            if (observation.windowTitle.isNotBlank()) {
+            if (!observation.windowTitle.isNullOrBlank()) {
                 sb.appendLine("Window Title: ${observation.windowTitle}")
             }
             sb.appendLine()

@@ -28,7 +28,7 @@ class AccessibilityObserver {
      * @return [AndroidObservation] containing the UI tree and metadata.
      */
     fun observe(): AndroidObservation {
-        val rootNode = AndroidAgentAccessibilityService.instance?.getRootInActiveWindow()
+        val rootNode = AndroidAgentAccessibilityService.instance?.safeGetRootInActiveWindow()
         val packageName = resolvePackageName(rootNode)
         val activityName = resolveActivityName(rootNode)
         val windowTitle = resolveWindowTitle(rootNode)
@@ -54,7 +54,7 @@ class AccessibilityObserver {
      * @return [AndroidObservation] with optional screenshot data.
      */
     fun observeWithScreenshot(takeScreenshot: Boolean = false): AndroidObservation {
-        val rootNode = AndroidAgentAccessibilityService.instance?.getRootInActiveWindow()
+        val rootNode = AndroidAgentAccessibilityService.instance?.safeGetRootInActiveWindow()
         val packageName = resolvePackageName(rootNode)
         val activityName = resolveActivityName(rootNode)
         val windowTitle = resolveWindowTitle(rootNode)
@@ -91,7 +91,7 @@ class AccessibilityObserver {
     fun getCurrentPackage(): String? {
         val service = AndroidAgentAccessibilityService.instance
             ?: return null
-        val rootNode = service.getRootInActiveWindow()
+        val rootNode = service.safeGetRootInActiveWindow()
             ?: return null
         return try {
             rootNode.packageName?.toString()
@@ -110,7 +110,7 @@ class AccessibilityObserver {
     fun getCurrentActivity(): String? {
         val service = AndroidAgentAccessibilityService.instance
             ?: return null
-        val rootNode = service.getRootInActiveWindow()
+        val rootNode = service.safeGetRootInActiveWindow()
             ?: return null
         return try {
             resolveActivityName(rootNode)

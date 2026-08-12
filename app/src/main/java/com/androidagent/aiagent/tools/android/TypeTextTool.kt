@@ -1,7 +1,6 @@
 package com.androidagent.aiagent.tools.android
 
 import android.util.Log
-import android.view.KeyEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.androidagent.aiagent.accessibility.AccessibilityObserver
 import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
@@ -146,10 +145,7 @@ class TypeTextTool : ToolHandler {
     ) {
         withContext(Dispatchers.IO) {
             text.forEach { char ->
-                val event = KeyEvent(KeyEvent.ACTION_DOWN, char.code)
-                service.dispatchKeyEvent(event)
-                val upEvent = KeyEvent(KeyEvent.ACTION_UP, char.code)
-                service.dispatchKeyEvent(upEvent)
+                service.dispatchKeyEvent(char.code)
                 kotlinx.coroutines.delay(10)
             }
         }

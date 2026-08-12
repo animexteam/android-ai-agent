@@ -5,6 +5,7 @@ import com.androidagent.aiagent.tools.RiskLevel
 import com.androidagent.aiagent.tools.ToolHandler
 import com.androidagent.aiagent.tools.ToolResult
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put

@@ -125,28 +125,12 @@ class ClearTextTool : ToolHandler {
     private suspend fun clearViaKeyEvents(service: AndroidAgentAccessibilityService) {
         withContext(Dispatchers.IO) {
             // Select all (Ctrl+A) - using meta key
-            val selectAllDown = KeyEvent(
-                KeyEvent.ACTION_DOWN,
-                KeyEvent.KEYCODE_A,
-                0,
-                KeyEvent.META_CTRL_ON
-            )
-            service.dispatchKeyEvent(selectAllDown)
-            val selectAllUp = KeyEvent(
-                KeyEvent.ACTION_UP,
-                KeyEvent.KEYCODE_A,
-                0,
-                KeyEvent.META_CTRL_ON
-            )
-            service.dispatchKeyEvent(selectAllUp)
+            service.dispatchKeyEvent(KeyEvent.KEYCODE_A)
 
             kotlinx.coroutines.delay(50)
 
             // Delete selected text
-            val deleteDown = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL)
-            service.dispatchKeyEvent(deleteDown)
-            val deleteUp = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL)
-            service.dispatchKeyEvent(deleteUp)
+            service.dispatchKeyEvent(KeyEvent.KEYCODE_DEL)
 
             kotlinx.coroutines.delay(50)
         }

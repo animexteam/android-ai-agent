@@ -13,6 +13,7 @@ import com.androidagent.aiagent.tools.ToolHandler
 import com.androidagent.aiagent.tools.ToolResult
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put

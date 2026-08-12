@@ -394,7 +394,7 @@ fun ToolExecutionDetail(event: AgentEvent.ToolExecution) {
                         .padding(12.dp)
                 ) {
                     Text(
-                        text = event.result,
+                        text = event.result.toString(),
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.TextSecondary,
                         fontFamily = FontFamily.Monospace,

@@ -2,7 +2,7 @@ package com.androidagent.aiagent.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
-import android.accessibilityservice.GestureDescription.GestureResultCallback
+import android.accessibilityservice.AccessibilityService.GestureResultCallback
 import android.graphics.Path
 import android.os.Build
 import android.util.Log

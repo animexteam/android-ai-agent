@@ -55,6 +55,14 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         toolHandlers = toolHandlers
     )
 
+    private val database: AppDatabase = Room.databaseBuilder(
+        context,
+        AppDatabase::class.java,
+        "android_agent_db"
+    ).build()
+
+    val taskRepository: TaskRepository = TaskRepository(database)
+
     val agentRuntime: AgentRuntime = AgentRuntime(
         gemmaClient = gemmaClient,
         toolRegistry = toolRegistry,
@@ -65,14 +73,6 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     val stateFlow: StateFlow<AgentState> = agentRuntime.state
-
-    private val database: AppDatabase = Room.databaseBuilder(
-        context,
-        AppDatabase::class.java,
-        "android_agent_db"
-    ).build()
-
-    val taskRepository: TaskRepository = TaskRepository(database)
 
     init {
         registerAllTools()
@@ -108,12 +108,12 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     private fun buildToolHandlers(): Map<String, ToolHandler> {
         return mapOf(
             LaunchAppTool.TOOL_NAME to LaunchAppTool(),
-            FindTool.TOOL_NAME to FindTool(accessibilityObserver),
-            ClickTool.TOOL_NAME to ClickTool(accessibilityObserver),
-            LongClickTool.TOOL_NAME to LongClickTool(accessibilityObserver),
-            TypeTextTool.TOOL_NAME to TypeTextTool(accessibilityObserver),
-            ClearTextTool.TOOL_NAME to ClearTextTool(accessibilityObserver),
-            ScrollTool.TOOL_NAME to ScrollTool(accessibilityObserver),
+            FindTool.TOOL_NAME to FindTool(),
+            ClickTool.TOOL_NAME to ClickTool(),
+            LongClickTool.TOOL_NAME to LongClickTool(),
+            TypeTextTool.TOOL_NAME to TypeTextTool(),
+            ClearTextTool.TOOL_NAME to ClearTextTool(),
+            ScrollTool.TOOL_NAME to ScrollTool(),
             SwipeTool.TOOL_NAME to SwipeTool(),
             PressKeyTool.TOOL_NAME to PressKeyTool(),
             BackTool.TOOL_NAME to BackTool(),
@@ -121,7 +121,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
             RecentsTool.TOOL_NAME to RecentsTool(),
             WaitTool.TOOL_NAME to WaitTool(),
             ScreenshotTool.TOOL_NAME to ScreenshotTool(),
-            InspectScreenTool.TOOL_NAME to InspectScreenTool(accessibilityObserver),
+            InspectScreenTool.TOOL_NAME to InspectScreenTool(),
             AnalyzeScreenTool.TOOL_NAME to AnalyzeScreenTool(visionAnalyzer),
             FindVisualTargetTool.TOOL_NAME to FindVisualTargetTool(visionAnalyzer),
             AskUserTool.TOOL_NAME to AskUserTool(),
