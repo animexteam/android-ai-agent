@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-agent
 
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +26,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: android-agent
 
       - name: Generate Gradle Wrapper
         run: |
@@ -49,12 +54,6 @@ jobs:
           KEY_PASSWORD: taskflow2025
         run: ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
 
-      - name: Verify APK
-        run: |
-          APK=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
-          echo "APK: $APK"
-          ls -lh "$APK"
-
       - name: Prepare release assets
         run: |
           mkdir -p release-assets
@@ -68,7 +67,7 @@ jobs:
         if: always()
         with:
           name: taskflow-apk
-          path: release-assets/*
+          path: android-agent/release-assets/*
           if-no-files-found: warn
 
       - name: Delete old release
@@ -91,26 +90,25 @@ jobs:
 
             A modern Android task automation agent with beautiful UI and intelligent tool execution.
 
-            ## What's New in v2.0.0
-            - **Complete UI Redesign**: Ultra-minimalist monochrome design with collapsible step cards, smooth animations, colored status indicators
-            - **Auto Node Recovery**: Agent automatically re-observes screen when UI changes and retries failed actions
+            ## What's New
+            - **Complete UI Redesign**: Ultra-minimalist monochrome design with collapsible step cards
+            - **Auto Node Recovery**: Agent automatically re-observes screen when UI changes and retries
             - **Smart Tool Resolution**: Fuzzy matching + 30+ aliases handle AI model tool name mistakes
             - **Background Execution**: Foreground service keeps agent running when you switch apps
-            - **Complete Tool Catalog**: All 21 tools listed in prompt with exact names — no more wrong tool calls
-            - **Device Awareness**: Prompt includes Android/ColorOS context for better decisions
+            - **Complete Tool Catalog**: All 21 tools listed in prompt with exact names
 
             ## Installation (OPPO/ColorOS)
-            1. **Settings** > **Password & security** > **Install unknown apps** > Enable your browser
-            2. **Google Play Store** > Profile > **Play Protect** > Gear icon > **Turn OFF** scanning
+            1. **Settings > Password & security > Install unknown apps** > Enable your browser
+            2. **Play Store > Profile > Play Protect > Gear > Turn OFF** scanning temporarily
             3. Download `TaskFlow-v2.0.0.apk` and install
             4. Re-enable Play Protect after install
-            5. Open app > Enable **Screen Control Service** in Settings
+            5. Open app > Enable Screen Control Service in Settings
             6. Enter your API key and model name
 
             ## Compatibility
-            - Android 9+ (minSdk 28), fully compatible with Android 15 (targetSdk 35)
+            - Android 9+ (minSdk 28), Android 15 (targetSdk 35)
             - Tested on OPPO A3 Pro 5G (ColorOS 15.0)
-          files: release-assets/*
+          files: android-agent/release-assets/*
           draft: false
           prerelease: false
 
@@ -119,5 +117,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-failure-logs
-          path: app/build/
+          path: android-agent/app/build/
           if-no-files-found: ignore
