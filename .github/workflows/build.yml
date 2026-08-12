@@ -92,6 +92,7 @@ jobs:
         with:
           tag_name: v1.0.3
           name: TaskFlow v1.0.3
+          token: ${{ secrets.PAT_TOKEN }}
           body: |
             # TaskFlow v1.0.3
 
@@ -144,8 +145,6 @@ jobs:
           files: release-assets/*
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
       - name: Upload build logs on failure
         if: failure()
