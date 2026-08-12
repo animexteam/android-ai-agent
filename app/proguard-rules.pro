@@ -1,9 +1,7 @@
-# Add project specific ProGuard rules here.
--keepattributes *Annotation*
--keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SourceFile
+# TaskFlow ProGuard Rules
 
-# Keep Kotlin serialization
+# Keep Kotlin Serialization
+dontwarn kotlinx.serialization.**
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.AnnotationsKt
 
@@ -14,20 +12,39 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
-# Keep data classes used in serialization
--keep class com.androidagent.aiagent.**$$serializer { *; }
--keepclassmembers class com.androidagent.aiagent.** {
-    *** Companion;
-}
--keepclasseswithmembers class com.androidagent.aiagent.** {
-    kotlinx.serialization.KSerializer serializer(...);
-}
+# Keep all serializable classes used in the agent
+-keep @kotlinx.serialization.Serializable class * { *; }
 
-# OkHttp
+# Keep Room entities and DAOs
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class *
+-dontwarn androidx.room.paging.**
+
+# Keep Compose
+-dontwarn androidx.compose.**
+
+# Keep OkHttp
 -dontwarn okhttp3.**
 -dontwarn okio.**
 
-# Keep model classes
--keep class com.androidagent.aiagent.agent.** { *; }
--keep class com.androidagent.aiagent.tools.** { *; }
--keep class com.androidagent.aiagent.data.** { *; }
+# Keep Coil
+-dontwarn coil.**
+
+# Keep DataStore
+-dontwarn androidx.datastore.**
+
+# Keep EncryptedSharedPreferences
+-keep class androidx.security.crypto.** { *; }
+
+# Keep application class
+-keep class com.androidagent.aiagent.AgentApplication { *; }
+
+# Keep accessibility service
+-keep class com.androidagent.aiagent.accessibility.** { *; }
+
+# Remove logging in release
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+}

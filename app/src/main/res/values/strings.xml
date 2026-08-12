@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Android AI Agent</string>
-    <string name="accessibility_service_description">Android AI Computer-Use Agent. This service allows the AI to observe and interact with your device UI to complete tasks you assign. The agent can read screen content, click elements, type text, and navigate apps on your behalf. All actions are visible in the agent log and sensitive actions require confirmation.</string>
-    <string name="task_hint">Describe a task for the AI agent…</string>
+    <string name="app_name">TaskFlow</string>
+    <string name="accessibility_service_label">TaskFlow Screen Control</string>
+    <string name="accessibility_service_description">TaskFlow uses this service to read your screen and perform actions like tapping, scrolling, and typing to automate tasks on your behalf. All actions are visible in the task log and require your confirmation.</string>
+    <string name="task_hint">Describe a task…</string>
     <string name="send">Send</string>
     <string name="stop">Stop</string>
     <string name="settings">Settings</string>
@@ -16,12 +17,12 @@
     <string name="agent_status_cancelled">Cancelled</string>
     <string name="accessibility_enabled">Enabled</string>
     <string name="accessibility_disabled">Disabled</string>
-    <string name="enable_accessibility">Enable Accessibility Service</string>
-    <string name="api_key">Ollama API Key</string>
+    <string name="enable_accessibility">Enable Screen Control Service</string>
+    <string name="api_key">API Key</string>
     <string name="api_endpoint">API Endpoint</string>
     <string name="model_name">Model Name</string>
     <string name="temperature">Temperature</string>
-    <string name="max_steps">Max Agent Steps</string>
+    <string name="max_steps">Max Steps</string>
     <string name="vision_mode">Vision Mode</string>
     <string name="confirmation_policy">Confirmation Policy</string>
     <string name="save_screenshots">Save Screenshots</string>
