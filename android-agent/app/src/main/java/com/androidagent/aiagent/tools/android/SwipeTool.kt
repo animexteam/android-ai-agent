@@ -9,6 +9,7 @@ import com.androidagent.aiagent.tools.ToolError
 import com.androidagent.aiagent.tools.ToolHandler
 import com.androidagent.aiagent.tools.ToolResult
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -153,7 +154,7 @@ class SwipeTool : ToolHandler {
     )
 
     companion object {
-        private const val TOOL_NAME = "android.swipe"
+        internal const val TOOL_NAME = "android.swipe"
         private const val TAG = "SwipeTool"
         private const val DEFAULT_DURATION_MS = 300
         private val VALID_DIRECTIONS = listOf("up", "down", "left", "right")
@@ -165,8 +166,8 @@ class SwipeTool : ToolHandler {
                 "calculation, or explicit startX/startY/endX/endY pixel coordinates.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("direction") {
+                put("properties", buildJsonObject {
+                    put("direction", buildJsonObject {
                         put("type", "string")
                         put("enum", buildJsonArray {
                             add("up")
@@ -175,28 +176,28 @@ class SwipeTool : ToolHandler {
                             add("right")
                         })
                         put("description", "Swipe direction")
-                    }
-                    addJsonObject("startX") {
+                    })
+                    put("startX", buildJsonObject {
                         put("type", "integer")
                         put("description", "Start X coordinate (optional, overrides direction)")
-                    }
-                    addJsonObject("startY") {
+                    })
+                    put("startY", buildJsonObject {
                         put("type", "integer")
                         put("description", "Start Y coordinate (optional, overrides direction)")
-                    }
-                    addJsonObject("endX") {
+                    })
+                    put("endX", buildJsonObject {
                         put("type", "integer")
                         put("description", "End X coordinate (optional, overrides direction)")
-                    }
-                    addJsonObject("endY") {
+                    })
+                    put("endY", buildJsonObject {
                         put("type", "integer")
                         put("description", "End Y coordinate (optional, overrides direction)")
-                    }
-                    addJsonObject("duration_ms") {
+                    })
+                    put("duration_ms", buildJsonObject {
                         put("type", "integer")
                         put("description", "Swipe duration in milliseconds (default 300)")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

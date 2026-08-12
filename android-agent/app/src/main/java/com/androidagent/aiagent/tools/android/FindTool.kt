@@ -86,14 +86,14 @@ class FindTool : ToolHandler {
                         put("resourceId", node.resourceId ?: "")
                         put("className", node.className ?: "")
                         put("isClickable", node.isClickable)
-                        addJsonObject("bounds") {
+                        put("bounds", buildJsonObject {
                             put("left", node.bounds.left)
                             put("top", node.bounds.top)
                             put("right", node.bounds.right)
                             put("bottom", node.bounds.bottom)
                             put("centerX", node.bounds.centerX)
                             put("centerY", node.bounds.centerY)
-                        }
+                        })
                     })
                 }
             }
@@ -122,7 +122,7 @@ class FindTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.find"
+        internal const val TOOL_NAME = "android.find"
         private const val TAG = "FindTool"
 
         fun definition(): AgentTool = AgentTool(
@@ -132,40 +132,40 @@ class FindTool : ToolHandler {
                 "with their IDs, text, descriptions, bounds, and other properties.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("text") {
+                put("properties", buildJsonObject {
+                    put("text", buildJsonObject {
                         put("type", "string")
                         put("description", "Exact text match for the element")
-                    }
-                    addJsonObject("text_contains") {
+                    })
+                    put("text_contains", buildJsonObject {
                         put("type", "string")
                         put("description", "Substring match for the element text")
-                    }
-                    addJsonObject("content_description") {
+                    })
+                    put("content_description", buildJsonObject {
                         put("type", "string")
                         put("description", "Content description of the element")
-                    }
-                    addJsonObject("resource_id") {
+                    })
+                    put("resource_id", buildJsonObject {
                         put("type", "string")
                         put("description", "Resource ID of the element (partial match)")
-                    }
-                    addJsonObject("class_name") {
+                    })
+                    put("class_name", buildJsonObject {
                         put("type", "string")
                         put("description", "Class name of the element (partial match)")
-                    }
-                    addJsonObject("clickable") {
+                    })
+                    put("clickable", buildJsonObject {
                         put("type", "boolean")
                         put("description", "Filter for clickable elements")
-                    }
-                    addJsonObject("editable") {
+                    })
+                    put("editable", buildJsonObject {
                         put("type", "boolean")
                         put("description", "Filter for editable elements")
-                    }
-                    addJsonObject("scrollable") {
+                    })
+                    put("scrollable", buildJsonObject {
                         put("type", "boolean")
                         put("description", "Filter for scrollable elements")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

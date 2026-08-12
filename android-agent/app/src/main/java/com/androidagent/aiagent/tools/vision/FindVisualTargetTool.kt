@@ -4,7 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
 import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
-import com.androidagent.aiagent.ai.VisualTargetResult
+import com.androidagent.aiagent.ai.VisionAnalyzer.VisualTargetResult
 import com.androidagent.aiagent.ai.VisionAnalyzer
 import com.androidagent.aiagent.tools.AgentTool
 import com.androidagent.aiagent.tools.RiskLevel
@@ -14,6 +14,7 @@ import com.androidagent.aiagent.tools.ToolResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -25,7 +26,7 @@ class FindVisualTargetTool(
 
     override suspend fun execute(args: JsonObject): ToolResult {
         val service = AndroidAgentAccessibilityService.instance
-        if (service == null || !AndroidAgentAccessibilityService.isConnected.get()) {
+        if (service == null || !AndroidAgentAccessibilityService.isConnected) {
             return ToolResult(
                 success = false,
                 toolName = TOOL_NAME,

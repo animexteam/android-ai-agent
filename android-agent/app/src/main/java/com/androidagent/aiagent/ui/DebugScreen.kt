@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -118,7 +119,7 @@ fun DebugScreen(
             // Current Package / Activity
             DebugInfoCard(
                 label = "Current Package",
-                value = state.currentPackage.ifBlank { "N/A" }
+                value = state.currentPackage?.ifBlank { "N/A" } ?: "N/A"
             )
 
             // Agent Status
@@ -187,8 +188,7 @@ fun DebugScreen(
                         color = AppColors.TextMuted,
                         fontWeight = FontWeight.Bold
                     )
-                    val isSuccess = lastToolEvent?.result?.contains("success", ignoreCase = true) == true ||
-                            (lastToolEvent?.result?.contains("error", ignoreCase = true) == false && lastToolEvent != null)
+                    val isSuccess = lastToolEvent?.result?.success == true
                     Text(
                         text = if (lastToolEvent == null) "N/A" else if (isSuccess) "Success" else "Failed",
                         style = MaterialTheme.typography.labelLarge,
@@ -305,7 +305,7 @@ private fun buildDebugReport(
         appendLine("Status: ${state.status}")
         appendLine("Goal: ${state.goal}")
         appendLine("Step: ${state.stepNumber}/${state.maxSteps}")
-        appendLine("Current Package: ${state.currentPackage.ifBlank { "N/A" }}")
+        appendLine("Current Package: ${state.currentPackage ?: "N/A"}")
         appendLine("Model Latency: ${state.modelLatencyMs}ms")
         appendLine("History Events: ${state.history.size}")
         appendLine("Last Error: ${state.lastError ?: "None"}")
@@ -313,7 +313,7 @@ private fun buildDebugReport(
         appendLine("--- Last Tool ---")
         appendLine("Name: ${lastToolEvent?.toolName ?: "N/A"}")
         appendLine("Arguments: ${truncate(lastToolEvent?.arguments ?: "N/A", 500)}")
-        appendLine("Result: ${truncate(lastToolEvent?.result ?: "N/A", 500)}")
+        appendLine("Result: ${truncate(lastToolEvent?.result?.toString() ?: "N/A", 500)}")
         appendLine()
         appendLine("--- Last Observation ---")
         appendLine("Summary: ${truncate(lastObservation?.summary ?: "N/A", 500)}")

@@ -48,7 +48,7 @@ class RecentsTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.recents"
+        internal const val TOOL_NAME = "android.recents"
         private const val TAG = "RecentsTool"
 
         fun definition(): AgentTool = AgentTool(
@@ -56,9 +56,9 @@ class RecentsTool : ToolHandler {
             description = "Presses the recents (overview/task switcher) button to show recently used apps.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
+                put("properties", buildJsonObject {
                     // No inputs required
-                }
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

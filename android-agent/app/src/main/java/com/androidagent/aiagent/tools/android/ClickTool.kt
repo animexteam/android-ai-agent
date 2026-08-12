@@ -118,7 +118,7 @@ class ClickTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.click"
+        internal const val TOOL_NAME = "android.click"
         private const val TAG = "ClickTool"
 
         fun definition(): AgentTool = AgentTool(
@@ -128,24 +128,24 @@ class ClickTool : ToolHandler {
                 "when the element cannot be found in the accessibility tree.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("observation_id") {
+                put("properties", buildJsonObject {
+                    put("observation_id", buildJsonObject {
                         put("type", "string")
                         put("description", "Optional observation snapshot ID for validation")
-                    }
-                    addJsonObject("node_id") {
+                    })
+                    put("node_id", buildJsonObject {
                         put("type", "string")
                         put("description", "The node ID of the element to click (from find or inspect_screen)")
-                    }
-                    addJsonObject("x") {
+                    })
+                    put("x", buildJsonObject {
                         put("type", "integer")
                         put("description", "X coordinate to tap (fallback, use with y)")
-                    }
-                    addJsonObject("y") {
+                    })
+                    put("y", buildJsonObject {
                         put("type", "integer")
                         put("description", "Y coordinate to tap (fallback, use with x)")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

@@ -45,7 +45,7 @@ class WaitTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.wait"
+        internal const val TOOL_NAME = "android.wait"
         private const val DEFAULT_WAIT_MS = 1000
         private const val MAX_WAIT_MS = 30000
 
@@ -55,12 +55,12 @@ class WaitTool : ToolHandler {
                 "Useful for waiting for animations, loading, or transitions to complete.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("milliseconds") {
+                put("properties", buildJsonObject {
+                    put("milliseconds", buildJsonObject {
                         put("type", "integer")
                         put("description", "Time to wait in milliseconds (default 1000)")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

@@ -125,35 +125,19 @@ class ClearTextTool : ToolHandler {
     private suspend fun clearViaKeyEvents(service: AndroidAgentAccessibilityService) {
         withContext(Dispatchers.IO) {
             // Select all (Ctrl+A) - using meta key
-            val selectAllDown = KeyEvent(
-                KeyEvent.ACTION_DOWN,
-                KeyEvent.KEYCODE_A,
-                0,
-                KeyEvent.META_CTRL_ON
-            )
-            service.dispatchKeyEvent(selectAllDown)
-            val selectAllUp = KeyEvent(
-                KeyEvent.ACTION_UP,
-                KeyEvent.KEYCODE_A,
-                0,
-                KeyEvent.META_CTRL_ON
-            )
-            service.dispatchKeyEvent(selectAllUp)
+            service.dispatchKeyEvent(KeyEvent.KEYCODE_A)
 
             kotlinx.coroutines.delay(50)
 
             // Delete selected text
-            val deleteDown = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL)
-            service.dispatchKeyEvent(deleteDown)
-            val deleteUp = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL)
-            service.dispatchKeyEvent(deleteUp)
+            service.dispatchKeyEvent(KeyEvent.KEYCODE_DEL)
 
             kotlinx.coroutines.delay(50)
         }
     }
 
     companion object {
-        private const val TOOL_NAME = "android.clear_text"
+        internal const val TOOL_NAME = "android.clear_text"
         private const val TAG = "ClearTextTool"
 
         fun definition(): AgentTool = AgentTool(
@@ -163,12 +147,12 @@ class ClearTextTool : ToolHandler {
                 "Otherwise attempts to select all and delete via key events.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("node_id") {
+                put("properties", buildJsonObject {
+                    put("node_id", buildJsonObject {
                         put("type", "string")
                         put("description", "Optional node ID of the editable field to clear")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

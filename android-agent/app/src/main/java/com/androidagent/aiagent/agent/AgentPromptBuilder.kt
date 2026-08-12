@@ -65,7 +65,7 @@ class AgentPromptBuilder {
             sb.appendLine("## Current Screen State")
             sb.appendLine("Package: ${observation.packageName}")
             sb.appendLine("Activity: ${observation.activityName}")
-            if (observation.windowTitle.isNotBlank()) {
+            if (!observation.windowTitle.isNullOrBlank()) {
                 sb.appendLine("Window Title: ${observation.windowTitle}")
             }
             sb.appendLine()
@@ -88,7 +88,7 @@ class AgentPromptBuilder {
             sb.appendLine("(No previous actions)")
         } else {
             for (event in recentEvents) {
-                val status = if (event.success) "SUCCESS" else "FAILED"
+                val status = if (event.result.success) "SUCCESS" else "FAILED"
                 sb.appendLine("Step ${event.stepNumber}: ${event.toolName} → $status")
             }
         }
@@ -116,23 +116,21 @@ class AgentPromptBuilder {
         for (event in recentEvents) {
             when (event) {
                 is AgentEvent.ToolExecution -> {
-                    val argsSummary = event.arguments?.let { args ->
-                        val keys = args.keys().asSequence().take(3).joinToString(", ")
-                        if (args.size() > 3) "$keys, ..." else keys
-                    } ?: "(no args)"
-                    val resultSummary = event.result?.let { result ->
-                        if (result.size() > 0) {
-                            val entries = result.entries().asSequence().take(2).joinToString(", ") {
-                                "${it.key}=${it.value}"
-                            }
-                            if (result.size() > 2) "$entries, ..." else entries
-                        } else null
+                    val argsSummary = event.arguments.let { args ->
+                        if (args.length > 50) args.take(50) + "..." else args
                     }
-                    val errorSummary = event.error?.let { "Error: ${it.message}" }
+                    val resultObj = event.result.result
+                    val resultSummary = resultObj?.let { result ->
+                        val entries = result.entries.take(2).joinToString(", ") {
+                            "${it.key}=${it.value}"
+                        }
+                        if (result.size > 2) "$entries, ..." else entries
+                    }
+                    val errorSummary = event.result.error?.let { "Error: ${it.message}" }
                     val outcome = when {
                         errorSummary != null -> errorSummary
                         resultSummary != null -> resultSummary
-                        event.success -> "Success"
+                        event.result.success -> "Success"
                         else -> "Completed without output"
                     }
                     messages.add(
@@ -144,23 +142,19 @@ class AgentPromptBuilder {
                 }
 
                 is AgentEvent.Observation -> {
-                    val nodeCount = event.observation.uiTree.size
                     messages.add(
                         GemmaClient.ChatMessage(
                             role = "user",
-                            content = "[Observation] Package=${event.observation.packageName}, " +
-                                "Activity=${event.observation.activityName}, " +
-                                "Nodes=$nodeCount, " +
-                                "ID=${event.observation.id}"
+                            content = "[Observation] ${event.summary}"
                         )
                     )
                 }
 
                 is AgentEvent.ModelResponse -> {
-                    val truncated = if (event.response.length > 200) {
-                        event.response.take(200) + "..."
+                    val truncated = if (event.content.length > 200) {
+                        event.content.take(200) + "..."
                     } else {
-                        event.response
+                        event.content
                     }
                     messages.add(
                         GemmaClient.ChatMessage(
@@ -174,7 +168,7 @@ class AgentPromptBuilder {
                     messages.add(
                         GemmaClient.ChatMessage(
                             role = "user",
-                            content = "[User] ${event.message}"
+                            content = "[User] ${event.text}"
                         )
                     )
                 }
@@ -184,7 +178,7 @@ class AgentPromptBuilder {
                     messages.add(
                         GemmaClient.ChatMessage(
                             role = "user",
-                            content = "[Status] Changed to ${event.newStatus}"
+                            content = "[Status] Changed to ${event.to}"
                         )
                     )
                 }

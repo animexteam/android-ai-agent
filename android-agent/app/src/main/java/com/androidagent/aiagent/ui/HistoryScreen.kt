@@ -18,7 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Delete
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
@@ -45,7 +45,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -66,6 +68,7 @@ fun HistoryScreen(
 ) {
     val tasks by taskRepository.getAllTasks().collectAsState(initial = emptyList())
     var taskToDelete by remember { mutableStateOf<TaskRecord?>(null) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -162,8 +165,10 @@ fun HistoryScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        taskRepository.deleteTask(task.id)
-                        taskToDelete = null
+                        scope.launch {
+                            taskRepository.deleteTask(task.id)
+                            taskToDelete = null
+                        }
                     }
                 ) {
                     Text("Delete", color = AppColors.Error)
@@ -250,7 +255,7 @@ private fun TaskHistoryCard(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Delete,
+                        imageVector = Icons.Default.Delete,
                         contentDescription = "Delete",
                         tint = AppColors.TextMuted,
                         modifier = Modifier.size(18.dp)
@@ -279,7 +284,7 @@ private fun TaskHistoryCard(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = calculateDuration(task.startTime, task.endTime),
+                            text = calculateDuration(task.startTime, task.endTime ?: 0L),
                             style = MaterialTheme.typography.labelLarge,
                             color = AppColors.TextSecondary
                         )
@@ -296,7 +301,7 @@ private fun TaskHistoryCard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = task.result.ifBlank { "No result recorded." },
+                        text = task.result?.ifBlank { "No result recorded." } ?: "No result recorded.",
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.TextSecondary,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace

@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.Display
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.annotation.RequiresApi
 import java.util.concurrent.CountDownLatch
@@ -57,7 +58,7 @@ class AndroidAgentAccessibilityService : AccessibilityService() {
     // Node tree access
     // ---------------------------------------------------------------------------
 
-    fun getRootInActiveWindow(): AccessibilityNodeInfo? {
+    fun safeGetRootInActiveWindow(): AccessibilityNodeInfo? {
         return try {
             rootInActiveWindow
         } catch (e: Exception) {
@@ -256,13 +257,8 @@ class AndroidAgentAccessibilityService : AccessibilityService() {
 
     fun dispatchKeyEvent(keyCode: Int): Boolean {
         return try {
-            val event = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, keyCode)
-            @Suppress("DEPRECATION")
-            dispatchGesture(null, null, null, null) // no-op fallback
-            // Use shell input as a reliable fallback via global action mapping
-            // Since AccessibilityService cannot directly inject key events,
-            // we use the InputManager approach through shell command execution
-            // For now, return false to indicate this method needs an alternative approach
+            // AccessibilityService cannot directly inject key events.
+            // This method is a no-op placeholder that logs the attempt.
             Log.w(TAG, "dispatchKeyEvent: direct key injection not supported via AccessibilityService (keyCode=$keyCode)")
             false
         } catch (e: Exception) {

@@ -5,7 +5,7 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
 import com.androidagent.aiagent.ai.VisionAnalyzer
-import com.androidagent.aiagent.ai.VisionObservation
+import com.androidagent.aiagent.ai.VisionAnalyzer.VisionObservation
 import com.androidagent.aiagent.tools.AgentTool
 import com.androidagent.aiagent.tools.RiskLevel
 import com.androidagent.aiagent.tools.ToolError
@@ -22,7 +22,7 @@ class AnalyzeScreenTool(private val visionAnalyzer: VisionAnalyzer) : ToolHandle
 
     override suspend fun execute(args: JsonObject): ToolResult {
         val service = AndroidAgentAccessibilityService.instance
-        if (service == null || !AndroidAgentAccessibilityService.isConnected.get()) {
+        if (service == null || !AndroidAgentAccessibilityService.isConnected) {
             return ToolResult(
                 success = false,
                 toolName = TOOL_NAME,

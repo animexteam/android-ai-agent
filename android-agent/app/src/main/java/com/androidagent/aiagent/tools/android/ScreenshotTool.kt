@@ -85,7 +85,7 @@ class ScreenshotTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.screenshot"
+        internal const val TOOL_NAME = "android.screenshot"
         private const val TAG = "ScreenshotTool"
         private const val QUALITY = 50
         private const val MAX_WIDTH = 1024
@@ -97,9 +97,9 @@ class ScreenshotTool : ToolHandler {
                 "at 50% quality to reduce size.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
+                put("properties", buildJsonObject {
                     // No required inputs
-                }
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

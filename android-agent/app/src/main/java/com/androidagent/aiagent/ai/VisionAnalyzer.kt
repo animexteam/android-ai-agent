@@ -15,7 +15,7 @@ class VisionAnalyzer(private val gemmaClient: GemmaClient) {
     companion object {
         private const val TAG = "VisionAnalyzer"
 
-        private const val DESCRIBE_SYSTEM_PROMPT =
+        private val DESCRIBE_SYSTEM_PROMPT =
             """You are a visual analyzer for Android screens. Describe what you see, identify UI elements, their approximate positions, and any text visible. Be precise about locations.
             When listing elements, try to provide their approximate pixel coordinates (x, y) if possible, and a confidence score from 0.0 to 1.0.
             Format your response as a JSON object with two fields:
@@ -27,7 +27,7 @@ class VisionAnalyzer(private val gemmaClient: GemmaClient) {
               - "confidence": float 0.0-1.0
             Return ONLY the JSON object, no extra text.""".trimIndent()
 
-        private const val FIND_TARGET_SYSTEM_PROMPT =
+        private val FIND_TARGET_SYSTEM_PROMPT =
             """You are a visual target finder for Android screens.
 You will be given a screenshot and a description of an element to find.
 You MUST return ONLY a JSON object with exactly these fields:

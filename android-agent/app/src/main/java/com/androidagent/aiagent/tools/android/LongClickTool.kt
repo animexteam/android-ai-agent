@@ -116,7 +116,7 @@ class LongClickTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.long_click"
+        internal const val TOOL_NAME = "android.long_click"
         private const val TAG = "LongClickTool"
 
         fun definition(): AgentTool = AgentTool(
@@ -125,20 +125,20 @@ class LongClickTool : ToolHandler {
                 "or at specific x,y coordinates. Triggers context menus and long-press actions.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("node_id") {
+                put("properties", buildJsonObject {
+                    put("node_id", buildJsonObject {
                         put("type", "string")
                         put("description", "The node ID of the element to long click")
-                    }
-                    addJsonObject("x") {
+                    })
+                    put("x", buildJsonObject {
                         put("type", "integer")
                         put("description", "X coordinate to long press (fallback, use with y)")
-                    }
-                    addJsonObject("y") {
+                    })
+                    put("y", buildJsonObject {
                         put("type", "integer")
                         put("description", "Y coordinate to long press (fallback, use with x)")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

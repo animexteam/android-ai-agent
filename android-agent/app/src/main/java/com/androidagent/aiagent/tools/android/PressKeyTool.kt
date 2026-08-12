@@ -9,6 +9,7 @@ import com.androidagent.aiagent.tools.ToolError
 import com.androidagent.aiagent.tools.ToolHandler
 import com.androidagent.aiagent.tools.ToolResult
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -52,10 +53,7 @@ class PressKeyTool : ToolHandler {
                 )
             }
 
-            val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, keyCode)
-            service.dispatchKeyEvent(downEvent)
-            val upEvent = KeyEvent(KeyEvent.ACTION_UP, keyCode)
-            service.dispatchKeyEvent(upEvent)
+            service.dispatchKeyEvent(keyCode)
 
             ToolResult(
                 success = true,
@@ -79,7 +77,7 @@ class PressKeyTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.press_key"
+        internal const val TOOL_NAME = "android.press_key"
         private const val TAG = "PressKeyTool"
 
         private val KEY_MAP = mapOf(
@@ -95,8 +93,8 @@ class PressKeyTool : ToolHandler {
             description = "Presses a system or character key. Supported keys: ENTER, BACK, TAB, ESCAPE, SPACE.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("key") {
+                put("properties", buildJsonObject {
+                    put("key", buildJsonObject {
                         put("type", "string")
                         put("enum", buildJsonArray {
                             add("ENTER")
@@ -106,8 +104,8 @@ class PressKeyTool : ToolHandler {
                             add("SPACE")
                         })
                         put("description", "The key to press")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false
