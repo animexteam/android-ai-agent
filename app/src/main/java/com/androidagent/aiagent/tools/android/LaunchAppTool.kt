@@ -146,16 +146,16 @@ class LaunchAppTool : ToolHandler {
                 "searches installed apps for a matching label.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("package") {
+                put("properties", buildJsonObject {
+                    put("package", buildJsonObject {
                         put("type", "string")
                         put("description", "Android package name to launch (e.g., com.android.chrome)")
-                    }
-                    addJsonObject("app_name") {
+                    })
+                    put("app_name", buildJsonObject {
                         put("type", "string")
                         put("description", "Human-readable app name to search for (e.g., Chrome, Settings)")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

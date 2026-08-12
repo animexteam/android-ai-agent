@@ -165,8 +165,8 @@ class SwipeTool : ToolHandler {
                 "calculation, or explicit startX/startY/endX/endY pixel coordinates.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("direction") {
+                put("properties", buildJsonObject {
+                    put("direction", buildJsonObject {
                         put("type", "string")
                         put("enum", buildJsonArray {
                             add("up")
@@ -175,28 +175,28 @@ class SwipeTool : ToolHandler {
                             add("right")
                         })
                         put("description", "Swipe direction")
-                    }
-                    addJsonObject("startX") {
+                    })
+                    put("startX", buildJsonObject {
                         put("type", "integer")
                         put("description", "Start X coordinate (optional, overrides direction)")
-                    }
-                    addJsonObject("startY") {
+                    })
+                    put("startY", buildJsonObject {
                         put("type", "integer")
                         put("description", "Start Y coordinate (optional, overrides direction)")
-                    }
-                    addJsonObject("endX") {
+                    })
+                    put("endX", buildJsonObject {
                         put("type", "integer")
                         put("description", "End X coordinate (optional, overrides direction)")
-                    }
-                    addJsonObject("endY") {
+                    })
+                    put("endY", buildJsonObject {
                         put("type", "integer")
                         put("description", "End Y coordinate (optional, overrides direction)")
-                    }
-                    addJsonObject("duration_ms") {
+                    })
+                    put("duration_ms", buildJsonObject {
                         put("type", "integer")
                         put("description", "Swipe duration in milliseconds (default 300)")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

@@ -56,9 +56,9 @@ class HomeTool : ToolHandler {
             description = "Presses the system home button to return to the home screen.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
+                put("properties", buildJsonObject {
                     // No inputs required
-                }
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

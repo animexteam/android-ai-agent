@@ -186,24 +186,24 @@ class ScrollTool : ToolHandler {
                 "Otherwise performs a gesture-based swipe on the screen center.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("direction") {
+                put("properties", buildJsonObject {
+                    put("direction", buildJsonObject {
                         put("type", "string")
                         put("enum", buildJsonArray {
                             add("down")
                             add("up")
                         })
                         put("description", "Scroll direction")
-                    }
-                    addJsonObject("amount") {
+                    })
+                    put("amount", buildJsonObject {
                         put("type", "number")
                         put("description", "Scroll amount as fraction of screen height (0.0-1.0, default 0.7)")
-                    }
-                    addJsonObject("node_id") {
+                    })
+                    put("node_id", buildJsonObject {
                         put("type", "string")
                         put("description", "Optional node ID of the scrollable container")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

@@ -6,6 +6,7 @@ import com.androidagent.aiagent.accessibility.AccessibilityObserver
 import com.androidagent.aiagent.ai.VisionAnalyzer
 import com.androidagent.aiagent.safety.SafetyCheckResult
 import com.androidagent.aiagent.safety.SafetyController
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 
 /**

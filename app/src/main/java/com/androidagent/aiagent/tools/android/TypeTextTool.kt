@@ -166,16 +166,16 @@ class TypeTextTool : ToolHandler {
                 "Otherwise, dispatches key events to the current focus.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("text") {
+                put("properties", buildJsonObject {
+                    put("text", buildJsonObject {
                         put("type", "string")
                         put("description", "The text to type")
-                    }
-                    addJsonObject("node_id") {
+                    })
+                    put("node_id", buildJsonObject {
                         put("type", "string")
                         put("description", "Optional node ID of the editable field to type into")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

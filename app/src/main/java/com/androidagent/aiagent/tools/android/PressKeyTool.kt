@@ -95,8 +95,8 @@ class PressKeyTool : ToolHandler {
             description = "Presses a system or character key. Supported keys: ENTER, BACK, TAB, ESCAPE, SPACE.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("key") {
+                put("properties", buildJsonObject {
+                    put("key", buildJsonObject {
                         put("type", "string")
                         put("enum", buildJsonArray {
                             add("ENTER")
@@ -106,8 +106,8 @@ class PressKeyTool : ToolHandler {
                             add("SPACE")
                         })
                         put("description", "The key to press")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

@@ -97,9 +97,9 @@ class ScreenshotTool : ToolHandler {
                 "at 50% quality to reduce size.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
+                put("properties", buildJsonObject {
                     // No required inputs
-                }
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

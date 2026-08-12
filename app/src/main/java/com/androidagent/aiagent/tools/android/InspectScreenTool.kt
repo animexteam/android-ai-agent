@@ -77,14 +77,14 @@ class InspectScreenTool : ToolHandler {
         put("className", node.className ?: "")
         put("isClickable", node.isClickable)
         put("isEditable", node.isEditable)
-        addJsonObject("bounds") {
+        put("bounds", buildJsonObject {
             put("left", node.bounds.left)
             put("top", node.bounds.top)
             put("right", node.bounds.right)
             put("bottom", node.bounds.bottom)
             put("centerX", node.bounds.centerX)
             put("centerY", node.bounds.centerY)
-        }
+        })
         if (node.childIds.isNotEmpty()) {
             put("childCount", node.childIds.size)
         }
@@ -102,9 +102,9 @@ class InspectScreenTool : ToolHandler {
                 "current screen layout before performing actions.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
+                put("properties", buildJsonObject {
                     // No inputs required
-                }
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

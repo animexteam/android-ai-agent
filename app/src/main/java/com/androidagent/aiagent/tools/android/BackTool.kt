@@ -56,9 +56,9 @@ class BackTool : ToolHandler {
             description = "Presses the system back button to navigate to the previous screen.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
+                put("properties", buildJsonObject {
                     // No inputs required
-                }
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false

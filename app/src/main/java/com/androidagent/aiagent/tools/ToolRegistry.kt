@@ -2,6 +2,7 @@ package com.androidagent.aiagent.tools
 
 import android.util.Log
 import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
@@ -88,11 +89,11 @@ class ToolRegistry {
 
         val array = buildJsonArray {
             tools.values.forEach { tool ->
-                addJsonObject {
+                add(buildJsonObject {
                     put("name", tool.name)
                     put("description", tool.description)
                     put("inputSchema", tool.inputSchema)
-                }
+                })
             }
         }
 

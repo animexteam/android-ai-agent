@@ -163,12 +163,12 @@ class ClearTextTool : ToolHandler {
                 "Otherwise attempts to select all and delete via key events.",
             inputSchema = buildJsonObject {
                 put("type", "object")
-                addJsonObject("properties") {
-                    addJsonObject("node_id") {
+                put("properties", buildJsonObject {
+                    put("node_id", buildJsonObject {
                         put("type", "string")
                         put("description", "Optional node ID of the editable field to clear")
-                    }
-                }
+                    })
+                })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false
