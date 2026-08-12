@@ -437,7 +437,6 @@ private fun SettingsRadioCard(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
                     .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
                         
                     ) {
                         onSelect(key)
@@ -483,7 +482,6 @@ private fun SettingsToggleCard(
             .background(AppColors.Surface)
             .border(1.dp, AppColors.SurfaceBorder, RoundedCornerShape(10.dp))
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
                 
             ) {
                 onCheckedChange(!checked)

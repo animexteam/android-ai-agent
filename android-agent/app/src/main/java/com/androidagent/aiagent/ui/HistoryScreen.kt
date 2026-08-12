@@ -221,11 +221,7 @@ private fun TaskHistoryCard(
             .clip(RoundedCornerShape(10.dp))
             .background(AppColors.Surface)
             .border(1.dp, AppColors.SurfaceBorder, RoundedCornerShape(10.dp))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                ,
-                onClick = { expanded = !expanded }
-            )
+            .clickable(onClick = { expanded = !expanded })
     ) {
         // Main row
         Row(

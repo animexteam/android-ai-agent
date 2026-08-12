@@ -193,11 +193,7 @@ fun MainScreen(
                                 .shadow(4.dp, CircleShape)
                                 .clip(CircleShape)
                                 .background(AppColors.ErrorRed)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    ),
-                                    onClick = { viewModel.stopAgent() }
-                                ),
+                                .clickable(onClick = { viewModel.stopAgent() }),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -219,11 +215,6 @@ fun MainScreen(
                                     else AppColors.SurfaceBorder
                                 )
                                 .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = rememberRipple(
-                                        color = if (taskInput.isNotBlank()) Color.White.copy(alpha = 0.3f)
-                                        else AppColors.SurfaceBorder
-                                    ),
                                     enabled = taskInput.isNotBlank(),
                                     onClick = {
                                         val trimmed = taskInput.trim()
