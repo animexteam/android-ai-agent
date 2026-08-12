@@ -118,7 +118,7 @@ class ClickTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.click"
+        internal const val TOOL_NAME = "android.click"
         private const val TAG = "ClickTool"
 
         fun definition(): AgentTool = AgentTool(

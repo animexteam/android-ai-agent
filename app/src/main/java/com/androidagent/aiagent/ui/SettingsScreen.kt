@@ -124,7 +124,7 @@ fun SettingsScreen(
             // Timeout
             OutlinedTextField(
                 value = timeoutMs.toString(),
-                onValueChange = { timeoutMs.toLongOrNull()?.let { v -> timeoutMs = v; scope.launch { settingsRepository.setTimeout(v) } } },
+                onValueChange = { text -> text.toLongOrNull()?.let { v -> timeoutMs = v; scope.launch { settingsRepository.setTimeout(v) } } },
                 label = { Text("Request Timeout (ms)") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()

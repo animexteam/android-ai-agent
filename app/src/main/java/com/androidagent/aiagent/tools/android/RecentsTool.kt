@@ -48,7 +48,7 @@ class RecentsTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.recents"
+        internal const val TOOL_NAME = "android.recents"
         private const val TAG = "RecentsTool"
 
         fun definition(): AgentTool = AgentTool(

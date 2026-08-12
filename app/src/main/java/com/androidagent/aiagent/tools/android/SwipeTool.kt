@@ -153,7 +153,7 @@ class SwipeTool : ToolHandler {
     )
 
     companion object {
-        private const val TOOL_NAME = "android.swipe"
+        internal const val TOOL_NAME = "android.swipe"
         private const val TAG = "SwipeTool"
         private const val DEFAULT_DURATION_MS = 300
         private val VALID_DIRECTIONS = listOf("up", "down", "left", "right")

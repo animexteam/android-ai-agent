@@ -156,7 +156,7 @@ class TypeTextTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.type_text"
+        internal const val TOOL_NAME = "android.type_text"
         private const val TAG = "TypeTextTool"
 
         fun definition(): AgentTool = AgentTool(

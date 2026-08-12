@@ -136,7 +136,7 @@ class LaunchAppTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.launch_app"
+        internal const val TOOL_NAME = "android.launch_app"
         private const val TAG = "LaunchAppTool"
 
         fun definition(): AgentTool = AgentTool(

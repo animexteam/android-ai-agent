@@ -116,7 +116,7 @@ class LongClickTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.long_click"
+        internal const val TOOL_NAME = "android.long_click"
         private const val TAG = "LongClickTool"
 
         fun definition(): AgentTool = AgentTool(

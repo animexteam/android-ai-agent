@@ -48,7 +48,7 @@ class BackTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.back"
+        internal const val TOOL_NAME = "android.back"
         private const val TAG = "BackTool"
 
         fun definition(): AgentTool = AgentTool(

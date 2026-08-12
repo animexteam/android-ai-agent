@@ -122,7 +122,7 @@ class FindTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.find"
+        internal const val TOOL_NAME = "android.find"
         private const val TAG = "FindTool"
 
         fun definition(): AgentTool = AgentTool(

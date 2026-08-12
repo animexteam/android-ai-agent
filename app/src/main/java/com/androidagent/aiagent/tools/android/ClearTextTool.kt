@@ -153,7 +153,7 @@ class ClearTextTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.clear_text"
+        internal const val TOOL_NAME = "android.clear_text"
         private const val TAG = "ClearTextTool"
 
         fun definition(): AgentTool = AgentTool(

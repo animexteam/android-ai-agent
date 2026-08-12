@@ -91,7 +91,7 @@ class InspectScreenTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.inspect_screen"
+        internal const val TOOL_NAME = "android.inspect_screen"
         private const val TAG = "InspectScreenTool"
 
         fun definition(): AgentTool = AgentTool(

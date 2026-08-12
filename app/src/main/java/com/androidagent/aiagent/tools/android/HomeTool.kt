@@ -48,7 +48,7 @@ class HomeTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.home"
+        internal const val TOOL_NAME = "android.home"
         private const val TAG = "HomeTool"
 
         fun definition(): AgentTool = AgentTool(

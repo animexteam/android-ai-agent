@@ -173,7 +173,7 @@ class ScrollTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.scroll"
+        internal const val TOOL_NAME = "android.scroll"
         private const val TAG = "ScrollTool"
         private const val DEFAULT_AMOUNT = 0.7f
         private const val SWIPE_DURATION_MS = 300L

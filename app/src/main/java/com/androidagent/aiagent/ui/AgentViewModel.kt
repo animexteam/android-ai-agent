@@ -148,7 +148,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun isAccessibilityServiceEnabled(): Boolean {
-        return AndroidAgentAccessibilityService.isConnected.get()
+        return AndroidAgentAccessibilityService.isConnected
     }
 
     fun openAccessibilitySettings() {

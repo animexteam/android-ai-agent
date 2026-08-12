@@ -2,7 +2,7 @@ package com.androidagent.aiagent.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
-import android.accessibilityservice.GestureDescription.GestureResultCallback
+// GestureResultCallback is used as GestureDescription.GestureResultCallback() below
 import android.graphics.Path
 import android.os.Build
 import android.util.Log
@@ -175,7 +175,7 @@ object GestureController {
         val result = booleanArrayOf(false)
 
         return try {
-            val callback = object : GestureResultCallback() {
+            val callback = object : GestureDescription.GestureResultCallback() {
                 override fun onCompleted(gestureDescription: GestureDescription) {
                     result[0] = true
                     latch.countDown()

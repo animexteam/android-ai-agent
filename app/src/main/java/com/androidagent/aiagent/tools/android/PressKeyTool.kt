@@ -79,7 +79,7 @@ class PressKeyTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.press_key"
+        internal const val TOOL_NAME = "android.press_key"
         private const val TAG = "PressKeyTool"
 
         private val KEY_MAP = mapOf(

@@ -45,7 +45,7 @@ class WaitTool : ToolHandler {
     }
 
     companion object {
-        private const val TOOL_NAME = "android.wait"
+        internal const val TOOL_NAME = "android.wait"
         private const val DEFAULT_WAIT_MS = 1000
         private const val MAX_WAIT_MS = 30000
 
