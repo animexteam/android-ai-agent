@@ -27,6 +27,10 @@
 -dontwarn coil.**
 -dontwarn androidx.datastore.**
 
+# Tink crypto library references error-prone annotations at compile time only
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn com.google.crypto.tink.**
+
 # Keep application and accessibility service
 -keep class com.androidagent.aiagent.AgentApplication { *; }
 -keep class com.androidagent.aiagent.accessibility.** { *; }
