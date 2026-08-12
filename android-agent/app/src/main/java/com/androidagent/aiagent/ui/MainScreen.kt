@@ -2,7 +2,6 @@ package com.androidagent.aiagent.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,7 +27,6 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -197,7 +195,7 @@ fun MainScreen(
                                 .background(AppColors.ErrorRed)
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
-                                    indication = rememberRipple(color = Color.White.copy(alpha = 0.3f)),
+                                    ),
                                     onClick = { viewModel.stopAgent() }
                                 ),
                             contentAlignment = Alignment.Center

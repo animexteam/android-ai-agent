@@ -9,7 +9,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,7 +35,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SettingsAccessibility
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -170,44 +168,51 @@ fun EventCard(
     expanded: Boolean,
     onToggle: () -> Unit
 ) {
-    val (icon, accentColor, title, stepLabel) = when (event) {
+    data class EventInfo(val icon: ImageVector, val accentColor: Color, val title: String, val stepLabel: String)
+
+    val info = when (event) {
         is AgentEvent.ToolExecution -> {
             val isSuccess = event.result.success
-            val color = if (isSuccess) AppColors.SuccessGreen else AppColors.ErrorRed
-            val ic = if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Error
-            Triple(ic, color, event.toolName, "Tool")
+            EventInfo(
+                icon = if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Error,
+                accentColor = if (isSuccess) AppColors.SuccessGreen else AppColors.ErrorRed,
+                title = event.toolName,
+                stepLabel = "Tool"
+            )
         }
-        is AgentEvent.Observation -> Triple(
+        is AgentEvent.Observation -> EventInfo(
             Icons.Default.KeyboardArrowDown,
             AppColors.ObservationPurple,
             "Screen captured",
             "Observation"
         )
-        is AgentEvent.ModelResponse -> Triple(
+        is AgentEvent.ModelResponse -> EventInfo(
             Icons.AutoMirrored.Filled.ArrowRight,
             AppColors.AccentBlue,
             event.decisionType,
             "Model"
         )
-        is AgentEvent.UserMessage -> Triple(
+        is AgentEvent.UserMessage -> EventInfo(
             Icons.Default.KeyboardArrowDown,
             AppColors.AccentBlue,
             event.text.take(60),
             "User"
         )
-        is AgentEvent.StatusChange -> Triple(
+        is AgentEvent.StatusChange -> EventInfo(
             Icons.Default.KeyboardArrowDown,
             AppColors.TextSecondary,
-            "${event.from} → ${event.to}",
+            "${event.from} \u2192 ${event.to}",
             "Status"
         )
-        is AgentEvent.Error -> Triple(
+        is AgentEvent.Error -> EventInfo(
             Icons.Default.Error,
             AppColors.ErrorRed,
             event.message.take(80),
             "Error"
         )
     }
+
+    val (icon, accentColor, title, stepLabel) = info
 
     // Chevron rotation animation
     val rotation by animateFloatAsState(
@@ -222,11 +227,7 @@ fun EventCard(
             .clip(RoundedCornerShape(10.dp))
             .background(AppColors.Surface)
             .border(1.dp, AppColors.SurfaceBorder, RoundedCornerShape(10.dp))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(color = AppColors.SurfaceBorder),
-                onClick = onToggle
-            )
+            .clickable(onClick = onToggle)
     ) {
         // Header row with colored left accent bar
         Row(
