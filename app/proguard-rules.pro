@@ -1,8 +1,8 @@
-# TaskFlow ProGuard Rules
+# ProGuard Rules for TaskFlow
 
 # Keep Kotlin Serialization
-dontwarn kotlinx.serialization.**
--keepattributes *Annotation*, InnerClasses
+-dontwarn kotlinx.serialization.**
+-keepattributes *Annotation*,InnerClasses
 -dontnote kotlinx.serialization.AnnotationsKt
 
 -keepclassmembers class kotlinx.serialization.json.** {
@@ -12,34 +12,23 @@ dontwarn kotlinx.serialization.**
     kotlinx.serialization.KSerializer serializer(...);
 }
 
-# Keep all serializable classes used in the agent
+# Keep all @Serializable classes
 -keep @kotlinx.serialization.Serializable class * { *; }
 
-# Keep Room entities and DAOs
--keep class * extends androidx.room.RoomDatabase
+# Keep Room classes
+-keep class * extends androidx.room.RoomDatabase { *; }
 -keep @androidx.room.Entity class *
 -dontwarn androidx.room.paging.**
 
-# Keep Compose
+# Suppress warnings for common libraries
 -dontwarn androidx.compose.**
-
-# Keep OkHttp
 -dontwarn okhttp3.**
 -dontwarn okio.**
-
-# Keep Coil
 -dontwarn coil.**
-
-# Keep DataStore
 -dontwarn androidx.datastore.**
 
-# Keep EncryptedSharedPreferences
--keep class androidx.security.crypto.** { *; }
-
-# Keep application class
+# Keep application and accessibility service
 -keep class com.androidagent.aiagent.AgentApplication { *; }
-
-# Keep accessibility service
 -keep class com.androidagent.aiagent.accessibility.** { *; }
 
 # Remove logging in release
