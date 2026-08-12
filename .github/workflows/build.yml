@@ -80,7 +80,7 @@ jobs:
 
       - name: Delete old release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           gh release delete v1.0.3 --yes 2>/dev/null || true
           git tag -d v1.0.3 2>/dev/null || true
@@ -145,7 +145,7 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
       - name: Upload build logs on failure
         if: failure()

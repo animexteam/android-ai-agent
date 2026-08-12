@@ -58,6 +58,42 @@ class ToolExecutor(
 
         /** Error code returned when the requested tool is not registered. */
         const val ERROR_UNKNOWN_TOOL = "UNKNOWN_TOOL"
+
+        /** Alias map: common tool name mistakes from AI models mapped to correct names */
+        private val TOOL_ALIASES = mapOf(
+            "android.press_home" to "android.home",
+            "android.go_home" to "android.home",
+            "android.home_button" to "android.home",
+            "android.screenshot" to "vision.screenshot",
+            "android.take_screenshot" to "vision.screenshot",
+            "android.capture_screenshot" to "vision.screenshot",
+            "android.analyze_screen" to "vision.analyze_screen",
+            "android.find_visual" to "vision.find_visual_target",
+            "android.find_target" to "vision.find_visual_target",
+            "android.press_back" to "android.back",
+            "android.go_back" to "android.back",
+            "android.press_recent" to "android.recents",
+            "android.show_recents" to "android.recents",
+            "android.type" to "android.type_text",
+            "android.enter_text" to "android.type_text",
+            "android.input_text" to "android.type_text",
+            "android.tap" to "android.click",
+            "android.press" to "android.click",
+            "android.scroll_down" to "android.scroll",
+            "android.scroll_up" to "android.scroll",
+            "android.swipe_up" to "android.swipe",
+            "android.swipe_down" to "android.swipe",
+            "android.open_app" to "android.launch_app",
+            "android.start_app" to "android.launch_app",
+            "android.wait" to "agent.wait",
+            "android.stop" to "agent.stop",
+            "android.finish" to "agent.finish"
+        )
+    }
+
+    /** Resolve a tool name, checking aliases first */
+    private fun resolveToolName(name: String): String {
+        return TOOL_ALIASES[name] ?: name
     }
 
     /**
@@ -75,10 +111,11 @@ class ToolExecutor(
     ): ToolResult {
         Log.d(TAG, "execute($toolName) observationId=$observationId")
 
-        // 1. Resolve handler
-        val handler = toolHandlers[toolName]
+        // 1. Resolve handler (check aliases for common model mistakes)
+        val resolvedName = resolveToolName(toolName)
+        val handler = toolHandlers[resolvedName]
         if (handler == null) {
-            Log.w(TAG, "No handler registered for tool: $toolName")
+            Log.w(TAG, "No handler registered for tool: $toolName (resolved: $resolvedName)")
             return ToolResult(
                 success = false,
                 toolName = toolName,
