@@ -1,8 +1,15 @@
 package com.androidagent.aiagent.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,9 +22,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
@@ -29,12 +36,10 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SettingsAccessibility
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -59,246 +65,297 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.androidagent.aiagent.agent.AgentEvent
-import com.androidagent.aiagent.agent.AgentStatus
-import com.androidagent.aiagent.agent.PendingConfirmation
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Status Pill (horizontal bar)
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun AgentStatusBar(
-    status: AgentStatus,
+    status: com.androidagent.aiagent.agent.AgentStatus,
     stepNumber: Int,
     maxSteps: Int,
     modelLatencyMs: Long
 ) {
     val statusColor = when (status) {
-        AgentStatus.IDLE -> AppColors.Secondary
-        AgentStatus.THINKING -> AppColors.Primary
-        AgentStatus.EXECUTING -> AppColors.Warning
-        AgentStatus.WAITING_FOR_USER -> AppColors.Primary
-        AgentStatus.WAITING_FOR_CONFIRMATION -> AppColors.Warning
-        AgentStatus.VERIFYING -> AppColors.Primary
-        AgentStatus.COMPLETED -> AppColors.Success
-        AgentStatus.FAILED -> AppColors.Error
-        AgentStatus.CANCELLED -> AppColors.Secondary
+        com.androidagent.aiagent.agent.AgentStatus.IDLE -> AppColors.TextSecondary
+        com.androidagent.aiagent.agent.AgentStatus.THINKING -> AppColors.AccentBlue
+        com.androidagent.aiagent.agent.AgentStatus.EXECUTING -> AppColors.WarningAmber
+        com.androidagent.aiagent.agent.AgentStatus.WAITING_FOR_USER -> AppColors.AccentBlue
+        com.androidagent.aiagent.agent.AgentStatus.WAITING_FOR_CONFIRMATION -> AppColors.WarningAmber
+        com.androidagent.aiagent.agent.AgentStatus.VERIFYING -> AppColors.AccentBlue
+        com.androidagent.aiagent.agent.AgentStatus.COMPLETED -> AppColors.SuccessGreen
+        com.androidagent.aiagent.agent.AgentStatus.FAILED -> AppColors.ErrorRed
+        com.androidagent.aiagent.agent.AgentStatus.CANCELLED -> AppColors.TextSecondary
     }
 
     val statusLabel = when (status) {
-        AgentStatus.IDLE -> "Idle"
-        AgentStatus.THINKING -> "Thinking..."
-        AgentStatus.EXECUTING -> "Executing..."
-        AgentStatus.WAITING_FOR_USER -> "Waiting for Input"
-        AgentStatus.WAITING_FOR_CONFIRMATION -> "Needs Confirmation"
-        AgentStatus.VERIFYING -> "Verifying..."
-        AgentStatus.COMPLETED -> "Completed"
-        AgentStatus.FAILED -> "Failed"
-        AgentStatus.CANCELLED -> "Cancelled"
+        com.androidagent.aiagent.agent.AgentStatus.IDLE -> "Idle"
+        com.androidagent.aiagent.agent.AgentStatus.THINKING -> "Thinking"
+        com.androidagent.aiagent.agent.AgentStatus.EXECUTING -> "Executing"
+        com.androidagent.aiagent.agent.AgentStatus.WAITING_FOR_USER -> "Waiting"
+        com.androidagent.aiagent.agent.AgentStatus.WAITING_FOR_CONFIRMATION -> "Confirm?"
+        com.androidagent.aiagent.agent.AgentStatus.VERIFYING -> "Verifying"
+        com.androidagent.aiagent.agent.AgentStatus.COMPLETED -> "Done"
+        com.androidagent.aiagent.agent.AgentStatus.FAILED -> "Failed"
+        com.androidagent.aiagent.agent.AgentStatus.CANCELLED -> "Cancelled"
     }
 
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = AppColors.SurfaceVariant
-        ),
-        shape = RoundedCornerShape(12.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.SurfaceBorder, RoundedCornerShape(20.dp))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Colored dot + status
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(statusColor)
-                )
-                Text(
-                    text = statusLabel,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = statusColor,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Steps",
-                    modifier = Modifier.size(14.dp),
-                    tint = AppColors.TextSecondary
-                )
-                Text(
-                    text = "$stepNumber/$maxSteps",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = AppColors.TextSecondary
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Timer,
-                    contentDescription = "Latency",
-                    modifier = Modifier.size(14.dp),
-                    tint = AppColors.TextSecondary
-                )
-                Text(
-                    text = "${modelLatencyMs}ms",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = AppColors.TextSecondary
-                )
-            }
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(statusColor)
+            )
+            Text(
+                text = statusLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = statusColor,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.5.sp
+            )
         }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Step progress
+        Text(
+            text = "Step $stepNumber/$maxSteps",
+            style = MaterialTheme.typography.labelMedium,
+            color = AppColors.TextSecondary,
+            fontFamily = FontFamily.Monospace
+        )
+
+        // Separator dot
+        Box(
+            modifier = Modifier
+                .size(3.dp)
+                .clip(CircleShape)
+                .background(AppColors.SurfaceBorder)
+        )
+
+        // Latency
+        Text(
+            text = "${modelLatencyMs}ms",
+            style = MaterialTheme.typography.labelMedium,
+            color = AppColors.TextSecondary,
+            fontFamily = FontFamily.Monospace
+        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+// ─────────────────────────────────────────────────────────────────────────────
+// Step Cards (colored left border, smooth expand/collapse)
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 fun EventCard(
     event: AgentEvent,
     expanded: Boolean,
     onToggle: () -> Unit
 ) {
-    val (icon, iconColor, title) = when (event) {
+    val (icon, accentColor, title, stepLabel) = when (event) {
         is AgentEvent.ToolExecution -> {
             val isSuccess = event.result.success
-            Triple(
-                if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Error,
-                if (isSuccess) AppColors.Success else AppColors.Error,
-                "Tool: ${event.toolName}"
-            )
+            val color = if (isSuccess) AppColors.SuccessGreen else AppColors.ErrorRed
+            val ic = if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Error
+            Triple(ic, color, event.toolName, "Tool")
         }
         is AgentEvent.Observation -> Triple(
             Icons.Default.KeyboardArrowDown,
-            AppColors.Primary,
+            AppColors.ObservationPurple,
+            "Screen captured",
             "Observation"
         )
         is AgentEvent.ModelResponse -> Triple(
             Icons.AutoMirrored.Filled.ArrowRight,
-            AppColors.Primary,
-            "Model: ${event.decisionType}"
+            AppColors.AccentBlue,
+            event.decisionType,
+            "Model"
         )
         is AgentEvent.UserMessage -> Triple(
             Icons.Default.KeyboardArrowDown,
-            AppColors.Primary,
-            "User: ${event.text.take(50)}"
+            AppColors.AccentBlue,
+            event.text.take(60),
+            "User"
         )
         is AgentEvent.StatusChange -> Triple(
             Icons.Default.KeyboardArrowDown,
-            AppColors.Secondary,
-            "${event.from} → ${event.to}"
+            AppColors.TextSecondary,
+            "${event.from} → ${event.to}",
+            "Status"
         )
         is AgentEvent.Error -> Triple(
             Icons.Default.Error,
-            AppColors.Error,
-            event.message.take(80)
+            AppColors.ErrorRed,
+            event.message.take(80),
+            "Error"
         )
     }
 
-    Card(
+    // Chevron rotation animation
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(250)
+    )
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 2.dp)
-            .clickable { onToggle() },
-        colors = CardDefaults.cardColors(
-            containerColor = AppColors.Surface
-        ),
-        shape = RoundedCornerShape(12.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.SurfaceBorder, RoundedCornerShape(10.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = rememberRipple(color = AppColors.SurfaceBorder),
+                onClick = onToggle
+            )
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp)
+        // Header row with colored left accent bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconColor,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = "Step ${event.stepNumber}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.TextMuted
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse" else "Expand",
-                    tint = AppColors.TextSecondary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
+            // Colored left accent bar
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(24.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(accentColor)
+            )
 
-            AnimatedVisibility(visible = expanded) {
-                Column(
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    when (event) {
-                        is AgentEvent.ToolExecution -> ToolExecutionDetail(event)
-                        is AgentEvent.Observation -> {
-                            Text(
-                                text = event.summary,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.TextSecondary,
-                                fontFamily = FontFamily.Monospace
-                            )
-                        }
-                        is AgentEvent.ModelResponse -> {
-                            Text(
-                                text = event.content,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.TextSecondary
-                            )
-                        }
-                        is AgentEvent.UserMessage -> {
-                            Text(
-                                text = event.text,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.TextSecondary
-                            )
-                        }
-                        is AgentEvent.StatusChange -> {
-                            Text(
-                                text = "${event.from} → ${event.to}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.TextSecondary
-                            )
-                        }
-                        is AgentEvent.Error -> {
-                            Text(
-                                text = event.message,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.Error
-                            )
-                        }
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // Step type label (small, muted)
+            Text(
+                text = stepLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = AppColors.TextMuted,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 1.sp
+            )
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Title
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppColors.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f)
+            )
+
+            // Step number
+            Text(
+                text = "#${event.stepNumber}",
+                style = MaterialTheme.typography.labelSmall,
+                color = AppColors.TextMuted,
+                fontFamily = FontFamily.Monospace
+            )
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            // Expand chevron with rotation
+            Icon(
+                imageVector = Icons.Default.ExpandMore,
+                contentDescription = if (expanded) "Collapse" else "Expand",
+                tint = AppColors.TextSecondary,
+                modifier = Modifier
+                    .size(18.dp)
+                    .rotate(rotation)
+            )
+        }
+
+        // Animated detail section
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 25.dp, end = 14.dp, bottom = 12.dp)
+            ) {
+                // Subtle separator
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(AppColors.SurfaceBorder)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                when (event) {
+                    is AgentEvent.ToolExecution -> ToolExecutionDetail(event)
+                    is AgentEvent.Observation -> {
+                        Text(
+                            text = event.summary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.TextSecondary,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp
+                        )
+                    }
+                    is AgentEvent.ModelResponse -> {
+                        Text(
+                            text = event.content,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.TextSecondary,
+                            fontSize = 13.sp,
+                            lineHeight = 19.sp
+                        )
+                    }
+                    is AgentEvent.UserMessage -> {
+                        Text(
+                            text = event.text,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.TextSecondary,
+                            fontSize = 13.sp,
+                            lineHeight = 19.sp
+                        )
+                    }
+                    is AgentEvent.StatusChange -> {
+                        Text(
+                            text = "${event.from} → ${event.to}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.TextSecondary,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                    is AgentEvent.Error -> {
+                        Text(
+                            text = event.message,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.ErrorRed,
+                            fontSize = 13.sp,
+                            lineHeight = 19.sp
+                        )
                     }
                 }
             }
@@ -307,108 +364,99 @@ fun EventCard(
 }
 
 @Composable
-fun ToolExecutionDetail(event: AgentEvent.ToolExecution) {
+private fun ToolExecutionDetail(event: AgentEvent.ToolExecution) {
     val isSuccess = event.result.success
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        // Tool name row
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Tool:",
+                text = "Tool",
                 style = MaterialTheme.typography.labelSmall,
                 color = AppColors.TextMuted,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.5.sp
             )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = event.toolName,
                 style = MaterialTheme.typography.labelSmall,
-                color = AppColors.Primary,
+                color = AppColors.AccentBlue,
+                fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Medium
             )
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "Arguments:",
-                style = MaterialTheme.typography.labelSmall,
-                color = AppColors.TextMuted,
-                fontWeight = FontWeight.Bold
+        // Arguments
+        Text(
+            text = event.arguments,
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.TextSecondary,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 12.sp,
+            lineHeight = 17.sp
+        )
+
+        // Status badge
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(if (isSuccess) AppColors.SuccessGreen else AppColors.ErrorRed)
             )
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = event.arguments,
+                text = if (isSuccess) "Success" else "Failed",
                 style = MaterialTheme.typography.labelSmall,
-                color = AppColors.TextSecondary,
-                fontFamily = FontFamily.Monospace
+                color = if (isSuccess) AppColors.SuccessGreen else AppColors.ErrorRed,
+                fontWeight = FontWeight.SemiBold
             )
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        // Result card
+        Column {
             Text(
-                text = "Status:",
+                text = "RESULT",
                 style = MaterialTheme.typography.labelSmall,
                 color = AppColors.TextMuted,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 1.sp
             )
-            Badge(
-                containerColor = if (isSuccess) AppColors.Success else AppColors.Error,
-                contentColor = Color.White
-            ) {
-                Text(
-                    text = if (isSuccess) "Success" else "Failed",
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-        }
-
-        Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = "Result:",
-                style = MaterialTheme.typography.labelSmall,
-                color = AppColors.TextMuted,
-                fontWeight = FontWeight.Bold
-            )
-            Card(
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 200.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = AppColors.DarkBackground
-                ),
-                shape = RoundedCornerShape(8.dp)
+                    .heightIn(max = 200.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AppColors.Background)
+                    .border(1.dp, AppColors.SurfaceBorder, RoundedCornerShape(8.dp))
             ) {
-                Column(
+                Text(
+                    text = event.result.toString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.TextSecondary,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp,
                     modifier = Modifier
                         .verticalScroll(rememberScrollState())
-                        .padding(12.dp)
-                ) {
-                    Text(
-                        text = event.result.toString(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.TextSecondary,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp
-                    )
-                }
+                        .padding(10.dp)
+                )
             }
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Confirmation Dialog
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 fun ConfirmationDialog(
-    confirmation: PendingConfirmation,
+    confirmation: com.androidagent.aiagent.agent.PendingConfirmation,
     onConfirm: () -> Unit,
     onDeny: () -> Unit
 ) {
@@ -418,100 +466,97 @@ fun ConfirmationDialog(
             Text(
                 text = "Confirm Action",
                 color = AppColors.TextPrimary,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.SemiBold
             )
         },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = "The agent wants to perform the following action:",
+                    text = "The agent wants to perform:",
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppColors.TextSecondary
                 )
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = AppColors.SurfaceVariant
-                    ),
-                    shape = RoundedCornerShape(8.dp)
+                // Tool info card
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(AppColors.Background)
+                        .border(1.dp, AppColors.SurfaceBorder, RoundedCornerShape(8.dp))
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    Row {
+                        Text(
+                            text = "Tool: ",
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.TextMuted,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = confirmation.toolName,
+                            color = AppColors.AccentBlue,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    if (confirmation.arguments.isNotBlank()) {
                         Row {
                             Text(
-                                text = "Tool: ",
-                                fontWeight = FontWeight.Bold,
+                                text = "Args: ",
+                                fontWeight = FontWeight.SemiBold,
                                 color = AppColors.TextMuted,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = confirmation.toolName,
-                                color = AppColors.Primary,
+                                text = confirmation.arguments,
+                                color = AppColors.TextSecondary,
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold
+                                fontFamily = FontFamily.Monospace,
+                                maxLines = 4,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
-                        if (confirmation.arguments.isNotBlank()) {
-                            Row {
-                                Text(
-                                    text = "Args: ",
-                                    fontWeight = FontWeight.Bold,
-                                    color = AppColors.TextMuted,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = confirmation.arguments,
-                                    color = AppColors.TextSecondary,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontFamily = FontFamily.Monospace,
-                                    maxLines = 4,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        if (confirmation.reason.isNotBlank()) {
-                            Row {
-                                Text(
-                                    text = "Reason: ",
-                                    fontWeight = FontWeight.Bold,
-                                    color = AppColors.TextMuted,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = confirmation.reason,
-                                    color = AppColors.TextSecondary,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
+                    }
+                    if (confirmation.reason.isNotBlank()) {
+                        Row {
+                            Text(
+                                text = "Reason: ",
+                                fontWeight = FontWeight.SemiBold,
+                                color = AppColors.TextMuted,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = confirmation.reason,
+                                color = AppColors.TextSecondary,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
                     }
                 }
                 Text(
                     text = "Step ${confirmation.stepNumber}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.TextMuted
+                    color = AppColors.TextMuted,
+                    fontFamily = FontFamily.Monospace
                 )
             }
         },
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AppColors.Success
-                )
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AppColors.SuccessGreen)
             ) {
-                Text("Confirm")
+                Text("Confirm", color = Color.Black, fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {
             OutlinedButton(
                 onClick = onDeny,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = AppColors.Error
-                )
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.ErrorRed)
             ) {
                 Text("Deny")
             }
@@ -520,6 +565,10 @@ fun ConfirmationDialog(
         shape = RoundedCornerShape(16.dp)
     )
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User Question Dialog
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun UserQuestionDialog(
@@ -535,33 +584,33 @@ fun UserQuestionDialog(
             Text(
                 text = "Agent Question",
                 color = AppColors.TextPrimary,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.SemiBold
             )
         },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     text = question,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.TextSecondary
+                    color = AppColors.TextSecondary,
+                    lineHeight = 22.sp
                 )
                 OutlinedTextField(
                     value = answerText,
                     onValueChange = { answerText = it },
                     label = { Text("Your answer") },
-                    placeholder = { Text("Type your answer...") },
+                    placeholder = { Text("Type your answer…") },
                     singleLine = false,
                     maxLines = 4,
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = AppColors.TextPrimary,
                         unfocusedTextColor = AppColors.TextPrimary,
-                        focusedBorderColor = AppColors.Primary,
-                        unfocusedBorderColor = AppColors.TextMuted,
-                        focusedLabelColor = AppColors.Primary,
-                        cursorColor = AppColors.Primary
+                        focusedBorderColor = AppColors.AccentBlue,
+                        unfocusedBorderColor = AppColors.SurfaceBorder,
+                        focusedLabelColor = AppColors.AccentBlue,
+                        cursorColor = AppColors.AccentBlue
                     )
                 )
             }
@@ -574,11 +623,10 @@ fun UserQuestionDialog(
                     }
                 },
                 enabled = answerText.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AppColors.Primary
-                )
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AppColors.AccentBlue)
             ) {
-                Text("Submit")
+                Text("Submit", fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {
@@ -591,6 +639,10 @@ fun UserQuestionDialog(
     )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Accessibility Status Card
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 fun AccessibilityStatusCard(
     isEnabled: Boolean,
@@ -598,101 +650,93 @@ fun AccessibilityStatusCard(
 ) {
     if (isEnabled) return
 
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = AppColors.Error.copy(alpha = 0.1f)
-        ),
-        shape = RoundedCornerShape(12.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(AppColors.ErrorRed.copy(alpha = 0.08f))
+            .border(1.dp, AppColors.ErrorRed.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.SettingsAccessibility,
-                contentDescription = "Accessibility",
-                tint = AppColors.Warning,
-                modifier = Modifier.size(24.dp)
+        Icon(
+            imageVector = Icons.Default.SettingsAccessibility,
+            contentDescription = "Accessibility",
+            tint = AppColors.WarningAmber,
+            modifier = Modifier.size(22.dp)
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Accessibility Required",
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppColors.TextPrimary,
+                fontWeight = FontWeight.SemiBold
             )
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = "Accessibility Service Required",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = AppColors.TextPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "The agent needs accessibility permissions to interact with apps on your device.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.TextSecondary
-                )
-            }
-            Button(
-                onClick = onEnable,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AppColors.Warning
-                )
-            ) {
-                Text("Enable", color = Color.Black)
-            }
+            Text(
+                text = "The agent needs accessibility permissions to interact with apps.",
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.TextSecondary,
+                lineHeight = 16.sp
+            )
+        }
+        Button(
+            onClick = onEnable,
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = AppColors.WarningAmber),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+        ) {
+            Text("Enable", color = Color.Black, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Error Banner
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun ErrorBanner(
     message: String,
     onDismiss: () -> Unit
 ) {
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = AppColors.Error.copy(alpha = 0.15f)
-        ),
-        shape = RoundedCornerShape(12.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(AppColors.ErrorRed.copy(alpha = 0.08f))
+            .border(1.dp, AppColors.ErrorRed.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Icon(
+            imageVector = Icons.Default.Error,
+            contentDescription = "Error",
+            tint = AppColors.ErrorRed,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.ErrorRed,
+            modifier = Modifier.weight(1f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            lineHeight = 16.sp
+        )
+        IconButton(
+            onClick = onDismiss,
+            modifier = Modifier.size(28.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Error,
-                contentDescription = "Error",
-                tint = AppColors.Error,
-                modifier = Modifier.size(20.dp)
+                imageVector = Icons.Default.Close,
+                contentDescription = "Dismiss",
+                tint = AppColors.TextMuted,
+                modifier = Modifier.size(16.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.Error,
-                modifier = Modifier.weight(1f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Dismiss",
-                    tint = AppColors.Error,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
         }
     }
 }

@@ -58,6 +58,45 @@ class ToolExecutor(
 
         /** Error code returned when the requested tool is not registered. */
         const val ERROR_UNKNOWN_TOOL = "UNKNOWN_TOOL"
+
+        /**
+         * Common tool-name mistakes the model makes, mapped to the correct
+         * canonical name that is actually registered.
+         */
+        private val TOOL_ALIASES: Map<String, String> = mapOf(
+            "android.set_text"       to "android.type_text",
+            "android.enter_text"     to "android.type_text",
+            "android.type"           to "android.type_text",
+            "android.input_text"     to "android.type_text",
+            "android.tap"            to "android.click",
+            "android.press_back"     to "android.back",
+            "android.go_back"        to "android.back",
+            "android.navigate_back"  to "android.back",
+            "android.long_press"     to "android.long_click",
+            "android.long_tap"       to "android.long_click",
+            "android.search"         to "android.find",
+            "android.look_for"       to "android.find",
+            "android.wait"           to "android.wait",
+            "android.sleep"          to "android.wait",
+            "android.delay"          to "android.wait",
+            "android.clear"          to "android.clear_text",
+            "android.erase_text"     to "android.clear_text",
+            "android.delete_text"    to "android.clear_text",
+            "android.press_home"     to "android.home",
+            "android.go_home"        to "android.home",
+            "android.show_recents"   to "android.recents",
+            "android.recent_apps"    to "android.recents",
+            "android.key"            to "android.press_key",
+            "android.send_key"       to "android.press_key",
+            "android.open_app"       to "android.launch_app",
+            "android.start_app"      to "android.launch_app",
+            "android.inspect"        to "android.inspect_screen",
+            "android.analyze"        to "android.analyze_screen",
+            "android.find_visual"    to "android.find_visual_target",
+            "android.visual_find"    to "android.find_visual_target",
+            "agent.ask"              to "agent.ask_user",
+            "agent.done"             to "agent.finish"
+        )
     }
 
     /**
@@ -182,4 +221,79 @@ class ToolExecutor(
      * Return the names of all registered tool handlers.
      */
     fun getRegisteredHandlerNames(): Set<String> = toolHandlers.keys
+
+    /**
+     * Attempt to find the closest matching registered tool name for a
+     * name the model supplied that does not exist.
+     *
+     * Resolution order:
+     * 1. Exact alias lookup via [TOOL_ALIASES].
+     * 2. Levenshtein distance ≤ 3 against all registered names.
+     * 3. Substring / suffix match (e.g. `"click"` → `"android.click"`).
+     *
+     * @return The best-matching canonical tool name, or `null` if nothing
+     *         is close enough.
+     */
+    fun findClosestToolName(requestedName: String): String? {
+        val normalised = requestedName.trim().lowercase()
+
+        // 1. Alias lookup
+        TOOL_ALIASES[normalised]?.let { return it }
+
+        // 2. Levenshtein distance
+        var bestName: String? = null
+        var bestDist = Int.MAX_VALUE
+        for (registered in toolHandlers.keys) {
+            val d = levenshtein(normalised, registered.lowercase())
+            if (d < bestDist) {
+                bestDist = d
+                bestName = registered
+            }
+        }
+        if (bestDist <= 3 && bestName != null) return bestName
+
+        // 3. Suffix match: if the requested name ends with the part after
+        //    the last dot of a registered name, suggest it.
+        val suffix = normalised.substringAfterLast(".", normalised)
+        if (suffix != normalised) {
+            // already had a dot – try matching the suffix part
+            val noDotMatch = toolHandlers.keys.firstOrNull {
+                it.substringAfterLast(".") == suffix
+            }
+            if (noDotMatch != null) return noDotMatch
+        }
+        // Try matching the whole requested name against registered suffixes
+        val suffixMatch = toolHandlers.keys.firstOrNull {
+            it.substringAfterLast(".") == normalised
+        }
+        if (suffixMatch != null) return suffixMatch
+
+        return null
+    }
+
+    /** Simple Levenshtein distance between two strings. */
+    private fun levenshtein(a: String, b: String): Int {
+        if (a == b) return 0
+        val la = a.length
+        val lb = b.length
+        if (la == 0) return lb
+        if (lb == 0) return la
+        var prev = IntArray(lb + 1) { it }
+        var curr = IntArray(lb + 1)
+        for (i in 1..la) {
+            curr[0] = i
+            for (j in 1..lb) {
+                val cost = if (a[i - 1] == b[j - 1]) 0 else 1
+                curr[j] = minOf(
+                    prev[j] + 1,      // deletion
+                    curr[j - 1] + 1,  // insertion
+                    prev[j - 1] + cost // substitution
+                )
+            }
+            val tmp = prev
+            prev = curr
+            curr = tmp
+        }
+        return prev[lb]
+    }
 }

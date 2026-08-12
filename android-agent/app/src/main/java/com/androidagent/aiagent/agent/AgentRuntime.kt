@@ -41,9 +41,17 @@ class AgentRuntime(
     private var agentJob: Job? = null
     private val agentScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    /**
+     * When set to true, the next iteration of the agent loop should
+     * *not* increment the step counter.  Used for UNKNOWN_TOOL recovery
+     * so the model's mistaken call doesn't consume a step budget.
+     */
+    private var skipNextStepIncrement = false
+
     fun startTask(goal: String) {
         agentJob?.cancel()
         loopGuard.reset()
+        skipNextStepIncrement = false
 
         _state.value = AgentState(
             goal = goal,
@@ -321,9 +329,14 @@ class AgentRuntime(
                 val shouldContinue = executeDecision(decision, observation.id)
                 if (!shouldContinue) break
 
-                _state.value = _state.value.copy(
-                    stepNumber = _state.value.stepNumber + 1
-                )
+                if (!skipNextStepIncrement) {
+                    _state.value = _state.value.copy(
+                        stepNumber = _state.value.stepNumber + 1
+                    )
+                } else {
+                    skipNextStepIncrement = false
+                    Log.d(TAG, "Skipped step increment (UNKNOWN_TOOL recovery)")
+                }
             }
         } catch (e: CancellationException) {
             Log.i(TAG, "Agent loop cancelled")
@@ -382,8 +395,9 @@ class AgentRuntime(
     ): Boolean {
         _state.value = _state.value.copy(status = AgentStatus.EXECUTING)
 
-        val toolResult = try {
-            withContext(Dispatchers.IO) {
+        var toolResult: ToolResult
+        try {
+            toolResult = withContext(Dispatchers.IO) {
                 toolExecutor.execute(decision.toolName, decision.arguments, observationId)
             }
         } catch (e: CancellationException) {
@@ -400,6 +414,81 @@ class AgentRuntime(
                 history = _state.value.history + errorEvent
             )
             return true
+        }
+
+        // ── BUG 2: UNKNOWN_TOOL ──
+        // The model called a tool that doesn't exist.  Find the closest
+        // registered name, tell the model, and let it retry without
+        // consuming a step.
+        if (!toolResult.success && toolResult.error?.code == ToolExecutor.ERROR_UNKNOWN_TOOL) {
+            val closest = toolExecutor.findClosestToolName(decision.toolName)
+            val correctionMsg = if (closest != null) {
+                "Tool '${decision.toolName}' does not exist. The correct tool name is '$closest'. " +
+                    "Please retry your action using '$closest' with the same arguments."
+            } else {
+                "Tool '${decision.toolName}' does not exist. " +
+                    "Available tools: ${toolExecutor.getRegisteredHandlerNames().sorted().joinToString(", ")}. " +
+                    "Please choose a valid tool name and retry."
+            }
+            Log.i(TAG, correctionMsg)
+
+            val errorEvent = AgentEvent.Error(
+                stepNumber = _state.value.stepNumber,
+                message = correctionMsg
+            )
+            _state.value = _state.value.copy(
+                status = AgentStatus.THINKING,
+                lastError = correctionMsg,
+                history = _state.value.history + errorEvent
+            )
+
+            // Don't count this as a step – let the model retry for free.
+            skipNextStepIncrement = true
+            return true
+        }
+
+        // ── BUG 1: NODE_NOT_FOUND auto-retry ──
+        // The node the model wanted to interact with vanished from the
+        // UI tree (screen changed since last observation).  Re-observe
+        // and retry the *same* tool call once before reporting failure.
+        if (!toolResult.success && toolResult.error?.code == "NODE_NOT_FOUND") {
+            Log.i(TAG, "NODE_NOT_FOUND for ${decision.toolName}(${decision.arguments}), re-observing and retrying once")
+
+            val retryResult: ToolResult? = try {
+                // Re-observe the screen (no screenshot – we just need the tree)
+                val newObservation = withContext(Dispatchers.IO) {
+                    accessibilityObserver.observeWithScreenshot(takeScreenshot = false)
+                }
+
+                val retryObsEvent = AgentEvent.Observation(
+                    stepNumber = _state.value.stepNumber,
+                    summary = "Auto re-observe (NODE_NOT_FOUND retry): " +
+                        "Package: ${newObservation.packageName}, Nodes: ${newObservation.uiTree.size}"
+                )
+
+                loopGuard.recordObservation(newObservation)
+
+                _state.value = _state.value.copy(
+                    lastObservation = newObservation,
+                    currentObservationId = newObservation.id,
+                    history = _state.value.history + retryObsEvent
+                )
+
+                // Retry the exact same tool call with the new observation ID
+                withContext(Dispatchers.IO) {
+                    toolExecutor.execute(decision.toolName, decision.arguments, newObservation.id)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Re-observation/retry failed, using original NODE_NOT_FOUND result", e)
+                null
+            }
+
+            // Use the retry result if we got one
+            if (retryResult != null) {
+                toolResult = retryResult
+            }
         }
 
         val toolEvent = AgentEvent.ToolExecution(

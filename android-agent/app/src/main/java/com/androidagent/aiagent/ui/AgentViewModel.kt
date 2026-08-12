@@ -10,6 +10,7 @@ import com.androidagent.aiagent.accessibility.GestureController
 import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
 import com.androidagent.aiagent.agent.AgentRuntime
 import com.androidagent.aiagent.agent.AgentState
+import com.androidagent.aiagent.agent.AgentStatus
 import com.androidagent.aiagent.ai.GemmaClient
 import com.androidagent.aiagent.ai.VisionAnalyzer
 import com.androidagent.aiagent.data.AppDatabase
@@ -18,6 +19,7 @@ import com.androidagent.aiagent.data.SettingsRepository
 import com.androidagent.aiagent.data.TaskRepository
 import com.androidagent.aiagent.safety.ConfirmationManager
 import com.androidagent.aiagent.safety.SafetyController
+import com.androidagent.aiagent.service.AgentForegroundService
 import com.androidagent.aiagent.tools.ToolExecutor
 import com.androidagent.aiagent.tools.ToolHandler
 import com.androidagent.aiagent.tools.ToolRegistry
@@ -29,6 +31,9 @@ import com.androidagent.aiagent.tools.agent.ConfirmTool
 import com.androidagent.aiagent.tools.agent.FinishTool
 import com.androidagent.aiagent.tools.agent.StopTool
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 
 class AgentViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -76,6 +81,27 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         registerAllTools()
+        observeAgentState()
+    }
+
+    private fun observeAgentState() {
+        viewModelScope.launch {
+            stateFlow
+                .distinctUntilChanged { old, new -> old.status == new.status && old.goal == new.goal }
+                .collect { state ->
+                    when (state.status) {
+                        AgentStatus.IDLE, AgentStatus.COMPLETED, AgentStatus.FAILED, AgentStatus.CANCELLED -> {
+                            if (state.status != AgentStatus.IDLE) {
+                                AgentForegroundService.updateNotification(context, state.status, state.goal)
+                            }
+                            AgentForegroundService.stop(context)
+                        }
+                        else -> {
+                            AgentForegroundService.updateNotification(context, state.status, state.goal)
+                        }
+                    }
+                }
+        }
     }
 
     private fun registerAllTools() {
@@ -132,11 +158,13 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startTask(goal: String) {
+        AgentForegroundService.start(context, goal)
         agentRuntime.startTask(goal)
     }
 
     fun stopAgent() {
         agentRuntime.stopAgent()
+        AgentForegroundService.stop(context)
     }
 
     fun respondToUser(answer: String) {
@@ -161,5 +189,6 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         agentRuntime.stopAgent()
+        AgentForegroundService.stop(context)
     }
 }

@@ -4,15 +4,6 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      create_release:
-        description: 'Create GitHub Release'
-        required: false
-        default: 'true'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
 
 jobs:
   build:
@@ -41,85 +32,92 @@ jobs:
           curl -sL https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradlew -o gradlew
           chmod +x gradlew
 
-      # Build universal release APK (signed with debug keys, like reference projects)
-      - name: Build Release APK (Universal)
+      - name: Generate Release Keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore app/release.keystore \
+            -alias taskflow \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass taskflow2025 -keypass taskflow2025 \
+            -dname "CN=TaskFlow, OU=Dev, O=TaskFlow, L=Unknown, ST=Unknown, C=US"
+
+      - name: Build Release APK
+        env:
+          KEYSTORE_PATH: release.keystore
+          KEYSTORE_PASSWORD: taskflow2025
+          KEY_ALIAS: taskflow
+          KEY_PASSWORD: taskflow2025
         run: ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
 
-      # Build ABI-specific APKs for smaller downloads
-      - name: Build Release APK (arm64-v8a)
-        run: ./gradlew assembleRelease -Pandroid.buildOnlyPreDexedDex=false --no-daemon 2>&1 || true
+      - name: Verify APK
+        run: |
+          APK=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
+          echo "APK: $APK"
+          ls -lh "$APK"
 
       - name: Prepare release assets
         run: |
           mkdir -p release-assets
-          # Universal APK (works on all devices)
-          cp app/build/outputs/apk/release/*.apk release-assets/android-agent-universal-release.apk 2>/dev/null || true
-          # Also keep debug as fallback
-          cp app/build/outputs/apk/debug/*.apk release-assets/android-agent-debug.apk 2>/dev/null || true
-          # Generate SHA256 checksums
+          cp app/build/outputs/apk/release/*.apk release-assets/TaskFlow-v2.0.0.apk
           cd release-assets
           sha256sum *.apk > SHA256SUMS.txt
-          cat SHA256SUMS.txt
           ls -lh
 
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: android-agent-apk
+          name: taskflow-apk
           path: release-assets/*
           if-no-files-found: warn
 
-      # Create GitHub Release (same method as reference private-agent repo)
+      - name: Delete old release
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          gh release delete v2.0.0 --yes 2>/dev/null || true
+          git tag -d v2.0.0 2>/dev/null || true
+          git push origin :refs/tags/v2.0.0 2>/dev/null || true
+
       - name: Create GitHub Release
-        if: success() && (github.event.inputs.create_release == 'true' || github.event_name == 'push')
+        if: success()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.2
-          name: Android AI Agent v1.0.2
+          tag_name: v2.0.0
+          name: TaskFlow v2.0.0
+          token: ${{ secrets.PAT_TOKEN }}
           body: |
-            # Android AI Agent v1.0.2
+            # TaskFlow v2.0.0 — Complete Rewrite
 
-            Native Android AI Computer-Use Agent powered by Gemma 4 31B.
+            A modern Android task automation agent with beautiful UI and intelligent tool execution.
 
-            ## Features
-            - 21+ registered automation tools (click, scroll, swipe, type, launch apps, screenshots, etc.)
-            - Ollama Cloud API integration with multimodal vision support
-            - Accessibility Service based UI automation
-            - Dark Material 3 theme
-            - Task history with Room database
-            - Safety controller with configurable confirmation policies
-            - Emergency stop button
-            - Encrypted API key storage
+            ## What's New in v2.0.0
+            - **Complete UI Redesign**: Ultra-minimalist monochrome design with collapsible step cards, smooth animations, colored status indicators
+            - **Auto Node Recovery**: Agent automatically re-observes screen when UI changes and retries failed actions
+            - **Smart Tool Resolution**: Fuzzy matching + 30+ aliases handle AI model tool name mistakes
+            - **Background Execution**: Foreground service keeps agent running when you switch apps
+            - **Complete Tool Catalog**: All 21 tools listed in prompt with exact names — no more wrong tool calls
+            - **Device Awareness**: Prompt includes Android/ColorOS context for better decisions
 
-            ## Installation
-            1. Download `android-agent-universal-release.apk`
-            2. Enable "Install from unknown sources" in Settings > Security
-            3. Install and open the app
-            4. Enable Accessibility Service when prompted
-            5. Go to Settings and enter your Ollama API key
+            ## Installation (OPPO/ColorOS)
+            1. **Settings** > **Password & security** > **Install unknown apps** > Enable your browser
+            2. **Google Play Store** > Profile > **Play Protect** > Gear icon > **Turn OFF** scanning
+            3. Download `TaskFlow-v2.0.0.apk` and install
+            4. Re-enable Play Protect after install
+            5. Open app > Enable **Screen Control Service** in Settings
+            6. Enter your API key and model name
 
             ## Compatibility
-            - Android 9+ (minSdk 28)
-            - Fully compatible with Android 15 (targetSdk 35)
-            - Works on arm64, armv7, x86_64 devices
-
-            ## Files
-            - `android-agent-universal-release.apk` — Recommended, works on all devices
-            - `android-agent-debug.apk` — Debug build (larger, for testing)
-            - `SHA256SUMS.txt` — Verify download integrity
+            - Android 9+ (minSdk 28), fully compatible with Android 15 (targetSdk 35)
+            - Tested on OPPO A3 Pro 5G (ColorOS 15.0)
           files: release-assets/*
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: build-failure-logs
-          path: |
-            app/build/
-            build/
+          path: app/build/
           if-no-files-found: ignore
