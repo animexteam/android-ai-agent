@@ -1,0 +1,1812 @@
+     1→     1→<!doctype html>
+     2→     2→<html lang="en" data-theme="dark">
+     3→     3→<head>
+     4→     4→<meta charset="utf-8">
+     5→     5→<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+     6→     6→<meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+     7→     7→<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+     8→     8→<meta name="description" content="TBH Helper Ai — an autonomous AI assistant for managing your TeleBotHost Telegram bots in plain language.">
+     9→     9→<title>TBH Helper Ai</title>
+    10→    10→<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Cpath d='M9 9h14M16 9v14' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+    11→    11→<link rel="preconnect" href="https://fonts.googleapis.com">
+    12→    12→<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    13→    13→<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    14→    14→<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    15→    15→<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    16→    16→<style>
+    17→    17→/* ============================================================================
+    18→    18→   TBH HELPER AI — ULTRA-MINIMALIST MONOCHROME DESIGN SYSTEM
+    19→    19→   ============================================================================ */
+    20→    20→:root{
+    21→    21→  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    22→    22→  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+    23→    23→  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:24px; --r-full:999px;
+    24→    24→  --ease:cubic-bezier(.4,0,.2,1); --ease-out:cubic-bezier(.16,1,.3,1); --spring:cubic-bezier(.34,1.4,.64,1);
+    25→    25→  --t-fast:.13s; --t:.22s; --t-slow:.4s;
+    26→    26→  --nav:0px; /* runtime sidebar width for mobile-safe layout */
+    27→    27→}
+    28→    28→/* ---- DARK (monochrome) ---- */
+    29→    29→[data-theme="dark"]{
+    30→    30→  --bg:#0a0a0a; --bg-2:#0f0f0f;
+    31→    31→  --surface:#141414; --surface-2:#101010; --surface-3:#1c1c1c;
+    32→    32→  --elevated:#161616; --line:#242424; --line-2:#333333;
+    33→    33→  --text:#f2f2f2; --text-2:#a0a0a0; --text-3:#6a6a6a; --text-inv:#0a0a0a;
+    34→    34→  --accent:#f2f2f2; --accent-soft:#1c1c1c;
+    35→    35→  --success:#e8e8e8; --warn:#c9c9c9; --danger:#ff6b6b; --danger-bg:#2a1414;
+    36→    36→  --success-bg:#1c1c1c; --warn-bg:#1c1c1c;
+    37→    37→  --user-bubble:#1a1a1a; --scrim:rgba(0,0,0,.7);
+    38→    38→  --shimmer:linear-gradient(90deg,#141414 0%,#202020 50%,#141414 100%);
+    39→    39→  --sh-1:0 1px 2px rgba(0,0,0,.4); --sh-2:0 4px 20px rgba(0,0,0,.5); --sh-3:0 16px 50px rgba(0,0,0,.6);
+    40→    40→  --ring:0 0 0 1px var(--line-2);
+    41→    41→}
+    42→    42→/* ---- LIGHT (monochrome, clean like demo) ---- */
+    43→    43→[data-theme="light"]{
+    44→    44→  --bg:#ffffff; --bg-2:#fafafa;
+    45→    45→  --surface:#ffffff; --surface-2:#f7f7f7; --surface-3:#f0f0f0;
+    46→    46→  --elevated:#ffffff; --line:#eaeaea; --line-2:#dcdcdc;
+    47→    47→  --text:#0d0d0d; --text-2:#6b6b6b; --text-3:#9a9a9a; --text-inv:#ffffff;
+    48→    48→  --accent:#0d0d0d; --accent-soft:#f2f2f2;
+    49→    49→  --success:#0d0d0d; --warn:#6b6b6b; --danger:#e5484d; --danger-bg:#fdecec;
+    50→    50→  --success-bg:#f2f2f2; --warn-bg:#f2f2f2;
+    51→    51→  --user-bubble:#f4f4f4; --scrim:rgba(15,15,15,.28);
+    52→    52→  --shimmer:linear-gradient(90deg,#f2f2f2 0%,#e6e6e6 50%,#f2f2f2 100%);
+    53→    53→  --sh-1:0 1px 2px rgba(0,0,0,.05); --sh-2:0 6px 24px rgba(0,0,0,.07); --sh-3:0 18px 50px rgba(0,0,0,.1);
+    54→    54→  --ring:0 0 0 1px var(--line-2);
+    55→    55→}
+    56→    56→*{box-sizing:border-box}
+    57→    57→*:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+    58→    58→html,body{height:100%;margin:0}
+    59→    59→body{font-family:var(--font);background:var(--bg);color:var(--text);
+    60→    60→  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow:hidden;
+    61→    61→  font-size:15px;line-height:1.55;transition:background var(--t),color var(--t)}
+    62→    62→.mono{font-family:var(--mono)}
+    63→    63→button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+    64→    64→a{color:var(--text);text-decoration:none;border-bottom:1px solid var(--line-2)}a:hover{border-color:var(--text)}
+    65→    65→input,textarea,select{font-family:inherit}
+    66→    66→::-webkit-scrollbar{width:10px;height:10px}
+    67→    67→::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:var(--r-full);border:3px solid transparent;background-clip:padding-box}
+    68→    68→::-webkit-scrollbar-thumb:hover{background:var(--text-3);background-clip:padding-box}
+    69→    69→::-webkit-scrollbar-track{background:transparent}
+    70→    70→@media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+    71→    71→
+    72→    72→/* icons */
+    73→    73→.ic{width:18px;height:18px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;display:inline-block;vertical-align:middle}
+    74→    74→.ic.sm{width:15px;height:15px}.ic.lg{width:22px;height:22px}
+    75→    75→
+    76→    76→/* ============================ APP SHELL ============================ */
+    77→    77→#app{display:grid;grid-template-columns:64px 1fr;height:100dvh;transition:grid-template-columns var(--t) var(--ease)}
+    78→    78→#app.expanded{grid-template-columns:248px 1fr}
+    79→    79→#app.collapsed{grid-template-columns:0 1fr}
+    80→    80→
+    81→    81→/* ---------- Sidebar (minimalist icon rail like demo) ---------- */
+    82→    82→#nav{background:var(--surface-2);border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+    83→    83→.nav-top{padding:12px 12px 4px;display:flex;flex-direction:column;gap:6px}
+    84→    84→.rail-btn{width:40px;height:40px;border-radius:var(--r-md);display:grid;place-items:center;color:var(--text-2);
+    85→    85→  border:1px solid transparent;transition:background var(--t-fast),color var(--t-fast),transform var(--t-fast)}
+    86→    86→.rail-btn:hover{background:var(--surface-3);color:var(--text)}
+    87→    87→.rail-btn:active{transform:scale(.93)}
+    88→    88→.rail-btn.brand-btn{color:var(--text);background:var(--surface-3);border-color:var(--line)}
+    89→    89→#app.expanded .rail-btn{display:flex;align-items:center;width:100%;justify-content:flex-start;gap:12px;padding:0 12px;font-size:14px;font-weight:500}
+    90→    90→#app.expanded .rail-btn .rbl{display:inline}
+    91→    91→.rail-btn .rbl{display:none;white-space:nowrap}
+    92→    92→.nav-sec{padding:14px 16px 6px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);opacity:0;transition:opacity var(--t)}
+    93→    93→#app.expanded .nav-sec{opacity:1}
+    94→    94→.nav-list{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 10px 12px;opacity:0;pointer-events:none;transition:opacity var(--t)}
+    95→    95→#app.expanded .nav-list{opacity:1;pointer-events:auto}
+    96→    96→.chat-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);font-size:13.5px;color:var(--text-2);
+    97→    97→  cursor:pointer;transition:background var(--t-fast);position:relative;margin-bottom:1px}
+    98→    98→.chat-item:hover{background:var(--surface-3)}
+    99→    99→.chat-item.active{background:var(--surface-3);color:var(--text);font-weight:500}
+   100→   100→.chat-item .ci-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   101→   101→.chat-item .ci-del{opacity:0;color:var(--text-3);padding:3px;border-radius:6px;transition:opacity var(--t-fast),color var(--t-fast),background var(--t-fast)}
+   102→   102→.chat-item:hover .ci-del,.chat-item:focus-within .ci-del{opacity:1}
+   103→   103→.chat-item .ci-del:hover{color:var(--danger);background:var(--danger-bg)}
+   104→   104→.nav-foot{border-top:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+   105→   105→
+   106→   106→/* ---------- Main ---------- */
+   107→   107→#main{display:flex;flex-direction:column;min-width:0;position:relative;height:100dvh;overflow:hidden}
+   108→   108→.topbar{height:58px;flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:0 14px;position:relative;z-index:20}
+   109→   109→.icon-btn{width:38px;height:38px;border-radius:var(--r-md);display:grid;place-items:center;color:var(--text-2);transition:background var(--t-fast),color var(--t-fast),transform var(--t-fast);position:relative}
+   110→   110→.icon-btn:hover{background:var(--surface-3);color:var(--text)}
+   111→   111→.icon-btn:active{transform:scale(.9)}
+   112→   112→.spacer{flex:1}
+   113→   113→/* centered model selector pill (like demo) */
+   114→   114→.model-select{position:absolute;left:calc(50% + var(--nav)/2);top:11px;transform:translateX(-50%);height:36px;padding:0 14px;border-radius:var(--r-full);
+   115→   115→  display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;color:var(--text);
+   116→   116→  border:1px solid var(--line);background:var(--surface);transition:border-color var(--t-fast),box-shadow var(--t-fast);max-width:56vw}
+   117→   117→.model-select:hover{border-color:var(--line-2);box-shadow:var(--sh-1)}
+   118→   118→.model-select:active{transform:translateX(-50%) scale(.97)}
+   119→   119→.model-select .ms-name{font-family:var(--mono);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   120→   120→.model-select .ms-chev{color:var(--text-3);transition:transform var(--t-fast)}
+   121→   121→.model-select[aria-expanded="true"] .ms-chev{transform:rotate(180deg)}
+   122→   122→.model-select .live{width:6px;height:6px;border-radius:50%;background:var(--text-3);flex:0 0 auto}
+   123→   123→.model-select.on .live{background:var(--success);animation:livepulse 2.4s var(--ease) infinite}
+   124→   124→@keyframes livepulse{0%,100%{opacity:.35}50%{opacity:1}}
+   125→   125→/* model picker dropdown (models only — NOT full settings) */
+   126→   126→.model-menu{position:absolute;left:calc(50% + var(--nav)/2);top:52px;transform:translateX(-50%) translateY(-10px) scale(.97);
+   127→   127→  transform-origin:top center;width:300px;max-width:90vw;background:var(--elevated);border:1px solid var(--line-2);
+   128→   128→  border-radius:var(--r-lg);box-shadow:var(--sh-3);padding:6px;z-index:30;opacity:0;pointer-events:none;
+   129→   129→  transition:opacity var(--t) var(--ease-out),transform var(--t) var(--spring);max-height:min(70vh,440px);overflow-y:auto}
+   130→   130→.model-menu.open{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0) scale(1)}
+   131→   131→.mm-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--r-md);cursor:pointer;transition:background var(--t-fast);text-align:left;width:100%}
+   132→   132→.mm-item:hover{background:var(--surface-3)}
+   133→   133→.mm-item.sel{background:var(--surface-3)}
+   134→   134→.mm-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--text-3)}
+   135→   135→.mm-dot.ready{background:var(--success)}
+   136→   136→.mm-dot.busy{background:var(--warn)}
+   137→   137→.mm-tx{flex:1;min-width:0}
+   138→   138→.mm-tx b{display:block;font-size:13px;font-weight:600;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   139→   139→.mm-tx span{font-size:11px;color:var(--text-3);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   140→   140→.mm-check{color:var(--text);opacity:0;flex:0 0 auto}
+   141→   141→.mm-item.sel .mm-check{opacity:1}
+   142→   142→.mm-sep{height:1px;background:var(--line);margin:5px 8px}
+   143→   143→.mm-hd{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);padding:6px 11px 3px}
+   144→   144→
+   145→   145→/* ============================ MESSAGES ============================ */
+   146→   146→#scroll{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth;overscroll-behavior:contain;min-height:0}
+   147→   147→.thread{max-width:760px;margin:0 auto;padding:20px 24px 8px;display:flex;flex-direction:column;gap:24px}
+   148→   148→.turn{display:flex;gap:13px;animation:msg-in .4s var(--ease-out) both}
+   149→   149→@keyframes msg-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+   150→   150→.avatar{width:30px;height:30px;border-radius:var(--r-sm);flex:0 0 auto;display:grid;place-items:center;font-weight:600;font-size:12px;border:1px solid var(--line)}
+   151→   151→.avatar.user{background:var(--user-bubble);color:var(--text-2)}
+   152→   152→.avatar.ai{background:var(--text);color:var(--text-inv);border-color:var(--text)}
+   153→   153→.avatar.ai svg{width:17px;height:17px;stroke:var(--text-inv);fill:none;stroke-width:2.4}
+   154→   154→.turn-body{flex:1;min-width:0}
+   155→   155→.turn-who{font-size:12.5px;font-weight:600;color:var(--text-2);margin-bottom:5px;display:flex;align-items:center;gap:8px}
+   156→   156→.turn-who .tag{font-size:10px;font-weight:500;font-family:var(--mono);color:var(--text-3);background:var(--surface-3);border:1px solid var(--line);padding:1px 7px;border-radius:var(--r-full)}
+   157→   157→.turn-who .tag.waiting{color:var(--text-2);animation:tagpulse 1.6s var(--ease) infinite}
+   158→   158→@keyframes tagpulse{0%,100%{opacity:.55}50%{opacity:1}}
+   159→   159→.limit-note{display:flex;gap:11px;align-items:flex-start;padding:13px 15px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--line-2)}
+   160→   160→.limit-note svg{margin-top:2px;color:var(--warn);flex:0 0 auto}
+   161→   161→.limit-note b{display:block;font-size:14px;margin-bottom:3px}
+   162→   162→.limit-note span{font-size:13px;color:var(--text-2);line-height:1.55}
+   163→   163→.edit-box{margin-top:2px}
+   164→   164→.edit-ta{width:100%;background:var(--surface-2);border:1px solid var(--line-2);color:var(--text);border-radius:var(--r-md);
+   165→   165→  padding:11px 13px;font-size:15px;line-height:1.5;resize:none;outline:none;min-height:44px;font-family:inherit}
+   166→   166→.edit-ta:focus{border-color:var(--text-3)}
+   167→   167→.edit-row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+   168→   168→.edit-row .btn{padding:8px 14px;font-size:13px}
+   169→   169→.prose{font-size:15px;line-height:1.7;color:var(--text);word-wrap:break-word;overflow-wrap:anywhere}
+   170→   170→.prose>*:first-child{margin-top:0}.prose>*:last-child{margin-bottom:0}
+   171→   171→.prose p{margin:.6em 0}
+   172→   172→.prose ul,.prose ol{margin:.6em 0;padding-left:1.4em}.prose li{margin:.2em 0}
+   173→   173→.prose h1,.prose h2,.prose h3{margin:.9em 0 .4em;line-height:1.3;font-weight:700}
+   174→   174→.prose h1{font-size:1.4em}.prose h2{font-size:1.22em}.prose h3{font-size:1.08em}
+   175→   175→.prose code{font-family:var(--mono);font-size:.86em;background:var(--surface-3);border:1px solid var(--line);padding:1.5px 6px;border-radius:6px}
+   176→   176→.prose pre{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;overflow:auto;margin:.8em 0;position:relative}
+   177→   177→.prose pre code{background:none;border:none;padding:0;font-size:12.8px;line-height:1.6}
+   178→   178→.prose blockquote{border-left:3px solid var(--line-2);margin:.6em 0;padding:.1em 1em;color:var(--text-2)}
+   179→   179→.prose .table-wrap{overflow-x:auto;margin:.6em 0;border:1px solid var(--line);border-radius:var(--r-sm);-webkit-overflow-scrolling:touch}
+   180→   180→.prose table{border-collapse:collapse;font-size:13.5px;width:100%;min-width:max-content}
+   181→   181→.prose .table-wrap table{margin:0}
+   182→   182→.prose th,.prose td{border:1px solid var(--line);padding:7px 11px;text-align:left;white-space:nowrap}
+   183→   183→.prose th{background:var(--surface-2);font-weight:600}
+   184→   184→.prose hr{border:none;border-top:1px solid var(--line);margin:1em 0}
+   185→   185→.copy-code{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:6px;background:var(--surface-3);
+   186→   186→  border:1px solid var(--line);color:var(--text-2);display:grid;place-items:center;opacity:0;transition:opacity var(--t-fast),color var(--t-fast),border-color var(--t-fast)}
+   187→   187→.prose pre:hover .copy-code{opacity:1}
+   188→   188→.copy-code:hover{color:var(--text);border-color:var(--line-2)}
+   189→   189→
+   190→   190→/* message actions */
+   191→   191→.msg-actions{display:flex;gap:2px;margin-top:9px;opacity:0;transform:translateY(-3px);transition:opacity var(--t),transform var(--t)}
+   192→   192→.turn:hover .msg-actions,.turn:focus-within .msg-actions{opacity:1;transform:none}
+   193→   193→.act-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-3);padding:5px 9px;border-radius:6px;transition:color var(--t-fast),background var(--t-fast)}
+   194→   194→.act-btn:hover{color:var(--text);background:var(--surface-3)}
+   195→   195→.act-btn.copied{color:var(--success)}
+   196→   196→
+   197→   197→/* reasoning */
+   198→   198→.reason{margin:2px 0 8px;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);background:var(--surface-2)}
+   199→   199→.reason summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-2);font-weight:500}
+   200→   200→.reason summary::-webkit-details-marker{display:none}
+   201→   201→.reason summary .chev{margin-left:auto;transition:transform var(--t)}
+   202→   202→.reason[open] summary .chev{transform:rotate(90deg)}
+   203→   203→.reason .r-body{padding:0 13px 12px;font-size:12.8px;color:var(--text-2);white-space:pre-wrap;line-height:1.6;font-family:var(--mono)}
+   204→   204→.reason.live summary .brain{animation:think 1.4s var(--ease) infinite}
+   205→   205→@keyframes think{0%,100%{opacity:.4}50%{opacity:1}}
+   206→   206→
+   207→   207→/* tool card */
+   208→   208→.tool-card{margin:8px 0;border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface);overflow:hidden;transition:border-color var(--t)}
+   209→   209→.tool-card summary{list-style:none;cursor:pointer;padding:11px 14px;display:flex;align-items:center;gap:10px;font-size:13.5px}
+   210→   210→.tool-card summary::-webkit-details-marker{display:none}
+   211→   211→.tc-ic{width:30px;height:30px;border-radius:var(--r-sm);background:var(--surface-3);display:grid;place-items:center;color:var(--text);flex:0 0 auto}
+   212→   212→.tc-name{font-family:var(--mono);font-weight:500;font-size:13px}
+   213→   213→.tc-sub{font-size:11.5px;color:var(--text-3)}
+   214→   214→.tc-status{margin-left:auto;font-size:11px;font-weight:500;padding:3px 10px;border-radius:var(--r-full);display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line)}
+   215→   215→.tc-status.run{background:var(--surface-3);color:var(--text-2)}
+   216→   216→.tc-status.ok{background:var(--success-bg);color:var(--text)}
+   217→   217→.tc-status.err{background:var(--danger-bg);color:var(--danger)}
+   218→   218→.tc-status .spin{width:11px;height:11px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+   219→   219→@keyframes spin{to{transform:rotate(360deg)}}
+   220→   220→.tc-body{border-top:1px solid var(--line);padding:12px 14px;display:grid;gap:8px}
+   221→   221→.tc-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3)}
+   222→   222→.tc-body pre{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;margin:3px 0 0;font-family:var(--mono);
+   223→   223→  font-size:12px;line-height:1.55;overflow:auto;max-height:280px}
+   224→   224→.cursor-blink{display:inline-block;width:7px;height:15px;background:var(--text);border-radius:1px;vertical-align:-3px;margin-left:1px;animation:blink 1.05s steps(2) infinite}
+   225→   225→@keyframes blink{50%{opacity:0}}
+   226→   226→
+   227→   227→/* skeleton */
+   228→   228→.skel{border-radius:6px;background:var(--shimmer);background-size:200% 100%;animation:shimmer 1.3s linear infinite}
+   229→   229→@keyframes shimmer{to{background-position:-200% 0}}
+   230→   230→
+   231→   231→/* ============================ CENTERED HOME (welcome + composer, like demo) ============================ */
+   232→   232→#stage{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;position:relative}
+   233→   233→/* Home: center the scroll content; composer stays in normal flow below it */
+   234→   234→#stage.home #scroll{display:flex;flex-direction:column;justify-content:center}
+   235→   235→#stage.home .thread{flex:0 0 auto}
+   236→   236→
+   237→   237→#welcome{max-width:640px;margin:0 auto;padding:8px 24px 22px;text-align:center;animation:msg-in .5s var(--ease-out) both;width:100%}
+   238→   238→.hero-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:6px}
+   239→   239→.hero-mark{width:52px;height:52px;flex:0 0 auto;display:grid;place-items:center;color:var(--text)}
+   240→   240→.hero-mark svg{width:52px;height:52px;overflow:visible}
+   241→   241→.hl-draw{stroke-dasharray:1;stroke-dashoffset:1;animation:hl-draw 1.1s var(--ease-out) forwards}
+   242→   242→.hl-d1{animation-delay:.05s}.hl-d2{animation-delay:.45s}
+   243→   243→@keyframes hl-draw{to{stroke-dashoffset:0}}
+   244→   244→.hl-pulse{opacity:0;transform-origin:24px 37px;animation:hl-pulse 2.6s var(--ease) 1.2s infinite}
+   245→   245→@keyframes hl-pulse{0%{opacity:0;transform:scale(.4)}15%{opacity:1;transform:scale(1)}40%{opacity:.5;transform:scale(1.9)}60%,100%{opacity:0;transform:scale(2.4)}}
+   246→   246→#welcome h1{font-size:30px;font-weight:600;letter-spacing:-.6px;margin:0;line-height:1.1;color:var(--text)}
+   247→   247→#welcome .lead{font-size:14.5px;color:var(--text-2);margin:14px auto 0;max-width:460px}
+   248→   248→.suggest{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;text-align:left;margin-top:26px;max-width:560px;margin-left:auto;margin-right:auto}
+   249→   249→.sg{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:13px 14px;display:flex;gap:11px;align-items:flex-start;
+   250→   250→  transition:border-color var(--t) var(--ease),transform var(--t) var(--ease),box-shadow var(--t) var(--ease);cursor:pointer}
+   251→   251→.sg:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--sh-2)}
+   252→   252→.sg:active{transform:translateY(0) scale(.99)}
+   253→   253→.sg-ic{width:34px;height:34px;border-radius:var(--r-sm);background:var(--surface-3);display:grid;place-items:center;color:var(--text);flex:0 0 auto}
+   254→   254→.sg-txt b{display:block;font-size:13.5px;font-weight:600;margin-bottom:2px}
+   255→   255→.sg-txt span{font-size:12px;color:var(--text-2)}
+   256→   256→
+   257→   257→/* ============================ COMPOSER ============================ */
+   258→   258→#composer{flex:0 0 auto;padding:12px 24px calc(18px + env(safe-area-inset-bottom));z-index:10;position:relative;background:var(--bg)}
+   259→   259→.compose-inner{max-width:760px;margin:0 auto;width:100%;position:relative}
+   260→   260→.compose-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);padding:14px 16px 10px;
+   261→   261→  transition:border-color var(--t),box-shadow var(--t);box-shadow:var(--sh-1)}
+   262→   262→.compose-box:focus-within{border-color:var(--line-2);box-shadow:var(--ring),var(--sh-2)}
+   263→   263→#input{width:100%;background:none;border:none;outline:none;resize:none;color:var(--text);font-size:16px;line-height:1.5;
+   264→   264→  max-height:200px;min-height:24px;padding:0;display:block}
+   265→   265→#input::placeholder{color:var(--text-3)}
+   266→   266→.compose-actions{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+   267→   267→.chip{height:32px;padding:0 12px;border-radius:var(--r-full);display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;
+   268→   268→  color:var(--text-2);border:1px solid var(--line);background:transparent;transition:color var(--t-fast),background var(--t-fast),border-color var(--t-fast),transform var(--t-fast)}
+   269→   269→.chip:hover{color:var(--text);border-color:var(--line-2)}
+   270→   270→.chip:active{transform:scale(.96)}
+   271→   271→.chip.on{color:var(--text);background:var(--accent-soft);border-color:var(--line-2)}
+   272→   272→.chip .ic{width:15px;height:15px}
+   273→   273→.chip.on .ic{color:var(--text)}
+   274→   274→.compose-actions .spacer{flex:1;min-width:0}
+   275→   275→.attach-btn{width:36px;height:36px;border-radius:var(--r-full);display:grid;place-items:center;color:var(--text-3);transition:color var(--t-fast),background var(--t-fast);flex:0 0 auto}
+   276→   276→.attach-btn:hover{color:var(--text);background:var(--surface-3)}
+   277→   277→.send-btn{width:36px;height:36px;border-radius:var(--r-full);background:var(--text);color:var(--text-inv);display:grid;place-items:center;
+   278→   278→  flex:0 0 auto;transition:filter var(--t),transform var(--t) var(--spring)}
+   279→   279→.send-btn:hover{filter:brightness(.92);transform:scale(1.06)}
+   280→   280→[data-theme="light"] .send-btn:hover{filter:brightness(1.3)}
+   281→   281→.send-btn:active{transform:scale(.9)}
+   282→   282→.send-btn:disabled{opacity:.35;cursor:default;transform:none;filter:none}
+   283→   283→.send-btn.stop{background:var(--danger);color:#fff}
+   284→   284→/* per-chat context + cost status bar (under composer) */
+   285→   285→.ctx-bar{display:flex;align-items:center;gap:10px;margin-top:11px;font-size:11.5px;color:var(--text-3);flex-wrap:wrap}
+   286→   286→.ctx-track{flex:0 0 auto;width:150px;max-width:38vw;height:8px;border-radius:var(--r-full);overflow:hidden;
+   287→   287→  background:var(--surface-3);border:1px solid var(--line)}
+   288→   288→.ctx-track>i{display:block;height:100%;width:0;border-radius:var(--r-full);transition:width .5s var(--ease-out);
+   289→   289→  background:repeating-linear-gradient(45deg,var(--text-2),var(--text-2) 5px,transparent 5px,transparent 10px);background-color:var(--text-3)}
+   290→   290→.ctx-track.warn>i{background:repeating-linear-gradient(45deg,var(--warn),var(--warn) 5px,transparent 5px,transparent 10px);background-color:var(--warn)}
+   291→   291→.ctx-track.hot>i{background:repeating-linear-gradient(45deg,var(--danger),var(--danger) 5px,transparent 5px,transparent 10px);background-color:var(--danger)}
+   292→   292→.ctx-tok{font-weight:600;color:var(--text);font-family:var(--mono);font-size:11px}
+   293→   293→.ctx-left{color:var(--text-3)}
+   294→   294→.ctx-cost{margin-left:auto;color:var(--text-2)}
+   295→   295→.ctx-cost b{color:var(--text);font-weight:600}
+   296→   296→.compose-foot{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px;font-size:11px;color:var(--text-3)}
+   297→   297→.kbd{font-family:var(--mono);font-size:10px;background:var(--surface-3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--text-2)}
+   298→   298→
+   299→   299→/* scroll-to-bottom fab */
+   300→   300→.fab-scroll{position:absolute;left:50%;top:-48px;transform:translateX(-50%) translateY(8px);width:34px;height:34px;border-radius:50%;
+   301→   301→  background:var(--surface);border:1px solid var(--line-2);box-shadow:var(--sh-2);display:grid;place-items:center;color:var(--text-2);
+   302→   302→  opacity:0;pointer-events:none;transition:opacity var(--t),transform var(--t),color var(--t);z-index:15}
+   303→   303→.fab-scroll.show{opacity:1;pointer-events:auto;transform:translateX(-50%)}
+   304→   304→.fab-scroll:hover{color:var(--text)}
+   305→   305→#stage.home .fab-scroll{display:none}
+   306→   306→
+   307→   307→/* ============================ RIGHT PANEL (models/limits) ============================ */
+   308→   308→#panel{position:fixed;top:0;right:0;bottom:0;width:340px;max-width:88vw;background:var(--surface-2);border-left:1px solid var(--line);
+   309→   309→  z-index:40;display:flex;flex-direction:column;transform:translateX(100%);transition:transform var(--t) var(--ease);box-shadow:var(--sh-3)}
+   310→   310→#panel.open{transform:none}
+   311→   311→.panel-head{padding:16px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);flex:0 0 auto}
+   312→   312→.panel-head h3{font-size:15px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px}
+   313→   313→.tier-chip{font-size:10.5px;font-weight:500;color:var(--text-2);background:var(--surface);border:1px solid var(--line);padding:3px 9px;border-radius:var(--r-full)}
+   314→   314→.panel-scroll{flex:1;overflow-y:auto;padding:14px}
+   315→   315→.panel-note{font-size:12px;color:var(--text-3);line-height:1.5;margin:0 0 14px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm)}
+   316→   316→.mcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:13px 14px;margin-bottom:10px;transition:border-color var(--t),box-shadow var(--t),opacity var(--t)}
+   317→   317→.mcard.active{border-color:var(--line-2);box-shadow:var(--ring)}
+   318→   318→.mcard.cool{opacity:.55}
+   319→   319→.mc-top{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+   320→   320→.mc-name{font-family:var(--mono);font-size:12.5px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   321→   321→.mc-badge{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:var(--r-full);border:1px solid var(--line)}
+   322→   322→.mc-badge.ready{background:var(--surface-3);color:var(--text-2)}
+   323→   323→.mc-badge.limit{background:var(--danger-bg);color:var(--danger)}
+   324→   324→.mc-badge.cool{background:var(--surface-3);color:var(--warn)}
+   325→   325→.mc-badge.active{background:var(--text);color:var(--text-inv);border-color:var(--text)}
+   326→   326→.meter{margin-bottom:9px}
+   327→   327→.meter:last-child{margin-bottom:0}
+   328→   328→.meter-top{display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-3);margin-bottom:4px}
+   329→   329→.meter-top b{color:var(--text-2);font-weight:500}
+   330→   330→.meter-bar{height:5px;background:var(--surface-3);border-radius:var(--r-full);overflow:hidden}
+   331→   331→.meter-bar>i{display:block;height:100%;border-radius:var(--r-full);transition:width .5s var(--ease-out);width:0;background:var(--text-2)}
+   332→   332→.meter-bar.hot>i{background:var(--danger)}
+   333→   333→.log-sec{border-top:1px solid var(--line);padding:12px 14px;flex:0 0 auto;max-height:170px;display:flex;flex-direction:column}
+   334→   334→.log-sec h4{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);margin:0 0 8px}
+   335→   335→.log-body{overflow-y:auto;font-family:var(--mono);font-size:11px;color:var(--text-2);line-height:1.7}
+   336→   336→.log-body .lt{color:var(--text-3)}
+   337→   337→
+   338→   338→/* ============================ MODAL (all settings live here) ============================ */
+   339→   339→.overlay{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;
+   340→   340→  padding:20px;z-index:60;opacity:0;pointer-events:none;transition:opacity var(--t)}
+   341→   341→.overlay.show{opacity:1;pointer-events:auto}
+   342→   342→.modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);width:100%;max-width:560px;max-height:90dvh;
+   343→   343→  overflow-y:auto;box-shadow:var(--sh-3);transform:translateY(14px) scale(.98);transition:transform var(--t) var(--spring)}
+   344→   344→.overlay.show .modal{transform:none}
+   345→   345→.modal-head{padding:22px 24px 6px;position:sticky;top:0;background:var(--surface);z-index:2}
+   346→   346→.modal-head h2{font-size:18px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:9px}
+   347→   347→.modal-head p{font-size:13px;color:var(--text-2);margin:0}
+   348→   348→.modal-head .x{position:absolute;top:18px;right:18px}
+   349→   349→.modal-body{padding:16px 24px 24px}
+   350→   350→.field{margin-bottom:18px}
+   351→   351→.field>label{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
+   352→   352→.field>label .opt{color:var(--text-3);font-weight:400;font-size:12px}
+   353→   353→.input-wrap{position:relative}
+   354→   354→.field input,.field textarea,.field select{width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+   355→   355→  border-radius:var(--r-md);padding:11px 13px;font-size:15px;transition:border-color var(--t);outline:none}
+   356→   356→.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--line-2)}
+   357→   357→.field input[type=password]{padding-right:44px}
+   358→   358→.field textarea{resize:vertical;min-height:78px;font-family:var(--mono);font-size:12.5px;line-height:1.6}
+   359→   359→.field .hint{font-size:11.5px;color:var(--text-3);margin-top:6px;line-height:1.5}
+   360→   360→.field .hint a{font-weight:500}
+   361→   361→.field .ok-tag,.field .err-tag{display:none;font-size:11.5px;margin-top:6px;align-items:center;gap:6px}
+   362→   362→.field .ok-tag{color:var(--success)}.field .err-tag{color:var(--danger)}
+   363→   363→.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:6px;display:grid;place-items:center;color:var(--text-3)}
+   364→   364→.eye:hover{color:var(--text)}
+   365→   365→.sec-title{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--text-3);margin:22px 0 10px;padding-top:16px;border-top:1px solid var(--line)}
+   366→   366→.toggle-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:10px}
+   367→   367→.toggle-row .tr-txt{flex:1}.toggle-row .tr-txt b{font-size:13.5px;font-weight:600;display:block}
+   368→   368→.toggle-row .tr-txt span{font-size:11.5px;color:var(--text-3)}
+   369→   369→.switch{width:42px;height:24px;border-radius:var(--r-full);background:var(--line-2);position:relative;flex:0 0 auto;transition:background var(--t);cursor:pointer}
+   370→   370→.switch.on{background:var(--text)}
+   371→   371→.switch>i{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--surface);transition:left var(--t) var(--spring);box-shadow:var(--sh-1)}
+   372→   372→.switch.on>i{left:20px}
+   373→   373→.seg{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);padding:4px}
+   374→   374→.seg button{flex:1;padding:8px;border-radius:var(--r-sm);font-size:13px;font-weight:500;color:var(--text-2);transition:background var(--t-fast),color var(--t-fast);display:flex;align-items:center;justify-content:center;gap:7px}
+   375→   375→.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--sh-1)}
+   376→   376→.modal-foot{display:flex;gap:10px;align-items:center;padding:16px 24px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--surface);flex-wrap:wrap}
+   377→   377→.btn{padding:11px 18px;border-radius:var(--r-md);font-size:14px;font-weight:600;transition:filter var(--t-fast),background var(--t-fast),border-color var(--t-fast),color var(--t-fast),transform var(--t-fast);border:1px solid var(--line);display:inline-flex;align-items:center;gap:7px}
+   378→   378→.btn:active{transform:scale(.97)}
+   379→   379→.btn.primary{background:var(--text);color:var(--text-inv);border-color:var(--text)}
+   380→   380→.btn.primary:hover{filter:brightness(.92)}
+   381→   381→[data-theme="light"] .btn.primary:hover{filter:none;background:#000}
+   382→   382→.btn.ghost{background:transparent;color:var(--text-2)}
+   383→   383→.btn.ghost:hover{color:var(--text);border-color:var(--line-2)}
+   384→   384→.btn.danger{color:var(--danger);border-color:transparent;background:transparent}
+   385→   385→.btn.danger:hover{background:var(--danger-bg)}
+   386→   386→
+   387→   387→/* ============================ TOAST ============================ */
+   388→   388→#toasts{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+   389→   389→.toast{background:var(--elevated);border:1px solid var(--line-2);border-radius:var(--r-md);padding:11px 16px;font-size:13.5px;font-weight:500;
+   390→   390→  box-shadow:var(--sh-3);display:flex;align-items:center;gap:10px;animation:toast-in .3s var(--spring);max-width:90vw}
+   391→   391→.toast.out{animation:toast-out .25s var(--ease) forwards}
+   392→   392→.toast .ti{width:18px;height:18px;flex:0 0 auto;color:var(--text-2)}
+   393→   393→.toast.err .ti{color:var(--danger)}
+   394→   394→@keyframes toast-in{from{opacity:0;transform:translateY(16px) scale(.95)}to{opacity:1;transform:none}}
+   395→   395→@keyframes toast-out{to{opacity:0;transform:translateY(10px) scale(.96)}}
+   396→   396→
+   397→   397→/* scrim for mobile drawers */
+   398→   398→#scrim{position:fixed;inset:0;background:var(--scrim);z-index:35;opacity:0;pointer-events:none;transition:opacity var(--t)}
+   399→   399→#scrim.show{opacity:1;pointer-events:auto}
+   400→   400→
+   401→   401→/* ============================ RESPONSIVE ============================ */
+   402→   402→@media(min-width:861px){ .mobile-only{display:none!important} }
+   403→   403→/* ---- MOBILE: sidebar becomes overlay drawer; main full width; composer ALWAYS visible ---- */
+   404→   404→@media(max-width:860px){
+   405→   405→  #app{grid-template-columns:1fr!important}
+   406→   406→  #nav{position:fixed;top:0;bottom:0;left:0;width:270px;max-width:82vw;z-index:45;transform:translateX(-100%);
+   407→   407→    transition:transform var(--t) var(--ease);box-shadow:var(--sh-3);grid-template-columns:none}
+   408→   408→  #nav.open{transform:none}
+   409→   409→  #nav .rail-btn{display:flex;align-items:center;width:100%;justify-content:flex-start;gap:12px;padding:0 12px;font-size:14px;font-weight:500;height:44px}
+   410→   410→  #nav .rail-btn .rbl{display:inline}
+   411→   411→  #nav .nav-sec{opacity:1}
+   412→   412→  #nav .nav-list{opacity:1;pointer-events:auto}
+   413→   413→  .desktop-only{display:none!important}
+   414→   414→  .model-select{left:50%!important}
+   415→   415→  .thread{padding:18px 14px 8px}
+   416→   416→  #composer{padding:10px 12px calc(14px + env(safe-area-inset-bottom))}
+   417→   417→  .compose-box{padding:12px 14px 8px;border-radius:20px}
+   418→   418→  .model-select{max-width:52vw;font-size:12px}
+   419→   419→  #welcome{padding:8px 16px 18px}
+   420→   420→  #welcome h1{font-size:22px}
+   421→   421→  .hero-row{gap:12px}
+   422→   422→  .hero-mark,.hero-mark svg{width:40px;height:40px}
+   423→   423→  .suggest{grid-template-columns:1fr;max-width:100%;margin-top:20px}
+   424→   424→  .compose-foot{display:none}
+   425→   425→  #panel{width:min(340px,92vw)}
+   426→   426→}
+   427→   427→@media(max-width:420px){
+   428→   428→  .model-select .ms-name{max-width:96px}
+   429→   429→  .topbar{padding:0 8px;gap:4px}
+   430→   430→  #welcome .lead{font-size:13.5px}
+   431→   431→}
+   432→   432→</style>
+   433→   433→</head>
+   434→   434→<body>
+   435→   435→<!-- SVG icon sprite -->
+   436→   436→<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+   437→   437→<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+   438→   438→<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+   439→   439→<symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/></symbol>
+   440→   440→<symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></symbol>
+   441→   441→<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+   442→   442→<symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+   443→   443→<symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/></symbol>
+   444→   444→<symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1A1.7 1.7 0 009 19.4a1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></symbol>
+   445→   445→<symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M12 3a9 9 0 019 9M3 12a9 9 0 019-9M12 15l4-4"/></symbol>
+   446→   446→<symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.6L19 10.5l-5.1 1.9L12 18l-1.9-5.6L5 10.5l5.1-1.9L12 3z"/></symbol>
+   447→   447→<symbol id="i-thinking" viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z"/></symbol>
+   448→   448→<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></symbol>
+   449→   449→<symbol id="i-attach" viewBox="0 0 24 24"><path d="M21 11.5l-8.9 8.9a5 5 0 01-7.1-7.1l9-9a3.3 3.3 0 014.7 4.7l-9 9a1.7 1.7 0 01-2.4-2.4l8.3-8.3"/></symbol>
+   450→   450→<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+   451→   451→<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></symbol>
+   452→   452→<symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></symbol>
+   453→   453→<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+   454→   454→<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0114.9-3.4L21 8M20.5 15a9 9 0 01-14.9 3.4L3 16"/></symbol>
+   455→   455→<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></symbol>
+   456→   456→<symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 01-11.8 7.8L3 21l1.7-6.2A8.5 8.5 0 1121 11.5z"/></symbol>
+   457→   457→<symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+   458→   458→<symbol id="i-chev-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+   459→   459→<symbol id="i-brain" viewBox="0 0 24 24"><path d="M9.5 2a3 3 0 00-3 3 3 3 0 00-2 5.2A3 3 0 004 15a3 3 0 003 3 3 3 0 006 0V5a3 3 0 00-3.5-3z"/><path d="M14.5 2A3 3 0 0118 5a3 3 0 012 5.2A3 3 0 0120 15a3 3 0 01-3 3"/></symbol>
+   460→   460→<symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 01-5.4 5.4l-6 6a2 2 0 002.8 2.8l6-6a4 4 0 015.4-5.4l-2.6 2.6-2-2 2.6-2.6z"/></symbol>
+   461→   461→<symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.8 12.2L21 2M17 6l3 3M15 8l2 2"/></symbol>
+   462→   462→<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+   463→   463→<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+   464→   464→<symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M9.9 4.2A10.9 10.9 0 0112 4c6.5 0 10 7 10 7a13.2 13.2 0 01-1.7 2.7M6.6 6.6A13.3 13.3 0 002 11s3.5 7 10 7a10.9 10.9 0 004.1-.8M3 3l18 18"/></symbol>
+   465→   465→<symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
+   466→   466→<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+   467→   467→<symbol id="i-robot" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="2"/><path d="M12 8V4M9 4h6"/><circle cx="9" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1" fill="currentColor" stroke="none"/></symbol>
+   468→   468→<symbol id="i-broadcast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 010 8.4M7.8 16.2a6 6 0 010-8.4M19 5a10 10 0 010 14M5 19A10 10 0 015 5"/></symbol>
+   469→   469→<symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M8 21v-6h8v6"/></symbol>
+   470→   470→<symbol id="i-puzzle" viewBox="0 0 24 24"><path d="M4 7h3a2 2 0 002-2 2 2 0 114 0 2 2 0 002 2h3v3a2 2 0 002 2 2 2 0 110 4 2 2 0 00-2 2v3h-3a2 2 0 01-2-2 2 2 0 10-4 0 2 2 0 01-2 2H4v-4a2 2 0 00-2-2 2 2 0 110-4 2 2 0 002-2V7z"/></symbol>
+   471→   471→<symbol id="i-command" viewBox="0 0 24 24"><path d="M9 3a3 3 0 110 6H3M15 3a3 3 0 100 6h6M9 15a3 3 0 100 6h.01M15 15a3 3 0 110 6H9V9h6"/></symbol>
+   472→   472→</defs></svg>
+   473→   473→
+   474→   474→<div id="app">
+   475→   475→  <!-- ========================= SIDEBAR ========================= -->
+   476→   476→  <nav id="nav" aria-label="Chats">
+   477→   477→    <div class="nav-top">
+   478→   478→      <button class="rail-btn brand-btn" id="btnSidebar" aria-label="Toggle sidebar"><svg class="ic"><use href="#i-sidebar"/></svg><span class="rbl">Collapse</span></button>
+   479→   479→      <button class="rail-btn" id="btnNew" aria-label="New chat"><svg class="ic"><use href="#i-edit"/></svg><span class="rbl">New chat</span></button>
+   480→   480→      <button class="rail-btn" id="btnSearch" aria-label="Search chats"><svg class="ic"><use href="#i-search"/></svg><span class="rbl">Search</span></button>
+   481→   481→    </div>
+   482→   482→    <div class="nav-sec">Recent</div>
+   483→   483→    <div class="nav-list" id="chatList"></div>
+   484→   484→    <div class="nav-foot">
+   485→   485→      <button class="rail-btn" id="btnSettingsSide" aria-label="Settings"><svg class="ic"><use href="#i-settings"/></svg><span class="rbl">Settings</span></button>
+   486→   486→    </div>
+   487→   487→  </nav>
+   488→   488→
+   489→   489→  <!-- ========================= MAIN ========================= -->
+   490→   490→  <div id="main">
+   491→   491→    <div class="topbar">
+   492→   492→      <button class="icon-btn mobile-only" id="btnNav" aria-label="Menu"><svg class="ic"><use href="#i-menu"/></svg></button>
+   493→   493→      <button class="model-select on" id="btnModel" aria-label="Choose model" aria-haspopup="listbox" aria-expanded="false">
+   494→   494→        <span class="live"></span>
+   495→   495→        <span class="ms-name" id="modelName">Auto</span>
+   496→   496→        <svg class="ic sm ms-chev"><use href="#i-chev-down"/></svg>
+   497→   497→      </button>
+   498→   498→      <div class="model-menu" id="modelMenu" role="listbox" aria-label="Models"></div>
+   499→   499→      <div class="spacer"></div>
+   500→   500→      <button class="icon-btn" id="btnPanel" aria-label="Model limits"><svg class="ic"><use href="#i-gauge"/></svg></button>
+   501→   501→    </div>
+   502→   502→
+   503→   503→    <div id="stage" class="home">
+   504→   504→      <div id="scroll">
+   505→   505→        <div class="thread" id="thread">
+   506→   506→          <div id="welcome"></div>
+   507→   507→        </div>
+   508→   508→      </div>
+   509→   509→
+   510→   510→      <div id="composer">
+   511→   511→        <div class="compose-inner">
+   512→   512→          <button class="fab-scroll" id="fabScroll" aria-label="Scroll to bottom"><svg class="ic"><use href="#i-arrow-down"/></svg></button>
+   513→   513→          <div class="compose-box">
+   514→   514→            <textarea id="input" rows="1" placeholder="Ask TBH Helper Ai…" autofocus></textarea>
+   515→   515→            <div class="compose-actions">
+   516→   516→              <button class="chip" id="chipThink" aria-pressed="false"><svg class="ic"><use href="#i-thinking"/></svg><span class="chip-lbl">Thinking</span></button>
+   517→   517→              <button class="chip" id="chipSearch" aria-pressed="false"><svg class="ic"><use href="#i-globe"/></svg><span class="chip-lbl">Search</span></button>
+   518→   518→              <div class="spacer"></div>
+   519→   519→              <button class="attach-btn" id="btnAttach" aria-label="Attach"><svg class="ic"><use href="#i-attach"/></svg></button>
+   520→   520→              <button class="send-btn" id="send" aria-label="Send"><svg class="ic sm"><use href="#i-send"/></svg></button>
+   521→   521→            </div>
+   522→   522→          </div>
+   523→   523→          <div class="ctx-bar" id="ctxBar" aria-hidden="true">
+   524→   524→            <div class="ctx-track"><i id="ctxFill"></i></div>
+   525→   525→            <span class="ctx-tok" id="ctxTok">0 / 25k</span>
+   526→   526→            <span class="ctx-left" id="ctxLeft">100% context left</span>
+   527→   527→            <span class="ctx-cost" id="ctxCost">cost $0.00</span>
+   528→   528→          </div>
+   529→   529→          <div class="compose-foot">
+   530→   530→            <span><span class="kbd">Enter</span> send · <span class="kbd">Shift ↵</span> newline</span>
+   531→   531→          </div>
+   532→   532→        </div>
+   533→   533→      </div>
+   534→   534→    </div>
+   535→   535→  </div>
+   536→   536→</div>
+   537→   537→
+   538→   538→<!-- ========================= MODELS PANEL ========================= -->
+   539→   539→<aside id="panel" aria-label="Model rate limits">
+   540→   540→  <div class="panel-head">
+   541→   541→    <h3><svg class="ic sm"><use href="#i-gauge"/></svg> Model Router</h3>
+   542→   542→    <div class="spacer"></div>
+   543→   543→    <span class="tier-chip" id="tierChip">Free Trial</span>
+   544→   544→    <button class="icon-btn" id="btnPanelClose" aria-label="Close"><svg class="ic sm"><use href="#i-x"/></svg></button>
+   545→   545→  </div>
+   546→   546→  <div class="panel-scroll">
+   547→   547→    <p class="panel-note">Free-tier limits are <b>5 req/min · 30K tok/min · 1M tok/hr · 1M tok/day</b> per model. Because <b>30K TPM</b> is the real ceiling, each request is auto-kept under a <b>~25K-token budget</b>: old turns are compressed into a running summary, long-term memory is re-sent every time, and static prompt/tools are ordered first for <b>prompt-cache</b> reuse. The router tracks all windows, load-balances, and <b>silently waits</b> for capacity — you never see a rate-limit error.</p>
+   548→   548→    <div id="modelList"></div>
+   549→   549→  </div>
+   550→   550→  <div class="log-sec">
+   551→   551→    <h4>Router activity</h4>
+   552→   552→    <div class="log-body" id="routeLog"></div>
+   553→   553→  </div>
+   554→   554→</aside>
+   555→   555→
+   556→   556→<!-- ========================= SETTINGS MODAL (ALL settings) ========================= -->
+   557→   557→<div class="overlay" id="modal">
+   558→   558→  <div class="modal" role="dialog" aria-modal="true" aria-label="Settings">
+   559→   559→    <div class="modal-head">
+   560→   560→      <h2><svg class="ic lg"><use href="#i-settings"/></svg> Settings</h2>
+   561→   561→      <p>Bring your own keys — everything runs 100% in your browser. Nothing is sent anywhere except the official APIs.</p>
+   562→   562→      <button class="icon-btn x" id="btnClose" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>
+   563→   563→    </div>
+   564→   564→    <div class="modal-body">
+   565→   565→      <div class="sec-title" style="border:none;padding-top:0;margin-top:0">API Keys</div>
+   566→   566→      <div class="field">
+   567→   567→        <label><svg class="ic sm" style="vertical-align:-3px"><use href="#i-key"/></svg> Cerebras API Key</label>
+   568→   568→        <div class="input-wrap">
+   569→   569→          <input id="fKey" type="password" placeholder="csk-…" autocomplete="off">
+   570→   570→          <button class="eye" data-eye="fKey" aria-label="Show"><svg class="ic sm"><use href="#i-eye"/></svg></button>
+   571→   571→        </div>
+   572→   572→        <div class="ok-tag" id="okKey"><svg class="ic sm"><use href="#i-check"/></svg><span></span></div>
+   573→   573→        <div class="err-tag" id="errKey"><svg class="ic sm"><use href="#i-x"/></svg><span></span></div>
+   574→   574→        <div class="hint">Free at <a href="https://cloud.cerebras.ai" target="_blank" rel="noopener">cloud.cerebras.ai</a>. Used only from your browser to call <span class="kbd">api.cerebras.ai</span>.</div>
+   575→   575→      </div>
+   576→   576→      <div class="field">
+   577→   577→        <label><svg class="ic sm" style="vertical-align:-3px"><use href="#i-robot"/></svg> TeleBotHost API Key <span class="opt">— optional</span></label>
+   578→   578→        <div class="input-wrap">
+   579→   579→          <input id="fTbh" type="password" placeholder="sk_… (write) or pub_… (read-only)" autocomplete="off">
+   580→   580→          <button class="eye" data-eye="fTbh" aria-label="Show"><svg class="ic sm"><use href="#i-eye"/></svg></button>
+   581→   581→        </div>
+   582→   582→        <div class="ok-tag" id="okTbh"><svg class="ic sm"><use href="#i-check"/></svg><span></span></div>
+   583→   583→        <div class="err-tag" id="errTbh"><svg class="ic sm"><use href="#i-x"/></svg><span></span></div>
+   584→   584→        <div class="hint">Unlocks the TeleBotHost tools (list bots, create commands, broadcasts…). Chat & public tools work without it.</div>
+   585→   585→      </div>
+   586→   586→      <button class="btn ghost" id="btnTest" style="width:100%;justify-content:center"><svg class="ic sm"><use href="#i-refresh"/></svg> Test connections</button>
+   587→   587→
+   588→   588→      <div class="sec-title">Appearance</div>
+   589→   589→      <div class="field">
+   590→   590→        <label>Theme</label>
+   591→   591→        <div class="seg" id="segTheme">
+   592→   592→          <button data-theme-val="light"><svg class="ic sm"><use href="#i-sun"/></svg> Light</button>
+   593→   593→          <button data-theme-val="dark"><svg class="ic sm"><use href="#i-moon"/></svg> Dark</button>
+   594→   594→        </div>
+   595→   595→      </div>
+   596→   596→
+   597→   597→      <div class="sec-title">Model</div>
+   598→   598→      <div class="field">
+   599→   599→        <label>Main coding model <span class="opt">— also selectable from the top bar</span></label>
+   600→   600→        <select id="fPinned"><option value="">Auto (recommended)</option></select>
+   601→   601→        <div class="hint"><b>Auto</b> load-balances across every model, protects each model's limits, and silently waits for capacity when needed — you never see rate-limit errors. Pick one model to make it your main coding model; lighter work (routing, tool selection, short summaries) still spreads across the faster models in the background.</div>
+   602→   602→      </div>
+   603→   603→
+   604→   604→      <div class="sec-title">Behavior</div>
+   605→   605→      <div class="toggle-row"><div class="tr-txt"><b>Extended thinking</b><span>Show the model's reasoning before it answers</span></div><div class="switch" id="swThink"><i></i></div></div>
+   606→   606→      <div class="toggle-row"><div class="tr-txt"><b>Web search</b><span>Let the agent search the web when helpful</span></div><div class="switch" id="swSearch"><i></i></div></div>
+   607→   607→      <div class="toggle-row"><div class="tr-txt"><b>TeleBotHost tools</b><span>Let the agent take actions on your bots</span></div><div class="switch on" id="swTools"><i></i></div></div>
+   608→   608→      <div class="toggle-row"><div class="tr-txt"><b>Stream responses</b><span>Show tokens as they generate</span></div><div class="switch on" id="swStream"><i></i></div></div>
+   609→   609→      <div class="field" style="margin-top:16px">
+   610→   610→        <label>System prompt</label>
+   611→   611→        <textarea id="fSys"></textarea>
+   612→   612→      </div>
+   613→   613→    </div>
+   614→   614→    <div class="modal-foot">
+   615→   615→      <button class="btn primary" id="btnSave"><svg class="ic sm"><use href="#i-check"/></svg> Save changes</button>
+   616→   616→      <button class="btn ghost" id="btnCancel">Cancel</button>
+   617→   617→      <div class="spacer"></div>
+   618→   618→      <button class="btn danger" id="btnClearAll"><svg class="ic sm"><use href="#i-trash"/></svg> Reset</button>
+   619→   619→    </div>
+   620→   620→  </div>
+   621→   621→</div>
+   622→   622→
+   623→   623→<div id="scrim"></div>
+   624→   624→<div id="toasts"></div>
+   625→   625→<script>
+   626→   626→"use strict";
+   627→   627→/* ============================================================================
+   628→   628→   TBH HELPER AI — production app logic (frontend-only, BYOK).
+   629→   629→   ============================================================================ */
+   630→   630→const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+   631→   631→const CB_BASE="https://api.cerebras.ai/v1", TBH_BASE="https://api.telebothost.com/api/v1";
+   632→   632→const READER="https://r.jina.ai/"; // headless page reader (returns clean markdown, no JS needed)
+   633→   633→const LS_CFG="tbh_cfg_v4", LS_CHATS="tbh_chats_v4", LS_ROUTER="tbh_router_v4", LS_UI="tbh_ui_v4", LS_RESUME="tbh_resume_v4";
+   634→   634→/* ---- REQUEST BUDGET (driven by the REAL Cerebras free-tier limit) ----------
+   635→   635→   Cerebras free tier: 30K TPM · 5 RPM · 1M TPH · 1M TPD per model (verified from
+   636→   636→   inference-docs.cerebras.ai/support/rate-limits). The 250K "context window" is
+   637→   637→   irrelevant here — TPM is the binding constraint. The rate limiter estimates a
+   638→   638→   request's cost as (input tokens + max_completion_tokens) BEFORE running it, so
+   639→   639→   we must keep EACH request's prompt + reserved output under the per-minute
+   640→   640→   budget. We therefore compact the conversation to a fixed EFFECTIVE input
+   641→   641→   budget per request instead of letting it grow to 250K.
+   642→   642→   Cached prefix tokens (system+tools+stable history) do NOT count toward the
+   643→   643→   uncached TPM bucket, so cache-friendly ordering buys real headroom — but the
+   644→   644→   uncached estimate still gates admission, so we stay conservative. */
+   645→   645→const TPM_LIMIT=30000;                    // free-tier tokens/min per model
+   646→   646→const MAX_OUT=3000;                       // reserved completion tokens (was 8192 — that inflated every TPM estimate)
+   647→   647→/* Effective per-request INPUT budget: leave room for the reserved output within
+   648→   648→   one minute's TPM so a single turn can't trip the limiter by itself. */
+   649→   649→const REQ_INPUT_BUDGET=TPM_LIMIT-MAX_OUT-2000; // ≈ 25K tokens of prompt max
+   650→   650→const COMPACT_AT=Math.round(REQ_INPUT_BUDGET*0.82); // start compacting at ~20.5K
+   651→   651→/* CTX_LIMIT is now a soft, per-chat lifetime ceiling only used for the UI + a
+   652→   652→   final safety stop; real control happens per-request via compaction. */
+   653→   653→const CTX_LIMIT=1000000;                  // TPD-aligned lifetime ceiling (UI shows request budget instead)
+   654→   654→const COST_LIMIT=1e9;                     // effectively no cost cap on free tier
+   655→   655→const COST_PER_MTOK=0.00;                 // free-tier price; change if on a paid tier
+   656→   656→const CLOUD_NS="tbh_helper_ai:";         // namespace for cloud (TBH Global) agent-memory keys
+   657→   657→const approxTokens=s=>Math.ceil((s||"").length/4); // ~4 chars/token estimate
+   658→   658→const msgTokens=m=>approxTokens(typeof m.content==="string"?m.content:JSON.stringify(m||{}))+ (m.tool_calls?approxTokens(JSON.stringify(m.tool_calls)):0)+4;
+   659→   659→
+   660→   660→/* ---- Cerebras rate limits (official, per model, per organization) ----
+   661→   661→   Source: inference-docs.cerebras.ai/support/rate-limits
+   662→   662→   Free Trial: 5 RPM · 30K TPM · 1M TPH · 1M TPD  (same for every public model)
+   663→   663→   Developer : much higher, no hourly/daily caps.
+   664→   664→   Any metric can trip a 429 (whichever comes first). */
+   665→   665→const TIERS={
+   666→   666→  free:{label:"Free Trial",def:{rpm:5,tpm:30000,tph:1000000,tpd:1000000},models:{}},
+   667→   667→  dev:{label:"Developer",def:{rpm:1000,tpm:1000000,tph:0,tpd:0},models:{
+   668→   668→    "zai-glm-4.7":{rpm:500,tpm:500000},
+   669→   669→    "gemma-4-31b":{rpm:300,tpm:500000},
+   670→   670→  }},
+   671→   671→};
+   672→   672→/* Preference order (fastest / most tool-capable first). Unknown models still work. */
+   673→   673→const PREFERENCE=["gpt-oss-120b","gemma-4-31b","zai-glm-4.7"];
+   674→   674→/* speed = tokens/sec (docs) — used to pick fast models for light/aux work */
+   675→   675→const MODEL_META={
+   676→   676→  "gpt-oss-120b":{label:"GPT-OSS 120B",note:"120B · ~3000 t/s · best agent & coding",speed:3000},
+   677→   677→  "gemma-4-31b":{label:"Gemma 4 31B",note:"31B · ~1850 t/s · fast, light tasks",speed:1850},
+   678→   678→  "zai-glm-4.7":{label:"GLM 4.7",note:"355B · ~1000 t/s · deep reasoning",speed:1000},
+   679→   679→};
+   680→   680→/* Which model each internal role prefers when in Auto. Falls back to any free model.
+   681→   681→   main = the model that writes code / final answers (user-pickable, scarce RPM protected).
+   682→   682→   aux  = fast/cheap work: routing, tool selection, short summaries. */
+   683→   683→const ROLE_PREF={ main:"gpt-oss-120b", reason:"zai-glm-4.7", aux:"gemma-4-31b" };
+   684→   684→
+   685→   685→/* ============================================================================
+   686→   686→   TBL KNOWLEDGE BASE — compressed reference for TBL (Tele Bot Lang).
+   687→   687→   Source: telebothost.com/docs. Kept dense to save tokens while preserving
+   688→   688→   the full API surface. A short overview is always in the system prompt; the
+   689→   689→   model pulls a full topic on demand via the read_docs tool. */
+   690→   690→const KB_OVERVIEW=`TBL (Tele Bot Lang) = JS-like scripting language for Telegram bots on TeleBotHost. Command-based (triggers), not event listeners. 80% sync / 20% async (await, Promise valid). Exec timeout 15s, output 512KB, up to 10 parallel via Promise.all. Free plan: file access off, 20MB props/account.
+   691→   691→GLOBALS (auto in every command): update(raw Telegram update), request(simplified update; in webhook has ip/body/params/headers), message(text only), msg(=update.message on message updates), user, chat, bot(id,token,name,bot_id,owner,status), owner, plan, params(text after cmd), options(data passed between commands/callbacks), content(HTTP response body), error(in ! cmd), tbl_options, inspect(obj), require("/cmd"), sleep(ms<=10000, awaited).
+   692→   692→COMMAND PARTS: name(/start), answer(static reply, markdown), code, keyboard(commas=same row, \\n=new row), aliases, need_reply(waits for next msg).
+   693→   693→SPECIAL CMDS: @ (init, runs first), ! (error handler), @@ (post-process after each cmd), * (wildcard fallback/master handler), /inline_query, /channel_update, /handle_{update_type} (dynamic handler e.g. /handle_chat_member, /handle_poll_answer).
+   694→   694→CLASSES: Api (all Telegram methods, case-insensitive, Api.call("method",{...}) for any method, on_run callback, await returns response, chained methods on responses), Bot (case-sensitive helpers: sendMessage/sendPhoto/sendKeyboard/sendDocument/etc, runCommand, run, read(code str), readCommand(full obj), inspect, getUsers({chatType,premiumOnly}) awaited, props set/get/del/getAll/has/count/getNames + aliases setProp/setProperty), HTTP (get/post; await or success/error callback cmds; opts headers/body/query/timeout/tbl_options; resp {ok,status,content,data,headers,cookies}), User (per-user storage set/get/del/getAll/has/count), Global (account-level storage shared across ALL owner's bots: set/get/del/getAll + getStorageInfo/getStorageUsage/isStorageNearLimit/getAvailableStorage/isOwnerValid/getOwnerMail), Webhook (getUrl user-signed / getUrlFor / getGlobalUrl public), Webapp (getUrl unsigned public), res (webhook/webapp HTTP response: set/status/send/json/html(EJS)/xml/text/redirect/render), msg (reply/send/replyPhoto/editText/delete/react/pin/forward/copy/sendChatAction), modules (JWT,bcrypt,crypto,ParseCSV,ParseYML,UUID,moment,lodash,randomstring,validator,chance,math,qs,cheerio,dayjs,zod,shortid,deepmerge,humanizeDuration,uaParser,ethers; crypto & FormData available directly), Libs (ResourcesLib,dateTimeFormat,MCL membership check,random,refLib,tgutil), TBL (clone/transfer bot), require (import module.exports between commands only).
+   695→   695→PROP TYPES: String,Number,Boolean,List,Date,Json (type optional, auto-detected).`;
+   696→   696→
+   697→   697→/* ---------------------------------------------------------------------------
+   698→   698→   EXTERNAL DOCS (single source of truth).
+   699→   699→   The full TBL reference is NOT bundled in this file — it is fetched at runtime
+   700→   700→   from DOCS_URL, split into sections by its "# HEADER" lines, cached in memory +
+   701→   701→   localStorage (with a TTL), and served on demand via read_docs. This keeps the
+   702→   702→   app tiny, lets docs be updated by editing one text file, and only spends
+   703→   703→   tokens on the section the model actually needs.
+   704→   704→   Note: the raw host has no CORS headers, so we read it through the same
+   705→   705→   headless reader proxy used for scrape_webpage (falls back to direct fetch). */
+   706→   706→const DOCS_URL="https://files.catbox.moe/y66iut.txt";
+   707→   707→const LS_DOCS="tbh_docs_cache_v1";
+   708→   708→const DOCS_TTL=6*60*60*1000; // re-fetch at most every 6h; served from cache meanwhile
+   709→   709→const DocsCache={ full:null, sections:null, fetchedAt:0, inflight:null };
+   710→   710→
+   711→   711→/* Slugify a "# CLASS: Api" style header into a stable topic id like "api". */
+   712→   712→function docSlug(h){return h.replace(/^#+\s*/,"").replace(/^CLASS:\s*/i,"").replace(/^MODULE\b.*\(require\)/i,"require")
+   713→   713→  .toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");}
+   714→   714→
+   715→   715→/* Parse the raw doc text into {slug -> {title, body}} keyed sections. */
+   716→   716→function parseDocs(text){
+   717→   717→  const lines=(text||"").split("\n");
+   718→   718→  const sections={}; const order=[]; let cur=null;
+   719→   719→  for(const ln of lines){
+   720→   720→    if(/^#\s+\S/.test(ln)){ // top-level section header
+   721→   721→      const title=ln.replace(/^#\s+/,"").trim(); const slug=docSlug(ln)||("s"+order.length);
+   722→   722→      cur={title,body:""}; sections[slug]=cur; order.push(slug);
+   723→   723→    }else if(cur){cur.body+=(cur.body?"\n":"")+ln;}
+   724→   724→  }
+   725→   725→  return {sections,order};
+   726→   726→}
+   727→   727→function readDocsLS(){try{const j=JSON.parse(localStorage.getItem(LS_DOCS)||"null");
+   728→   728→  if(j&&j.full&&(Date.now()-j.fetchedAt)<DOCS_TTL)return j;}catch(e){}return null;}
+   729→   729→function writeDocsLS(){try{localStorage.setItem(LS_DOCS,JSON.stringify({full:DocsCache.full,fetchedAt:DocsCache.fetchedAt}));}catch(e){}}
+   730→   730→
+   731→   731→/* Return the parsed docs, using memory cache → localStorage cache → network.
+   732→   732→   Concurrent callers share one in-flight fetch. Never throws: on total failure
+   733→   733→   it returns whatever (possibly stale) cache exists, or an empty set. */
+   734→   734→async function getDocs(force){
+   735→   735→  if(!force){
+   736→   736→    if(DocsCache.sections&&(Date.now()-DocsCache.fetchedAt)<DOCS_TTL)return DocsCache;
+   737→   737→    const ls=readDocsLS();
+   738→   738→    if(ls){DocsCache.full=ls.full;DocsCache.fetchedAt=ls.fetchedAt;
+   739→   739→      const p=parseDocs(ls.full);DocsCache.sections=p.sections;DocsCache.order=p.order;return DocsCache;}
+   740→   740→  }
+   741→   741→  if(DocsCache.inflight)return DocsCache.inflight;
+   742→   742→  DocsCache.inflight=(async()=>{
+   743→   743→    let text=null;
+   744→   744→    // 1) reader proxy (adds CORS, returns clean text)
+   745→   745→    try{const r=await fetch(READER+DOCS_URL,{headers:{"X-Return-Format":"text"}});
+   746→   746→      if(r.ok){const t=await r.text();if(t&&t.length>200)text=t;}}catch(e){}
+   747→   747→    // 2) direct fetch fallback (works if the host ever sends CORS headers)
+   748→   748→    if(!text){try{const r=await fetch(DOCS_URL);if(r.ok){const t=await r.text();if(t&&t.length>200)text=t;}}catch(e){}}
+   749→   749→    if(text){DocsCache.full=text;DocsCache.fetchedAt=Date.now();
+   750→   750→      const p=parseDocs(text);DocsCache.sections=p.sections;DocsCache.order=p.order;writeDocsLS();}
+   751→   751→    else if(!DocsCache.sections){ // last resort: keep any stale localStorage even if expired
+   752→   752→      try{const j=JSON.parse(localStorage.getItem(LS_DOCS)||"null");
+   753→   753→        if(j&&j.full){DocsCache.full=j.full;DocsCache.fetchedAt=j.fetchedAt;
+   754→   754→          const p=parseDocs(j.full);DocsCache.sections=p.sections;DocsCache.order=p.order;}}catch(e){}
+   755→   755→      if(!DocsCache.sections){DocsCache.sections={};DocsCache.order=[];}
+   756→   756→    }
+   757→   757→    DocsCache.inflight=null;return DocsCache;
+   758→   758→  })();
+   759→   759→  return DocsCache.inflight;
+   760→   760→}
+   761→   761→/* Find sections matching a topic id or free-text query. Returns [{slug,title,body}]. */
+   762→   762→function findDocSections(q){
+   763→   763→  const {sections,order=[]}=DocsCache; if(!sections)return [];
+   764→   764→  const query=(q||"").trim().toLowerCase();
+   765→   765→  if(!query)return [];
+   766→   766→  // exact / prefix slug match first
+   767→   767→  const bySlug=order.filter(s=>s===query||s.startsWith(query)||query.startsWith(s));
+   768→   768→  if(bySlug.length)return bySlug.map(s=>({slug:s,...sections[s]}));
+   769→   769→  // keyword match against title + body
+   770→   770→  const scored=order.map(s=>{const sec=sections[s];const hay=(s+" "+sec.title+" "+sec.body).toLowerCase();
+   771→   771→    let score=0;for(const w of query.split(/\s+/)){if(!w)continue;if(hay.includes(w))score++;}
+   772→   772→    if(sec.title.toLowerCase().includes(query))score+=3; return {s,score};})
+   773→   773→    .filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,2);
+   774→   774→  return scored.map(x=>({slug:x.s,...sections[x.s]}));
+   775→   775→}
+   776→   776→
+   777→   777→const DEFAULT_SYS=`You are TBH Helper Ai — an autonomous assistant & coding copilot for TeleBotHost (telebothost.com), a platform for hosting Telegram bots that run scripts written in TBL (Tele Bot Lang).
+   778→   778→
+   779→   779→You have DEEP knowledge of TBL. Reference overview:
+   780→   780→${KB_OVERVIEW}
+   781→   781→
+   782→   782→When you need exact syntax/details for a class or topic, call the read_docs tool with a topic id (e.g. api, bot, http, global, webhook, webapp, res, msg, libs, modules, require, command-structure) or a free-text query. The full reference lives in an external, auto-cached file — always read_docs rather than guessing TBL APIs.
+   783→   783→
+   784→   784→MEMORY: You have a human-like memory managed for you.
+   785→   785→- Long-term memory (durable facts: preferences, bot ids, project context, decisions) is shown to you under "Known about this user" when present. Do NOT re-ask or re-state things already listed there. Save a new durable fact with memory_save the moment the user reveals one (e.g. their main bot id, preferred language/tone, project name). Keep values concise; reuse the same key to update.
+   786→   786→- Short-term/working memory: older turns of the current chat may be condensed into a "Conversation so far" summary to save tokens — treat it as the reliable recap of what happened earlier.
+   787→   787→- Forgetting: if the user says to forget something, says a fact is wrong/outdated, or clearly switches to a new topic, use memory_forget (a key, or all:true after confirming) and drop stale context. Never nag the user with the same question twice.
+   788→   788→
+   789→   789→Guidelines:
+   790→   790→- Call a tool whenever the request maps to a TeleBotHost action or you need TBL detail. You may chain multiple tools.
+   791→   791→- When writing bot logic, produce correct TBL code (Api/Bot/HTTP/User/Global/msg/Libs/modules) — never invent methods; verify via read_docs if unsure.
+   792→   792→- You can read/scrape any web page headlessly with scrape_webpage when the user asks or when live info helps.
+   793→   793→- ALWAYS ask explicit confirmation before destructive actions (deleting bots/commands, clearing storage, transfers, memory_forget all).
+   794→   794→- Bot IDs are numeric; reuse ones you get from a list or from memory.
+   795→   795→- Be friendly, precise, proactive. If a required detail is missing (e.g. a bot token) and it isn't in memory, ask once.
+   796→   796→
+   797→   797→VERBOSE MODE: narrate what you are doing in your own words as you work — e.g. before reading docs, calling a tool, or scraping a page, say briefly why. Keep it natural and concise, not templated. Summarize tool results clearly with good formatting.`;
+   798→   798→
+   799→   799→let cfg=Object.assign({
+   800→   800→  cbKey:"",tbhKey:"",sys:DEFAULT_SYS,tier:"free",theme:"dark",
+   801→   801→  useTools:true,stream:true,mainModel:"",thinking:false,webSearch:false,
+   802→   802→},JSON.parse(localStorage.getItem(LS_CFG)||"{}"));
+   803→   803→/* migrate old "pinned" -> "mainModel" */
+   804→   804→if(cfg.pinned&&!cfg.mainModel){cfg.mainModel=cfg.pinned;}delete cfg.pinned;
+   805→   805→function saveCfg(){localStorage.setItem(LS_CFG,JSON.stringify(cfg));}
+   806→   806→
+   807→   807→/* ============================================================================
+   808→   808→   MEMORY SYSTEM — human-like, two-tier, token-aware.
+   809→   809→   ---------------------------------------------------------------------------
+   810→   810→   LONG-TERM  (Memory): durable facts about the user that survive across all
+   811→   811→     chats and devices. Stored as {key -> {value, ts, hits}}. Mirrored to the
+   812→   812→     TeleBotHost Global cloud store when a key is set (cross-device), always
+   813→   813→     kept in localStorage too. A compact, deduplicated digest of these facts is
+   814→   814→     injected into every system prompt so the model never re-asks or repeats
+   815→   815→     itself — but only the facts, never raw transcripts, so tokens stay low.
+   816→   816→   SHORT-TERM (working memory, per chat): recent turns are kept verbatim; once a
+   817→   817→     chat grows past a threshold the older turns are compressed into a running
+   818→   818→     summary (see summarizeOlderTurns). This caps context growth so long chats
+   819→   819→     don't blow up token cost or drift.
+   820→   820→   FORGETTING: memory_forget removes facts; a detected topic-change or an
+   821→   821→     explicit "forget" resets the per-chat working memory while long-term stays.
+   822→   822→   ============================================================================ */
+   823→   823→const LS_MEM="tbh_mem_v5";
+   824→   824→const MEM_MAX_FACTS=40;            // hard cap; least-useful evicted past this
+   825→   825→const MEM_MAX_VALUE=280;           // chars per fact value (keeps digest cheap)
+   826→   826→const MEM_DIGEST_BUDGET=1200;      // max chars of memory injected into the prompt
+   827→   827→const Memory={
+   828→   828→  data:(()=>{try{return JSON.parse(localStorage.getItem(LS_MEM)||"{}");}catch(e){return {};}})(),
+   829→   829→  _save(){try{localStorage.setItem(LS_MEM,JSON.stringify(this.data));}catch(e){}},
+   830→   830→  _evict(){const keys=Object.keys(this.data);if(keys.length<=MEM_MAX_FACTS)return;
+   831→   831→    // evict lowest (hits, then oldest) beyond cap
+   832→   832→    keys.sort((a,b)=>((this.data[a].hits||0)-(this.data[b].hits||0))||((this.data[a].ts||0)-(this.data[b].ts||0)));
+   833→   833→    for(const k of keys.slice(0,keys.length-MEM_MAX_FACTS))delete this.data[k];},
+   834→   834→  async set(key,value){
+   835→   835→    key=String(key).trim();value=String(value).slice(0,MEM_MAX_VALUE);
+   836→   836→    const prev=this.data[key];
+   837→   837→    this.data[key]={value,ts:Date.now(),hits:prev?prev.hits:0};
+   838→   838→    this._evict();this._save();
+   839→   839→    if(cfg.tbhKey)tbhGlobal("set",{key:CLOUD_NS+key,value,type:"String"}).catch(()=>{});
+   840→   840→    return true;},
+   841→   841→  async get(key){key=String(key).trim();let e=this.data[key];
+   842→   842→    if(e){e.hits=(e.hits||0)+1;this._save();return e.value;}
+   843→   843→    if(cfg.tbhKey){const g=await tbhGlobal("get",{key:CLOUD_NS+key});
+   844→   844→      if(g.ok&&g.data&&g.data.value!=null){this.data[key]={value:g.data.value,ts:Date.now(),hits:1};this._save();return g.data.value;}}
+   845→   845→    return null;},
+   846→   846→  del(key){key=String(key).trim();const had=key in this.data;delete this.data[key];this._save();
+   847→   847→    if(had&&cfg.tbhKey)tbhGlobal("del",{key:CLOUD_NS+key}).catch(()=>{});return had;},
+   848→   848→  clear(){const n=Object.keys(this.data).length;
+   849→   849→    if(cfg.tbhKey)for(const k of Object.keys(this.data))tbhGlobal("del",{key:CLOUD_NS+k}).catch(()=>{});
+   850→   850→    this.data={};this._save();return n;},
+   851→   851→  all(){const o={};for(const k of Object.keys(this.data))o[k]=this.data[k].value;return o;},
+   852→   852→  /* Compact, token-bounded digest for the system prompt (facts only). */
+   853→   853→  digest(){
+   854→   854→    const keys=Object.keys(this.data);if(!keys.length)return "";
+   855→   855→    // most-used / most-recent first so the useful facts survive the budget
+   856→   856→    keys.sort((a,b)=>((this.data[b].hits||0)-(this.data[a].hits||0))||((this.data[b].ts||0)-(this.data[a].ts||0)));
+   857→   857→    let out="",used=0;
+   858→   858→    for(const k of keys){const line=`- ${k}: ${this.data[k].value}`;
+   859→   859→      if(used+line.length+1>MEM_DIGEST_BUDGET)break;out+=(out?"\n":"")+line;used+=line.length+1;}
+   860→   860→    return out;},
+   861→   861→};
+   862→   862→
+   863→   863→/* ===== TBH TOOLS registry ===== */
+   864→   864→const TBH_TOOLS = [{"name":"list_public_ads","description":"Retrieve all active, non-expired advertisements. Fetches active advertisements filtered by active status and non-expired time criteria. Returns an empty array if no advertisements are available. [Public: no auth required.]","method":"GET","path":"/public/ads","requiresAuth":false,"pathParams":[],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{},"required":[]}},{"name":"get_api_status","description":"API health and status probe. Retrieves current version, health status, and active environment. [Public: no auth required.]","method":"GET","path":"/status","requiresAuth":false,"pathParams":[],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{},"required":[]}},{"name":"get_public_user_profile","description":"Get public profile. Retrieves public information about a user. No authentication required. [Public: no auth required.]","method":"GET","path":"/public/user/{username}","requiresAuth":false,"pathParams":["username"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"username":{"type":"string","description":"The user's public username. (URL path parameter)"}},"required":["username"]}},{"name":"list_public_user_bots","description":"List a user's published bots. Returns bot templates and community store listings owned by the user. Each item includes listing_type to distinguish them. No authentication required. [Public: no auth required.]","method":"GET","path":"/public/user/{username}/bots","requiresAuth":false,"pathParams":["username"],"queryParams":["page","limit","listing_type","type"],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"username":{"type":"string","description":"The owner's username. (URL path parameter)","example":"johndoe"},"page":{"type":"string","description":" (query parameter)","example":"1"},"limit":{"type":"string","description":" (query parameter)","example":"20"},"listing_type":{"type":"string","description":"Filter: bot_template (shareable blueprint) or community_store (store listing). (query parameter)","enum":["all","bot_template","community_store"],"example":"all"},"type":{"type":"string","description":"Deprecated alias for listing_type. Use listing_type instead. (query parameter)","enum":["all","template","store"],"example":"all"}},"required":["username"]}},{"name":"get_public_user_bot","description":"Get a published bot by Telegram username. Returns full details for one published bot (bot template or community store listing), including description, README markdown, commands, and env placeholders. No authentication required. [Public: no auth required.]","method":"GET","path":"/public/user/{username}/bots/{botUsername}","requiresAuth":false,"pathParams":["username","botUsername"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"username":{"type":"string","description":" (URL path parameter)","example":"johndoe"},"botUsername":{"type":"string","description":"Telegram bot username without @. (URL path parameter)","example":"my_weather_bot"}},"required":["username","botUsername"]}},{"name":"get_public_user_bot_readme","description":"Get published bot README only. Returns only the description and README markdown for a published bot. Use the bot detail endpoint for the full profile including commands. No authentication required. [Public: no auth required.]","method":"GET","path":"/public/user/{username}/bots/{botUsername}/readme","requiresAuth":false,"pathParams":["username","botUsername"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"username":{"type":"string","description":" (URL path parameter)","example":"johndoe"},"botUsername":{"type":"string","description":" (URL path parameter)","example":"my_weather_bot"}},"required":["username","botUsername"]}},{"name":"list_bots","description":"List user bots. Retrieves all registered bots belonging to the user. Accessible by developer API keys. [Auth required: developer API key.]","method":"GET","path":"/bot","requiresAuth":true,"pathParams":[],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{},"required":[]}},{"name":"register_bot","description":"Register a new bot. Registers a new bot under the caller's account. Accessible via web session cookie OR developer API keys (sk_*). Subject to plan-based creation rate limits (e.g. 1 request per 5 minutes on FREE/FREEMIUM plans). [Auth required: developer API key.]","method":"POST","path":"/bot","requiresAuth":true,"pathParams":[],"queryParams":[],"bodyProps":["bot_token","bot_name","run_now"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"bot_token":{"type":"string","example":"123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"},"bot_name":{"type":"string","description":"Optional. Defaults to the Telegram bot first name when omitted.","example":"MyAwesomeBot"},"run_now":{"type":"boolean","example":false}},"required":["bot_token"]}},{"name":"delete_bots","description":"Delete registered bot(s). Performs a soft deletion on one or more bots, moving them to a backup for 10 days during which they can be recovered. **Requires write/secret key or session cookie**. [Auth required: developer API key.]","method":"DELETE","path":"/bot","requiresAuth":true,"pathParams":[],"queryParams":[],"bodyProps":["ids"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"ids":{"type":"array","description":"A single bot ID or an array of bot IDs to delete","example":[123456],"items":{"type":"integer"}}},"required":["ids"]}},{"name":"list_deleted_bots","description":"List soft-deleted bots. Retrieves all soft-deleted bots belonging to the user that are currently in the 10-day backup. Accessible by developer API keys. [Auth required: developer API key.]","method":"GET","path":"/bot/deleted","requiresAuth":true,"pathParams":[],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{},"required":[]}},{"name":"recover_deleted_bot","description":"Recover soft-deleted bot. Restores a soft-deleted bot from backup back to the active bots collection. **The bot will be recovered with status 0 (disabled) for safety**. [Auth required: developer API key.]","method":"POST","path":"/bot/deleted/{botid}/recover","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID to recover (URL path parameter)"}},"required":["botid"]}},{"name":"permanently_delete_bot","description":"Permanently delete soft-deleted bot. Permanently purges a soft-deleted bot and all of its associated logs, users, and session records from backup. [Auth required: developer API key.]","method":"DELETE","path":"/bot/deleted/{botid}/permanent","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID to permanently delete (URL path parameter)"}},"required":["botid"]}},{"name":"pin_bots","description":"Pin or unpin bot(s). Updates the pin status for one or more bots. **Requires write/secret key or session cookie**. [Auth required: developer API key.]","method":"PATCH","path":"/bot/pin","requiresAuth":true,"pathParams":[],"queryParams":[],"bodyProps":["ids","pin"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"ids":{"type":"array","description":"A single bot ID or an array of bot IDs to pin/unpin","example":[123456],"items":{"type":"integer"}},"pin":{"type":"boolean","description":"True to pin, false to unpin","example":true}},"required":["ids","pin"]}},{"name":"get_bot","description":"Get single bot details. Retrieves profile of a specific bot by ID. [Auth required: developer API key.]","method":"GET","path":"/bot/{botid}","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"}},"required":["botid"]}},{"name":"update_bot","description":"Update bot configuration. Updates specific attributes of the registered bot. **Requires write/secret key or session cookie**. [Auth required: developer API key.]","method":"PATCH","path":"/bot/{botid}","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":["name","bot_token","pin","status"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"},"name":{"type":"string","example":"NewBotName"},"bot_token":{"type":"string","example":"987654321:XYZabcDef..."},"pin":{"type":"boolean","example":true},"status":{"type":"integer","example":1}},"required":["botid"]}},{"name":"export_bot_link","description":"Generate temporary bot export download link. Generates a temporary JWT token and download URL for exporting the bot. [Auth required: developer API key.]","method":"GET","path":"/bot/{botid}/export","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"}},"required":["botid"]}},{"name":"download_bot_package","description":"Download bot configuration package. Downloads the bot configuration as a ZIP package containing bot.yaml, .env, and commands directory. Requires a valid temporary JWT token query parameter. [Public: no auth required.]","method":"GET","path":"/bot/download","requiresAuth":false,"pathParams":[],"queryParams":["token"],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"token":{"type":"string","description":"The temporary download JWT token (query parameter)"}},"required":["token"]}},{"name":"import_bot","description":"Import bot from ZIP package. Imports a bot from a ZIP upload. Requires a multipart form-data payload containing the zip file. Accessible via web session cookie OR developer API keys (sk_*). Subject to plan-based creation rate limits (e.g. 1 request per 5 minutes on FREE/FREEMIUM plans). [Auth required: developer API key.]","method":"POST","path":"/bot/import","requiresAuth":true,"pathParams":[],"queryParams":[],"bodyProps":["file"],"bodyIsMultipart":true,"inputSchema":{"type":"object","properties":{"file":{"type":"string","description":"The bot configuration ZIP file","format":"binary"}},"required":[]}},{"name":"clone_bot","description":"Clone an existing bot. Duplicates an owned bot or a public template bot under the user's account. Accessible via web session cookie OR developer API keys (sk_*). Subject to plan-based creation rate limits (e.g. 1 request per 5 minutes on FREE/FREEMIUM plans). Subject to bot cloning rate limits (1/sec, 5/min, 20/hr). [Auth required: developer API key.]","method":"POST","path":"/bot/{botid}/clone","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"}},"required":["botid"]}},{"name":"clone_child_bot","description":"Clone a bot as a child bot. Clones an owned parent bot or a public template bot as a child bot under the user's account. Child bots dynamically inherit environment variables and commands/folders from the parent bot without copying or duplicating configuration arrays in the database. Accessible via web session cookie OR developer API keys (sk_*). Subject to plan-based creation rate limits. Subject to bot cloning rate limits (1/sec, 5/min, 20/hr). [Auth required: developer API key.]","method":"POST","path":"/bot/{botid}/clone-child","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric parent bot ID (URL path parameter)"}},"required":["botid"]}},{"name":"list_child_bots","description":"List children of a parent bot. Retrieves all child bots registered under the specified parent bot. Accessible via web session cookie OR developer API keys (sk_* / pub_*). [Auth required: developer API key.]","method":"GET","path":"/bot/{botid}/children","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric parent bot ID (URL path parameter)"}},"required":["botid"]}},{"name":"transfer_bot","description":"Transfer bot to another user. Transfers the bot to a target user (identified by their user ID or email address). Note that the transfer operation actually clones the same bot into the target user's account: the original bot is preserved on the sender's account, and a new clone of the bot is provisioned on the receiver's account with blank credentials (status 0, null token) and reset environment variables. All other configurations and command structures are duplicated. [Auth required: developer API key.]","method":"POST","path":"/bot/{botid}/transfer","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":["target"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"},"target":{"type":"string","description":"The target user's email or user ID","example":"receiver@example.com"}},"required":["botid","target"]}},{"name":"reset_bot","description":"Reset bot logs and sessions. Deletes all records from bot logs, bot sessions, and flags all bot users as just created. [Auth required: developer API key.]","method":"POST","path":"/bot/{botid}/reset","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"}},"required":["botid"]}},{"name":"toggle_bot_template","description":"Toggle bot template status. Toggles the is_template flag for the specified bot. [Auth required: developer API key.]","method":"PATCH","path":"/bot/{botid}/template","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":["is_template"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"},"is_template":{"type":"boolean","example":true}},"required":["botid","is_template"]}},{"name":"get_bot_readme","description":"Get bot description and README. Retrieves the description and README markdown privately for the bot owner. [Auth required: developer API key.]","method":"GET","path":"/bot/{botid}/readme","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"}},"required":["botid"]}},{"name":"update_bot_readme","description":"Update bot description and README. Saves or updates description and README markdown. Only allowed if the bot has been marked as a template. [Auth required: developer API key.]","method":"PUT","path":"/bot/{botid}/readme","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":["description","readme"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"},"description":{"type":"string","example":"A Telegram bot description","maxLength":500},"readme":{"type":"string","example":"# Bot Description","maxLength":50000}},"required":["botid"]}},{"name":"get_bot_storage_stats","description":"Get bot storage statistics. Retrieves sync and async storage size and key metrics for a specific bot and its users. Requires ownership check. [Auth required: developer API key.]","method":"GET","path":"/bot/{botid}/storage/stats","requiresAuth":true,"pathParams":["botid"],"queryParams":["refresh"],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"},"refresh":{"type":"boolean","description":"Bypasses cache if set to true or 1. (query parameter)","default":false}},"required":["botid"]}},{"name":"get_bot_storage_keys","description":"Get bot storage data keys (detail). Retrieves bot keys detail without showing values. Requires ownership check. [Auth required: developer API key.]","method":"GET","path":"/bot/{botid}/storage/data","requiresAuth":true,"pathParams":["botid"],"queryParams":["refresh"],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"},"refresh":{"type":"boolean","description":"Bypasses cache if set to true or 1. (query parameter)","default":false}},"required":["botid"]}},{"name":"clear_bot_storage","description":"Clear bot storage data (sync + async). Permanently deletes all sync and async props for the bot and user props associated with it. Requires ownership check. [Auth required: developer API key.]","method":"DELETE","path":"/bot/{botid}/storage/data","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"}},"required":["botid"]}},{"name":"migrate_bot_storage","description":"Migrate bot sync storage to async. Migrates sync Bot.setProp data to async db.xx storage on the executor. Owner is resolved from the bot record. [Auth required: developer API key.]","method":"POST","path":"/bot/{botid}/storage/migrate","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":["scope","dryRun","overwrite","deleteSource"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":" (URL path parameter)"},"scope":{"type":"string","enum":["bot","user","both"],"default":"both"},"dryRun":{"type":"boolean","default":false},"overwrite":{"type":"boolean","default":false},"deleteSource":{"type":"boolean","default":false}},"required":["botid"]}},{"name":"start_bot_broadcast","description":"Start a bot broadcast job. Initiates a broadcast sending a command trigger or message template to all bot subscribers matching the given filters. Owner checks are enforced. [Auth required: developer API key.]","method":"POST","path":"/bot/{botid}/broadcast","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":["method","body","filters"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"},"method":{"type":"string","example":"sendMessage"},"body":{"type":"object","properties":{"text":{"type":"string","example":"Hello Subscribers!"}}},"filters":{"type":"object","properties":{"chatType":{"oneOf":[{"type":"string","enum":["all","private","group","channel"]},{"type":"array","items":{"type":"string","enum":["all","private","group","channel"]}}],"description":"Target specific chat types. Can be a single chat type or an array of multiple chat types to target simultaneously.","example":["private","group"]},"premiumOnly":{"type":"boolean","example":false}}}},"required":["botid","body"]}},{"name":"get_broadcast_stats","description":"Get bot broadcast stats. Retrieves real-time progress metrics and status of a broadcast. Requires bot ownership check. [Auth required: developer API key.]","method":"GET","path":"/bot/{botid}/broadcast/stats/{broadcastId}","requiresAuth":true,"pathParams":["botid","broadcastId"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":" (URL path parameter)"},"broadcastId":{"type":"string","description":" (URL path parameter)"}},"required":["botid","broadcastId"]}},{"name":"stop_broadcast","description":"Stop an active bot broadcast. Stops a processing broadcast job immediately. Requires bot ownership check. [Auth required: developer API key.]","method":"POST","path":"/bot/{botid}/broadcast/stop/{broadcastId}","requiresAuth":true,"pathParams":["botid","broadcastId"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":" (URL path parameter)"},"broadcastId":{"type":"string","description":" (URL path parameter)"}},"required":["botid","broadcastId"]}},{"name":"modify_broadcast","description":"Modify active bot broadcast parameters. Allows modifying the message body mid-run for any pending batches. Requires bot ownership check. [Auth required: developer API key.]","method":"PUT","path":"/bot/{botid}/broadcast/modify/{broadcastId}","requiresAuth":true,"pathParams":["botid","broadcastId"],"queryParams":[],"bodyProps":["body"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":" (URL path parameter)"},"broadcastId":{"type":"string","description":" (URL path parameter)"},"body":{"type":"object","properties":{"text":{"type":"string","example":"Updated subscriber text."}}}},"required":["botid","broadcastId","body"]}},{"name":"delete_broadcast","description":"Delete bot broadcast history log. Deletes the completed or stopped broadcast tracking record and cleans Redis keys. Requires bot ownership check. [Auth required: developer API key.]","method":"DELETE","path":"/bot/{botid}/broadcast/delete/{broadcastId}","requiresAuth":true,"pathParams":["botid","broadcastId"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":" (URL path parameter)"},"broadcastId":{"type":"string","description":" (URL path parameter)"}},"required":["botid","broadcastId"]}},{"name":"list_broadcasts","description":"List broadcasts for a bot. Retrieves the full list of broadcasts queued or run for a specific bot. Requires bot ownership check. [Auth required: developer API key.]","method":"GET","path":"/bot/{botid}/broadcast/list","requiresAuth":true,"pathParams":["botid"],"queryParams":["status","all"],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":" (URL path parameter)"},"status":{"type":"string","description":"Comma-separated list of statuses to filter by (e.g. pending,processing,completed,failed,stopped) (query parameter)"},"all":{"type":"string","description":"Set to true to retrieve broadcasts across all statuses (query parameter)"}},"required":["botid"]}},{"name":"list_public_templates","description":"List bot templates (explore). Browse shareable bot blueprints (listing_type: bot_template). For community store listings use GET /public/store/bots. No authentication required. [Public: no auth required.]","method":"GET","path":"/public/templates","requiresAuth":false,"pathParams":[],"queryParams":["page","limit","search"],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"page":{"type":"string","description":" (query parameter)","example":"1"},"limit":{"type":"string","description":" (query parameter)","example":"10"},"search":{"type":"string","description":" (query parameter)","example":"search_term"}},"required":[]}},{"name":"get_public_template","description":"Get a bot template by ID. Returns one shareable bot blueprint (listing_type: bot_template) including description, README markdown, commands, and env placeholders. No authentication required. [Public: no auth required.]","method":"GET","path":"/public/templates/{botid}","requiresAuth":false,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":" (URL path parameter)","example":"123456789012345"}},"required":["botid"]}},{"name":"get_public_template_readme","description":"Get public template README details. Retrieves the public description and README markdown for a template bot. Uses caching for performance. [Public: no auth required.]","method":"GET","path":"/public/templates/{botid}/readme","requiresAuth":false,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"}},"required":["botid"]}},{"name":"browse_public_store","description":"Browse community store (public). Public discovery endpoint for the community bot store. Same data as the authenticated store list but requires no login. No authentication required. [Public: no auth required.]","method":"GET","path":"/public/store/bots","requiresAuth":false,"pathParams":[],"queryParams":["category","search","page","limit"],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"category":{"type":"string","description":" (query parameter)","example":"Utility"},"search":{"type":"string","description":" (query parameter)","example":"weather"},"page":{"type":"string","description":" (query parameter)","example":"1"},"limit":{"type":"string","description":" (query parameter)","example":"20"}},"required":[]}},{"name":"get_public_store_bot","description":"Get a community store listing (public). Returns one store listing with owner username and a link to the owner profile path. No authentication required. [Public: no auth required.]","method":"GET","path":"/public/store/bots/{botMetaId}","requiresAuth":false,"pathParams":["botMetaId"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botMetaId":{"type":"string","description":" (URL path parameter)","example":"665a1b2c3d4e5f6789012345"}},"required":["botMetaId"]}},{"name":"list_store_bots","description":"List community store bots. Returns all bots published in the community store, sorted by popularity (install count). Accessible via web session cookie or developer API keys. [Auth required: developer API key.]","method":"GET","path":"/store/bots","requiresAuth":true,"pathParams":[],"queryParams":["category","search","page","limit"],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"category":{"type":"string","description":"Filter by store category. (query parameter)","example":"Utility"},"search":{"type":"string","description":"Search name, description, username, or tags (2–64 characters). (query parameter)","example":"weather"},"page":{"type":"string","description":"Page number (default 1). (query parameter)","example":"1"},"limit":{"type":"string","description":"Results per page (default 20, max 50). (query parameter)","example":"20"}},"required":[]}},{"name":"install_store_bot","description":"Install a community store bot. Adds a community store bot to the authenticated user's account. Environment values are cleared and must be configured after install. Subject to store burst, daily, listing cooldown, and plan-based creation limits. Subject to store install rate limits (1/sec, 5/min, 20/hr). [Auth required: developer API key.]","method":"POST","path":"/store/install/{botMetaId}","requiresAuth":true,"pathParams":["botMetaId"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botMetaId":{"type":"string","description":"The store listing ID returned from the list endpoint (`_id` field). (URL path parameter)","example":"665a1b2c3d4e5f6789012345"}},"required":["botMetaId"]}},{"name":"list_bot_commands","description":"List bot commands. Retrieves all commands registered for the specified bot. [Auth required: developer API key.]","method":"GET","path":"/bot/{botid}/commands","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"}},"required":["botid"]}},{"name":"create_bot_command","description":"Create a new bot command. Registers a new command configuration for the bot. Subject to creation rate limits (10/sec, 30/min, 200/hr) and bot capacity cap of 1000 commands / 10MB total command payload. [Auth required: developer API key.]","method":"POST","path":"/bot/{botid}/commands","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":["name","code","answer","parse_mode","keyboard","aliases","allow_only_group","need_reply","is_web","folder"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"},"name":{"type":"string","example":"/start"},"code":{"type":"string","example":"ctx.reply(\"Hello!\");"},"answer":{"type":"string","example":"Welcome"},"parse_mode":{"type":"string","example":"Markdown"},"keyboard":{"type":"string","example":"main_menu"},"aliases":{"type":"array","example":["begin"],"items":{"type":"string"}},"allow_only_group":{"type":"boolean","example":false},"need_reply":{"type":"boolean","example":false},"is_web":{"type":"integer","example":0},"folder":{"type":"string","description":"Optional folder name to assign this command to. Folder must exist.","example":"Admin Utilities"}},"required":["botid","name"]}},{"name":"delete_bot_commands","description":"Delete multiple commands. Deletes one or more commands from the bot in a single batch operation. [Auth required: developer API key.]","method":"DELETE","path":"/bot/{botid}/commands","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":["ids"],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"},"ids":{"type":"array","description":"Array of command database IDs to delete","example":[1,2,3],"items":{"type":"integer"}}},"required":["botid","ids"]}},{"name":"list_deleted_bot_commands","description":"List deleted bot commands. Retrieves all soft-deleted commands for the specified bot that are currently stored in the recovery collection (expires after 7 days). [Auth required: developer API key.]","method":"GET","path":"/bot/{botid}/commands/deleted","requiresAuth":true,"pathParams":["botid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"}},"required":["botid"]}},{"name":"recover_deleted_bot_command","description":"Recover a deleted bot command. Restores a soft-deleted bot command by its deletion record ID back into the bot's active commands array. [Auth required: developer API key.]","method":"POST","path":"/bot/{botid}/commands/deleted/{deletedid}/recover","requiresAuth":true,"pathParams":["botid","deletedid"],"queryParams":[],"bodyProps":[],"bodyIsMultipart":false,"inputSchema":{"type":"object","properties":{"botid":{"type":"string","description":"The numeric bot ID (URL path parameter)"},"deletedid":{"type":"string","description":"The unique ObjectId of the soft-deleted command record (URL path parameter)"}},"required":["botid","deletedid"]}}];
+   865→   865→
+   866→   866→/* ============================ LOCAL (built-in) TOOLS ============================
+   867→   867→   These run entirely in-browser (no TeleBotHost API): TBL knowledge base,
+   868→   868→   headless web scraping, and cloud agent-memory (backed by TBH Global storage
+   869→   869→   when a key is present, else localStorage fallback). */
+   870→   870→const LOCAL_TOOLS=[
+   871→   871→  {name:"read_docs",description:"Read the full external TBL (Tele Bot Lang) reference for a topic to get exact syntax before writing bot code. Docs live outside this app and are fetched+cached automatically. Pass a topic id (e.g. api, bot, http, global, webhook, msg, libs, modules) OR a free-text query (e.g. 'send photo', 'membership check'). Use whenever unsure of a TBL method — prefer this over guessing.",
+   872→   872→   parameters:{type:"object",properties:{topic:{type:"string",description:"Topic id or free-text query to look up in the docs"}},required:["topic"]}},
+   873→   873→  {name:"scrape_webpage",description:"Fetch a web page headlessly and return its clean text/markdown. Use when the user asks to read a page or you need live/up-to-date info.",
+   874→   874→   parameters:{type:"object",properties:{url:{type:"string",description:"Full http(s) URL to read"}},required:["url"]}},
+   875→   875→  {name:"memory_save",description:"Save a durable long-term memory (a preference, bot id, project fact, decision) that should persist across chats & devices. Only save genuinely reusable facts — NOT transient chat details. Provide a short stable key and a concise value. Saving an existing key overwrites it.",
+   876→   876→   parameters:{type:"object",properties:{key:{type:"string",description:"Short stable id, e.g. 'main_bot_id' or 'reply_language'"},value:{type:"string",description:"Concise fact to remember"}},required:["key","value"]}},
+   877→   877→  {name:"memory_get",description:"Recall long-term memory. Give a key to fetch one fact, or omit key to list all remembered keys+values. Saved memories are already injected into your context, so usually you do not need this.",
+   878→   878→   parameters:{type:"object",properties:{key:{type:"string"}},required:[]}},
+   879→   879→  {name:"memory_forget",description:"Delete a long-term memory. Use when the user asks to forget something, a fact becomes wrong/outdated, or they want a clean slate. Pass a key to delete one fact, or all:true to wipe every long-term memory (confirm with the user first for all:true).",
+   880→   880→   parameters:{type:"object",properties:{key:{type:"string"},all:{type:"boolean"}},required:[]}},
+   881→   881→];
+   882→   882→const LOCAL_NAMES=new Set(LOCAL_TOOLS.map(t=>t.name));
+   883→   883→
+   884→   884→/* cloud/local memory backed by TeleBotHost Global storage when available */
+   885→   885→async function tbhGlobal(method,body){
+   886→   886→  if(!cfg.tbhKey) return {ok:false,local:true};
+   887→   887→  try{const res=await fetch(TBH_BASE+"/global/"+method,{method:body?"POST":"GET",
+   888→   888→    headers:{"Content-Type":"application/json",Authorization:"Bearer "+cfg.tbhKey},
+   889→   889→    body:body?JSON.stringify(body):undefined});
+   890→   890→    if(!res.ok) return {ok:false,status:res.status,local:true};
+   891→   891→    return {ok:true,data:await res.json().catch(()=>null)};}catch(e){return {ok:false,local:true};}
+   892→   892→}
+   893→   893→async function runLocalTool(name,args={}){
+   894→   894→  if(name==="read_docs"){
+   895→   895→    await getDocs(false);
+   896→   896→    const hits=findDocSections(args.topic);
+   897→   897→    if(!hits.length){
+   898→   898→      const avail=(DocsCache.order||[]).join(", ");
+   899→   899→      return {error:`No doc section matched "${args.topic}".`,available_topics:avail};
+   900→   900→    }
+   901→   901→    // return at most ~6k chars to stay token-cheap
+   902→   902→    let budget=6000;const out=[];
+   903→   903→    for(const h of hits){const body=h.body.slice(0,budget);out.push({topic:h.slug,title:h.title,reference:body});budget-=body.length;if(budget<=0)break;}
+   904→   904→    return {ok:true,source:DOCS_URL,cached:true,sections:out};
+   905→   905→  }
+   906→   906→  if(name==="scrape_webpage"){
+   907→   907→    if(!/^https?:\/\//i.test(args.url||"")) return {error:"Provide a full http(s) URL."};
+   908→   908→    try{const res=await fetch(READER+args.url,{headers:{"X-Return-Format":"markdown"}});
+   909→   909→      const text=(await res.text()).slice(0,12000);
+   910→   910→      return {ok:res.ok,status:res.status,url:args.url,content:text};
+   911→   911→    }catch(e){return {error:"Could not read page: "+e.message};}
+   912→   912→  }
+   913→   913→  if(name==="memory_save"){
+   914→   914→    if(!args.key||args.value==null||args.value==="") return {error:"Provide both key and value."};
+   915→   915→    await Memory.set(args.key,args.value);
+   916→   916→    return {ok:true,stored:cfg.tbhKey?"cloud+local":"local",key:args.key,value:args.value};
+   917→   917→  }
+   918→   918→  if(name==="memory_get"){
+   919→   919→    if(args.key){const v=await Memory.get(args.key);return {ok:true,key:args.key,value:v??null};}
+   920→   920→    return {ok:true,memories:Memory.all()};
+   921→   921→  }
+   922→   922→  if(name==="memory_forget"){
+   923→   923→    if(args.all){const n=Memory.clear();return {ok:true,forgot:"all",count:n};}
+   924→   924→    if(args.key){const had=Memory.del(args.key);return {ok:true,key:args.key,forgot:had};}
+   925→   925→    return {error:"Pass a key to forget, or all:true to wipe everything."};
+   926→   926→  }
+   927→   927→  return {error:"Unknown local tool: "+name};
+   928→   928→}
+   929→   929→
+   930→   930→/* ============================ TBH TOOL EXECUTOR ============================ */
+   931→   931→const TBH_BY_NAME=Object.fromEntries(TBH_TOOLS.map(t=>[t.name,t]));
+   932→   932→async function runTbhTool(name,args={}){
+   933→   933→  if(LOCAL_NAMES.has(name)) return runLocalTool(name,args);
+   934→   934→  const t=TBH_BY_NAME[name];
+   935→   935→  if(!t) return {error:`Unknown tool: ${name}`};
+   936→   936→  for(const r of (t.inputSchema.required||[]))
+   937→   937→    if(args[r]===undefined||args[r]===null||args[r]==="") return {error:`Missing required argument: ${r}`};
+   938→   938→  let path=t.path;
+   939→   939→  for(const p of t.pathParams){if(args[p]===undefined) return {error:`Missing path param: ${p}`};path=path.replace(`{${p}}`,encodeURIComponent(args[p]));}
+   940→   940→  const qs=new URLSearchParams();
+   941→   941→  for(const q of t.queryParams) if(args[q]!==undefined&&args[q]!==null&&args[q]!=="") qs.append(q,String(args[q]));
+   942→   942→  const url=TBH_BASE+path+(qs.toString()?`?${qs}`:"");
+   943→   943→  const headers={};
+   944→   944→  if(t.requiresAuth){if(!cfg.tbhKey) return {error:"TeleBotHost API key not set. Add it in Settings to use this tool."};headers["Authorization"]="Bearer "+cfg.tbhKey;}
+   945→   945→  let body;
+   946→   946→  if(t.bodyProps.length&&t.method!=="GET"&&!t.bodyIsMultipart){
+   947→   947→    const payload={};for(const k of t.bodyProps) if(args[k]!==undefined) payload[k]=args[k];
+   948→   948→    body=JSON.stringify(payload);headers["Content-Type"]="application/json";
+   949→   949→  }
+   950→   950→  try{
+   951→   951→    const res=await fetch(url,{method:t.method,headers,body});
+   952→   952→    const ct=res.headers.get("content-type")||"";
+   953→   953→    const data=ct.includes("json")?await res.json().catch(()=>null):(await res.text()).slice(0,4000);
+   954→   954→    return {ok:res.ok,status:res.status,data};
+   955→   955→  }catch(e){return {error:"Network error: "+e.message};}
+   956→   956→}
+   957→   957→function toolSchemas(){
+   958→   958→  const local=LOCAL_TOOLS.map(t=>({type:"function",function:{name:t.name,description:t.description,parameters:t.parameters}}));
+   959→   959→  const tbh=TBH_TOOLS.map(t=>({type:"function",function:{
+   960→   960→    name:t.name,description:t.description.replace(/\s*\[(Auth required|Public)[^\]]*\]\s*$/,""),parameters:t.inputSchema,
+   961→   961→  }}));
+   962→   962→  return [...local,...tbh];
+   963→   963→}
+   964→   964→
+   965→   965→/* ============================ MODEL ROUTER ============================
+   966→   966→   Tracks per-model rolling usage across minute / hour / day windows and,
+   967→   967→   crucially, computes how long to WAIT for capacity so rate limits are
+   968→   968→   absorbed silently in the background instead of shown to the user. */
+   969→   969→const MIN=60000, HOUR=3600000, DAY=86400000;
+   970→   970→const sleep=(ms,signal)=>new Promise((res,rej)=>{
+   971→   971→  const id=setTimeout(res,ms);
+   972→   972→  if(signal)signal.addEventListener("abort",()=>{clearTimeout(id);rej(new DOMException("Aborted","AbortError"));},{once:true});
+   973→   973→});
+   974→   974→const Router={
+   975→   975→  state:JSON.parse(localStorage.getItem(LS_ROUTER)||"{}"),
+   976→   976→  models:[],
+   977→   977→  save(){localStorage.setItem(LS_ROUTER,JSON.stringify(this.state));},
+   978→   978→  limitsFor(id){const tr=TIERS[cfg.tier]||TIERS.free;return Object.assign({},tr.def,tr.models[id]||{});},
+   979→   979→  ent(id){if(!this.state[id])this.state[id]={reqs:[],toks:[],cooldownUntil:0};return this.state[id];},
+   980→   980→  prune(e){const n=Date.now();e.reqs=e.reqs.filter(t=>n-t<DAY);e.toks=e.toks.filter(x=>n-x.t<DAY);},
+   981→   981→  /* usage across all windows */
+   982→   982→  usage(id){const e=this.ent(id);this.prune(e);const n=Date.now(),L=this.limitsFor(id);
+   983→   983→    const rpm=e.reqs.filter(t=>n-t<MIN).length;
+   984→   984→    const tpm=e.toks.filter(x=>n-x.t<MIN).reduce((s,x)=>s+x.n,0);
+   985→   985→    const tph=e.toks.filter(x=>n-x.t<HOUR).reduce((s,x)=>s+x.n,0);
+   986→   986→    const tpd=e.toks.reduce((s,x)=>s+x.n,0);
+   987→   987→    return {rpm,tpm,tph,tpd,L,cool:n<e.cooldownUntil,cooldownUntil:e.cooldownUntil,
+   988→   988→      rpmFrac:L.rpm?rpm/L.rpm:0,tpmFrac:L.tpm?tpm/L.tpm:0,
+   989→   989→      tphFrac:L.tph?tph/L.tph:0,tpdFrac:L.tpd?tpd/L.tpd:0};},
+   990→   990→  /* how many ms until this model can accept a request (0 = ready now).
+   991→   991→     Returns Infinity-ish (DAY) only if a hard daily cap is reached. */
+   992→   992→  waitMs(id){const e=this.ent(id);this.prune(e);const n=Date.now(),L=this.limitsFor(id);
+   993→   993→    let w=Math.max(0,e.cooldownUntil-n);
+   994→   994→    // RPM: if at cap, wait until the oldest request in the last minute ages out
+   995→   995→    if(L.rpm){const inMin=e.reqs.filter(t=>n-t<MIN);
+   996→   996→      if(inMin.length>=L.rpm)w=Math.max(w,MIN-(n-Math.min(...inMin)) + 60);}
+   997→   997→    // TPM: if at cap, wait until oldest tokens in last minute age out
+   998→   998→    if(L.tpm){const inMin=e.toks.filter(x=>n-x.t<MIN);const sum=inMin.reduce((s,x)=>s+x.n,0);
+   999→   999→      if(sum>=L.tpm&&inMin.length)w=Math.max(w,MIN-(n-Math.min(...inMin.map(x=>x.t)))+60);}
+  1000→  1000→    // TPH
+  1001→  1001→    if(L.tph){const inH=e.toks.filter(x=>n-x.t<HOUR);const sum=inH.reduce((s,x)=>s+x.n,0);
+  1002→  1002→      if(sum>=L.tph&&inH.length)w=Math.max(w,HOUR-(n-Math.min(...inH.map(x=>x.t)))+60);}
+  1003→  1003→    // TPD (hard-ish) — treat as available in DAY at worst
+  1004→  1004→    if(L.tpd){const sum=e.toks.reduce((s,x)=>s+x.n,0);
+  1005→  1005→      if(sum>=L.tpd&&e.toks.length)w=Math.max(w,DAY-(n-Math.min(...e.toks.map(x=>x.t)))+60);}
+  1006→  1006→    return w;},
+  1007→  1007→  ready(id){return this.waitMs(id)===0;},
+  1008→  1008→  /* candidate list honouring an optional role preference */
+  1009→  1009→  candidates(role){
+  1010→  1010→    const list=(this.models.length?this.models:PREFERENCE).slice();
+  1011→  1011→    // stable ordering: role pref first, then declared PREFERENCE, then rest
+  1012→  1012→    const prefId=role&&ROLE_PREF[role];
+  1013→  1013→    return list.sort((a,b)=>{
+  1014→  1014→      if(prefId){if(a===prefId)return -1;if(b===prefId)return 1;}
+  1015→  1015→      const ia=PREFERENCE.indexOf(a),ib=PREFERENCE.indexOf(b);
+  1016→  1016→      return (ia<0?99:ia)-(ib<0?99:ib);});},
+  1017→  1017→  /* pick a model to try now, preferring ready ones; returns {id, wait} where
+  1018→  1018→     wait is ms the caller should silently sleep before using it. */
+  1019→  1019→  plan(role,exclude=[]){
+  1020→  1020→    // user pinned a main model → always honour it for the main role
+  1021→  1021→    if(cfg.mainModel&&(!role||role==="main")){
+  1022→  1022→      const id=cfg.mainModel;return {id,wait:this.waitMs(id)};}
+  1023→  1023→    const cand=this.candidates(role).filter(m=>!exclude.includes(m));
+  1024→  1024→    if(!cand.length)return {id:cfg.mainModel||PREFERENCE[0],wait:0};
+  1025→  1025→    // any ready right now? take the best-preferred ready one
+  1026→  1026→    const readyNow=cand.filter(m=>this.ready(m));
+  1027→  1027→    if(readyNow.length)return {id:readyNow[0],wait:0};
+  1028→  1028→    // none ready → choose the one with the shortest wait
+  1029→  1029→    let best=cand[0],bw=this.waitMs(cand[0]);
+  1030→  1030→    for(const m of cand){const w=this.waitMs(m);if(w<bw){bw=w;best=m;}}
+  1031→  1031→    return {id:best,wait:bw};},
+  1032→  1032→  recordReq(id){this.ent(id).reqs.push(Date.now());this.save();},
+  1033→  1033→  recordToks(id,n){const e=this.ent(id);e.toks.push({t:Date.now(),n});this.save();},
+  1034→  1034→  cooldown(id,ms=12000){const until=Date.now()+ms;const e=this.ent(id);
+  1035→  1035→    if(until>e.cooldownUntil)e.cooldownUntil=until;this.save();
+  1036→  1036→    addLog(`${modelLabel(id)} paused ${Math.round(ms/1000)}s (limit)`);},
+  1037→  1037→  async discover(){
+  1038→  1038→    if(!cfg.cbKey){this.models=[...PREFERENCE];return;}
+  1039→  1039→    try{const r=await fetch(CB_BASE+"/models",{headers:{Authorization:"Bearer "+cfg.cbKey}});
+  1040→  1040→      if(r.ok){const j=await r.json();this.models=(j.data||[]).map(m=>m.id).filter(Boolean);}}catch(e){}
+  1041→  1041→    if(!this.models.length)this.models=[...PREFERENCE];
+  1042→  1042→    // keep known-good ordering up front
+  1043→  1043→    this.models.sort((a,b)=>{const ia=PREFERENCE.indexOf(a),ib=PREFERENCE.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});},
+  1044→  1044→};
+  1045→  1045→function modelLabel(id){return (MODEL_META[id]&&MODEL_META[id].label)||id;}
+  1046→  1046→
+  1047→  1047→/* ============================ CEREBRAS CLIENT ============================
+  1048→  1048→   Rate limits are handled here SILENTLY:
+  1049→  1049→   - Before each attempt we ask the Router for the best model + how long to
+  1050→  1050→     wait for capacity, then sleep that long (UI shows a neutral "waiting"
+  1051→  1051→     tag, never an error).
+  1052→  1052→   - On a 429 we honour the server's retry-after, park that model, and try
+  1053→  1053→     the next best one. The user only ever sees a hard error for a bad key
+  1054→  1054→     or a total network failure. */
+  1055→  1055→async function cerebras(messages,{onDelta,onModel,onWait,signal,role,cacheKey,maxOut}={}){
+  1056→  1056→  if(!cfg.cbKey)throw new Error("Add your Cerebras API key in Settings to chat.");
+  1057→  1057→  const tried=[];let lastErr;
+  1058→  1058→  const poolSize=Math.max(1,(Router.models.length||PREFERENCE.length));
+  1059→  1059→  const maxAttempts=poolSize+3; // allow a couple of extra silent waits
+  1060→  1060→  for(let a=0;a<maxAttempts;a++){
+  1061→  1061→    let {id:model,wait}=Router.plan(role,tried);
+  1062→  1062→    // If every candidate is busy, reset the exclude list and wait on the soonest.
+  1063→  1063→    if(model===undefined){tried.length=0;({id:model,wait}=Router.plan(role,[]));}
+  1064→  1064→    // Silent back-off: wait for capacity instead of erroring out.
+  1065→  1065→    if(wait>0){
+  1066→  1066→      onWait&&onWait(Math.ceil(wait/1000),modelLabel(model));
+  1067→  1067→      addLog(`Waiting ${Math.ceil(wait/1000)}s for ${modelLabel(model)} capacity`);
+  1068→  1068→      await sleep(Math.min(wait,60000),signal);
+  1069→  1069→      onWait&&onWait(0);
+  1070→  1070→    }
+  1071→  1071→    tried.push(model);
+  1072→  1072→    onModel&&onModel(model);Router.recordReq(model);
+  1073→  1073→    if(a>0)addLog(`Routing to ${modelLabel(model)}`);
+  1074→  1074→    // max_completion_tokens is added to the pre-flight TPM estimate, so keep it
+  1075→  1075→    // as small as the task needs (aux/summary calls pass a tiny maxOut).
+  1076→  1076→    const payload={model,messages,stream:!!cfg.stream,max_completion_tokens:maxOut||MAX_OUT,temperature:0.6};
+  1077→  1077→    // Route same-conversation turns to the same prompt cache for better hit rate
+  1078→  1078→    // (harmless if the account hasn't enabled prompt_cache_key — it's an opaque hint).
+  1079→  1079→    if(cacheKey)payload.prompt_cache_key=cacheKey;
+  1080→  1080→    if(cfg.useTools){payload.tools=toolSchemas();payload.tool_choice="auto";}
+  1081→  1081→    try{
+  1082→  1082→      const res=await fetch(CB_BASE+"/chat/completions",{method:"POST",signal,
+  1083→  1083→        headers:{"Content-Type":"application/json",Authorization:"Bearer "+cfg.cbKey},body:JSON.stringify(payload)});
+  1084→  1084→      if(res.status===429){
+  1085→  1085→        // honour server retry-after (seconds); default to a minute-window backoff
+  1086→  1086→        const ra=parseFloat(res.headers.get("retry-after")||res.headers.get("Retry-After")||"");
+  1087→  1087→        Router.cooldown(model,isFinite(ra)&&ra>0?Math.ceil(ra*1000):15000);
+  1088→  1088→        lastErr=new Error("rate limited");
+  1089→  1089→        // remove from tried so we may return to it after cooldown if it's the only option
+  1090→  1090→        if(tried.length>=poolSize)tried.length=0;
+  1091→  1091→        continue;}
+  1092→  1092→      if(res.status===401)throw new Error("Invalid Cerebras API key (401). Check Settings.");
+  1093→  1093→      if(res.status===403)throw new Error("Cerebras key rejected (403). Check your account/billing.");
+  1094→  1094→      if(!res.ok){const txt=await res.text().catch(()=>"");
+  1095→  1095→        if(res.status>=500){Router.cooldown(model,6000);lastErr=new Error(res.status+" on "+model);continue;}
+  1096→  1096→        throw new Error(`Cerebras ${res.status}: ${txt.slice(0,180)}`);}
+  1097→  1097→      if(cfg.stream){
+  1098→  1098→        const reader=res.body.getReader(),dec=new TextDecoder();
+  1099→  1099→        let buf="",content="",reasoning="",usage=null;const toolAcc={};
+  1100→  1100→        while(true){
+  1101→  1101→          const {value,done}=await reader.read();if(done)break;
+  1102→  1102→          buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop();
+  1103→  1103→          for(const line of lines){const s=line.trim();if(!s.startsWith("data:"))continue;
+  1104→  1104→            const d=s.slice(5).trim();if(d==="[DONE]")continue;let j;try{j=JSON.parse(d);}catch(e){continue;}
+  1105→  1105→            if(j.usage)usage=j.usage;const ch=j.choices&&j.choices[0];if(!ch)continue;const dl=ch.delta||{};
+  1106→  1106→            if(dl.reasoning){reasoning+=dl.reasoning;onDelta&&onDelta({reasoning:dl.reasoning});}
+  1107→  1107→            if(dl.content){content+=dl.content;onDelta&&onDelta({content:dl.content});}
+  1108→  1108→            if(dl.tool_calls)for(const tc of dl.tool_calls){const i=tc.index||0;toolAcc[i]=toolAcc[i]||{id:"",name:"",args:""};
+  1109→  1109→              if(tc.id)toolAcc[i].id=tc.id;if(tc.function){if(tc.function.name)toolAcc[i].name+=tc.function.name;if(tc.function.arguments)toolAcc[i].args+=tc.function.arguments;}}
+  1110→  1110→          }
+  1111→  1111→        }
+  1112→  1112→        const tokens=usage?usage.total_tokens:Math.ceil((JSON.stringify(messages).length+content.length+reasoning.length)/4);
+  1113→  1113→        Router.recordToks(model,tokens||0);
+  1114→  1114→        const tool_calls=Object.values(toolAcc).map(t=>({id:t.id||("call_"+Math.random().toString(36).slice(2,10)),type:"function",function:{name:t.name,arguments:t.args||"{}"}}));
+  1115→  1115→        return {model,content,reasoning,tool_calls:tool_calls.length?tool_calls:null,usage};
+  1116→  1116→      }else{
+  1117→  1117→        const j=await res.json(),m=j.choices[0].message;
+  1118→  1118→        Router.recordToks(model,(j.usage&&j.usage.total_tokens)||0);
+  1119→  1119→        return {model,content:m.content||"",reasoning:m.reasoning||"",tool_calls:m.tool_calls||null,usage:j.usage};
+  1120→  1120→      }
+  1121→  1121→    }catch(e){if(e.name==="AbortError")throw e;lastErr=e;
+  1122→  1122→      if(/401|403|Invalid|rejected|Add your/.test(e.message))throw e;Router.cooldown(model,6000);}
+  1123→  1123→  }
+  1124→  1124→  // Exhausted attempts — this is rare. Surface a soft, non-alarming message.
+  1125→  1125→  throw lastErr||new Error("Still waiting on model capacity — please send that again in a moment.");
+  1126→  1126→}
+  1127→  1127→
+  1128→  1128→/* ============================ CHAT STORE (multi-chat) ============================ */
+  1129→  1129→let chats=JSON.parse(localStorage.getItem(LS_CHATS)||"[]");
+  1130→  1130→let currentId=null;
+  1131→  1131→function saveChats(){localStorage.setItem(LS_CHATS,JSON.stringify(chats.slice(0,50)));}
+  1132→  1132→function curChat(){return chats.find(c=>c.id===currentId);}
+  1133→  1133→function newChat(){const c={id:"c"+Date.now().toString(36),title:"New chat",messages:[],ts:Date.now()};chats.unshift(c);currentId=c.id;saveChats();return c;}
+  1134→  1134→function ensureChat(){let c=curChat();if(!c)c=newChat();return c;}
+  1135→  1135→function delChat(id){chats=chats.filter(c=>c.id!==id);if(currentId===id){currentId=chats[0]?chats[0].id:null;}saveChats();renderChatList();if(!currentId){openChat(null);}else openChat(currentId);}
+  1136→  1136→
+  1137→  1137→/* ============================ PER-CHAT CONTEXT & COST ============================ */
+  1138→  1138→function chatUsed(chat){ // token estimate of everything held in this chat's context
+  1139→  1139→  if(!chat)return 0;
+  1140→  1140→  if(typeof chat.used==="number")return chat.used;
+  1141→  1141→  let t=approxTokens(cfg.sys||DEFAULT_SYS);
+  1142→  1142→  for(const m of chat.messages)t+=approxTokens(m.text||m.reasoning||JSON.stringify(m.api||{}));
+  1143→  1143→  return t;
+  1144→  1144→}
+  1145→  1145→function chatCost(chat){return chat&&typeof chat.cost==="number"?chat.cost:0;}
+  1146→  1146→function addUsage(chat,tokens){ // accumulate real usage from the API
+  1147→  1147→  if(!chat)return;chat.used=(chat.used||chatUsed(chat))+ (tokens||0);
+  1148→  1148→  chat.cost=(chat.cost||0)+ (tokens||0)/1e6*COST_PER_MTOK;
+  1149→  1149→}
+  1150→  1150→function limitState(chat){ // {ok} | {blocked:'context'|'cost'}
+  1151→  1151→  // With per-request compaction the chat can run indefinitely; only stop at the
+  1152→  1152→  // TPD-aligned lifetime ceiling as a final safety valve.
+  1153→  1153→  if(!chat)return {ok:true};
+  1154→  1154→  if(chatUsed(chat)>=CTX_LIMIT)return {blocked:"context"};
+  1155→  1155→  return {ok:true};
+  1156→  1156→}
+  1157→  1157→/* Live size of the request we WOULD send now (post-compaction), vs the free-tier
+  1158→  1158→   per-request budget. This is the number that actually matters under 30K TPM. */
+  1159→  1159→function liveReqTokens(chat){
+  1160→  1160→  if(!chat||!chat.messages||!chat.messages.length)return 0;
+  1161→  1161→  try{return histTokens([sysStatic(),sysContext(chat),...buildTail(chat)].filter(Boolean));}catch(e){return chatUsed(chat);}
+  1162→  1162→}
+  1163→  1163→function updateCtxBar(){
+  1164→  1164→  const chat=curChat();const bar=$("#ctxBar");if(!bar)return;
+  1165→  1165→  const used=Math.min(liveReqTokens(chat),REQ_INPUT_BUDGET);
+  1166→  1166→  const pct=Math.min(100,Math.round(used/REQ_INPUT_BUDGET*100)),left=Math.max(0,100-pct);
+  1167→  1167→  const track=bar.querySelector(".ctx-track");
+  1168→  1168→  track.classList.toggle("warn",pct>=70&&pct<88);track.classList.toggle("hot",pct>=88);
+  1169→  1169→  $("#ctxFill").style.width=pct+"%";
+  1170→  1170→  const kf=n=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+"k":String(n);
+  1171→  1171→  $("#ctxTok").textContent=`${kf(used)} / ${kf(REQ_INPUT_BUDGET)}`;
+  1172→  1172→  $("#ctxLeft").textContent=`${left}% request budget · auto-compacts`;
+  1173→  1173→  $("#ctxCost").innerHTML=`free · <b>30K TPM</b>`;
+  1174→  1174→  bar.style.display=chat&&chat.messages&&chat.messages.length?"flex":"none";
+  1175→  1175→}
+  1176→  1176→
+  1177→  1177→/* ============================ AGENT LOOP ============================ */
+  1178→  1178→let running=false,abortCtl=null;
+  1179→  1179→function saveResume(chat,step){localStorage.setItem(LS_RESUME,JSON.stringify({chatId:chat.id,step,ts:Date.now()}));}
+  1180→  1180→function clearResume(){localStorage.removeItem(LS_RESUME);}
+  1181→  1181→/* STATIC system message — same bytes on every request in a session so Cerebras
+  1182→  1182→   prompt caching (prefix, 128-token blocks) reuses it and it does NOT count
+  1183→  1183→   toward the uncached TPM bucket. No timestamps or per-turn state here. */
+  1184→  1184→function sysStatic(){let s=cfg.sys||DEFAULT_SYS;
+  1185→  1185→  if(cfg.thinking)s+="\nThink step-by-step and expose your reasoning before the final answer.";
+  1186→  1186→  if(cfg.webSearch)s+="\nWeb search is enabled; use it when up-to-date info is needed.";
+  1187→  1187→  if(!cfg.tbhKey)s+="\nNOTE: No TeleBotHost API key is set — authenticated tools will error, but public tools (store, templates, public profiles, status) work.";
+  1188→  1188→  return {role:"system",content:s};}
+  1189→  1189→/* SEMI-STATIC context message — long-term memory + running summary. Changes only
+  1190→  1190→   when memory/summary changes, so it caches well between consecutive turns.
+  1191→  1191→   ALWAYS present so the assistant never "forgets" across separate requests. */
+  1192→  1192→function sysContext(chat){
+  1193→  1193→  let s="";
+  1194→  1194→  const dig=Memory.digest();
+  1195→  1195→  if(dig)s+="=== Known about this user (long-term memory — persists across all chats; do not re-ask; keep it updated) ===\n"+dig;
+  1196→  1196→  if(chat&&chat.summary)s+=(s?"\n\n":"")+"=== Conversation so far (earlier turns, condensed) ===\n"+chat.summary;
+  1197→  1197→  return s?{role:"system",content:s}:null;}
+  1198→  1198→
+  1199→  1199→/* ---- SHORT-TERM (working) MEMORY -------------------------------------------
+  1200→  1200→   Keep the last RECENT_TURNS user↔assistant exchanges verbatim; everything
+  1201→  1201→   older gets folded into chat.summary so the prompt stays bounded no matter how
+  1202→  1202→   long the chat runs. chat.sumIdx = index in chat.messages up to which content
+  1203→  1203→   is already reflected in chat.summary. We only ever cut at a user-message
+  1204→  1204→   boundary so we never split a tool_call/tool_result pair. */
+  1205→  1205→const RECENT_TURNS=6;                 // user messages we try hardest to keep verbatim
+  1206→  1206→const OLD_TOOL_CAP=400;               // chars kept for a tool result once it's "old"
+  1207→  1207→function userIndices(chat){const a=[];for(let i=0;i<chat.messages.length;i++)if(chat.messages[i].role==="user")a.push(i);return a;}
+  1208→  1208→function msgToLine(m){
+  1209→  1209→  if(m.role==="user")return "User: "+(m.text||"").slice(0,600);
+  1210→  1210→  if(m.role==="assistant"){let t=(m.text||"").slice(0,600);
+  1211→  1211→    if(m.tool_calls&&m.tool_calls.length)t+=" [called: "+m.tool_calls.map(c=>c.function.name).join(", ")+"]";return t?"Assistant: "+t:"";}
+  1212→  1212→  if(m.role==="tool"){const r=m.result||{};const ok=r.ok!==false&&!r.error;
+  1213→  1213→    let d="";try{d=JSON.stringify(r).slice(0,200);}catch(e){}return `Tool ${m.tool}: ${ok?"ok":"error"} ${d}`;}
+  1214→  1214→  return "";}
+  1215→  1215→/* Condense messages [from,cut) into a short text block, merging with any prior
+  1216→  1216→   summary. Uses the fast aux model with a tiny output budget; on any failure it
+  1217→  1217→   falls back to a trimmed transcript so nothing ever breaks. */
+  1218→  1218→async function condense(prevSummary,msgs,signal){
+  1219→  1219→  const transcript=msgs.map(msgToLine).filter(Boolean).join("\n").slice(0,9000);
+  1220→  1220→  const sys="You compress chat history for a TeleBotHost coding assistant. "
+  1221→  1221→    +"Rewrite everything below into a compact recap (<=200 words): durable facts, user goals, "
+  1222→  1222→    +"bot ids, decisions, code/commands produced, and unfinished threads. Merge with the existing "
+  1223→  1223→    +"recap without repeating. Output ONLY the recap.";
+  1224→  1224→  const usr=(prevSummary?"Existing recap:\n"+prevSummary+"\n\n":"")+"New turns:\n"+transcript;
+  1225→  1225→  try{const r=await cerebras([{role:"system",content:sys},{role:"user",content:usr}],{role:"aux",signal,maxOut:500});
+  1226→  1226→    const out=(r.content||"").trim();
+  1227→  1227→    if(out)return out.slice(0,1400);
+  1228→  1228→  }catch(e){}
+  1229→  1229→  return ((prevSummary?prevSummary+"\n":"")+transcript).slice(-1400);
+  1230→  1230→}
+  1231→  1231→/* Fold older un-summarized turns into chat.summary. Cuts at a user-message
+  1232→  1232→   boundary so tool_call/tool_result pairs stay intact. Each call folds a BATCH
+  1233→  1233→   (roughly half of the extra turns) so a long chat is compacted in a few steps
+  1234→  1234→   rather than one-turn-at-a-time. Returns true if it advanced the summary. */
+  1235→  1235→async function foldOldestTurns(chat,signal){
+  1236→  1236→  const uidx=userIndices(chat);
+  1237→  1237→  if(uidx.length<=RECENT_TURNS+1)return false;    // only the recent window left
+  1238→  1238→  const from=chat.sumIdx||0;
+  1239→  1239→  // Never fold the last RECENT_TURNS user turns (kept verbatim).
+  1240→  1240→  const keepFrom=uidx[uidx.length-RECENT_TURNS];
+  1241→  1241→  // Foldable user-turn boundaries strictly after `from` and before keepFrom.
+  1242→  1242→  const cand=uidx.filter(i=>i>from&&i<=keepFrom);
+  1243→  1243→  if(!cand.length)return false;
+  1244→  1244→  // Fold about half the remaining foldable turns each pass (min the first one),
+  1245→  1245→  // so we converge in ~log steps but keep summaries digestible.
+  1246→  1246→  const take=Math.max(1,Math.ceil(cand.length/2));
+  1247→  1247→  const cut=cand[take-1];
+  1248→  1248→  const slice=chat.messages.slice(from,cut);
+  1249→  1249→  if(!slice.length)return false;
+  1250→  1250→  chat.summary=await condense(chat.summary||"",slice,signal);
+  1251→  1251→  chat.sumIdx=cut;saveChats();return true;
+  1252→  1252→}
+  1253→  1253→/* Estimate token size of a candidate message list (system+context+tail).
+  1254→  1254→   Tool-schema size is memoized — it only changes when tools toggle. */
+  1255→  1255→let _toolTokCache=null;
+  1256→  1256→function toolSchemaTokens(){if(!cfg.useTools)return 0;
+  1257→  1257→  if(_toolTokCache==null)_toolTokCache=approxTokens(JSON.stringify(toolSchemas()));return _toolTokCache;}
+  1258→  1258→function histTokens(msgs){let t=0;for(const m of msgs)t+=msgTokens(m);return t+toolSchemaTokens();}
+  1259→  1259→/* Build the tail (recent, un-summarized messages) with OLD tool outputs trimmed
+  1260→  1260→   to keep tokens down while preserving the last turn's tool detail. */
+  1261→  1261→function buildTail(chat){
+  1262→  1262→  let start=chat.sumIdx||0;
+  1263→  1263→  if(start>chat.messages.length||(start>0&&chat.messages[start]&&chat.messages[start].role!=="user")){
+  1264→  1264→    start=0;chat.summary="";chat.sumIdx=0;
+  1265→  1265→  }
+  1266→  1266→  const raw=chat.messages.slice(start);
+  1267→  1267→  const lastUser=(()=>{for(let i=raw.length-1;i>=0;i--)if(raw[i].role==="user")return i;return 0;})();
+  1268→  1268→  return raw.map((m,i)=>{
+  1269→  1269→    if(!m.api)return null;
+  1270→  1270→    // trim big tool outputs that are older than the current turn
+  1271→  1271→    if(m.role==="tool"&&i<lastUser){
+  1272→  1272→      const c=m.api.content||"";
+  1273→  1273→      if(c.length>OLD_TOOL_CAP)return {...m.api,content:c.slice(0,OLD_TOOL_CAP)+" …[trimmed]"};
+  1274→  1274→    }
+  1275→  1275→    return m.api;
+  1276→  1276→  }).filter(Boolean);
+  1277→  1277→}
+  1278→  1278→/* Compose the full request: static system → semi-static context → recent tail.
+  1279→  1279→   Then, if still over budget, progressively fold older turns until it fits.
+  1280→  1280→   This runs EVERY request, so no single turn can exceed the free-tier TPM. */
+  1281→  1281→async function buildHistory(chat,signal){
+  1282→  1282→  let msgs=[sysStatic(),sysContext(chat),...buildTail(chat)].filter(Boolean);
+  1283→  1283→  let guard=0;
+  1284→  1284→  while(histTokens(msgs)>REQ_INPUT_BUDGET&&guard++<12){
+  1285→  1285→    const folded=await foldOldestTurns(chat,signal);
+  1286→  1286→    if(!folded)break; // can't fold further (only the last turn(s) remain)
+  1287→  1287→    msgs=[sysStatic(),sysContext(chat),...buildTail(chat)].filter(Boolean);
+  1288→  1288→  }
+  1289→  1289→  return msgs;
+  1290→  1290→}
+  1291→  1291→/* Proactive compaction before a turn: if the chat is already near budget, fold
+  1292→  1292→   ahead of time so the turn starts lean (and so cache stays warm). */
+  1293→  1293→async function maybeCompact(chat,signal){
+  1294→  1294→  if(!chat)return;
+  1295→  1295→  let msgs=[sysStatic(),sysContext(chat),...buildTail(chat)].filter(Boolean);
+  1296→  1296→  let guard=0;
+  1297→  1297→  while(histTokens(msgs)>COMPACT_AT&&guard++<12){
+  1298→  1298→    const folded=await foldOldestTurns(chat,signal);
+  1299→  1299→    if(!folded)break;
+  1300→  1300→    msgs=[sysStatic(),sysContext(chat),...buildTail(chat)].filter(Boolean);
+  1301→  1301→  }
+  1302→  1302→}
+  1303→  1303→
+  1304→  1304→/* ---- TOPIC-CHANGE DETECTION -----------------------------------------------
+  1305→  1305→   Cheap heuristic so we don't waste tokens: explicit "forget/new topic/nvm"
+  1306→  1306→   phrases, or a very low word-overlap between the new message and the running
+  1307→  1307→   context, resets the per-chat working memory (summary) while long-term facts
+  1308→  1308→   stay. Keeps the model from being fed stale, unrelated context. */
+  1309→  1309→const FORGET_RE=/\b(forget (that|it|this|everything|all)|never mind|nevermind|nvm|scrap that|start over|new topic|change (of )?topic|different topic|let'?s move on|clear context|reset (chat|context))\b/i;
+  1310→  1310→function stripWords(s){return (s||"").toLowerCase().match(/[a-z0-9]{4,}/g)||[];}
+  1311→  1311→function topicChanged(chat,text){
+  1312→  1312→  if(FORGET_RE.test(text))return true;
+  1313→  1313→  if(!chat||!chat.messages.length)return false;
+  1314→  1314→  // compare against the last couple of turns' keywords
+  1315→  1315→  const recent=chat.messages.slice(-6).map(m=>m.text||"").join(" ");
+  1316→  1316→  const a=new Set(stripWords(recent)),b=stripWords(text);
+  1317→  1317→  if(b.length<4)return false; // too short to judge → assume same topic
+  1318→  1318→  let overlap=0;for(const w of b)if(a.has(w))overlap++;
+  1319→  1319→  return overlap/b.length<0.08; // <8% shared keywords ⇒ likely a new subject
+  1320→  1320→}
+  1321→  1321→function resetWorkingMemory(chat){if(!chat)return;chat.summary="";chat.sumIdx=0;saveChats();}
+  1322→  1322→
+  1323→  1323→async function agentTurn(text){
+  1324→  1324→  const chat=ensureChat();
+  1325→  1325→  // Topic change / explicit "forget": drop stale working memory (long-term stays)
+  1326→  1326→  // so we don't feed the model unrelated context or waste tokens.
+  1327→  1327→  if(topicChanged(chat,text)&&chat.messages.length){
+  1328→  1328→    resetWorkingMemory(chat);
+  1329→  1329→    addLog("Topic changed — working memory reset");
+  1330→  1330→  }
+  1331→  1331→  addUserMsg(text);hideWelcome();
+  1332→  1332→  chat.messages.push({role:"user",api:{role:"user",content:text},text});
+  1333→  1333→  if(chat.title==="New chat"){chat.title=text.slice(0,44);renderChatList();}
+  1334→  1334→  saveChats();updateCtxBar();
+  1335→  1335→
+  1336→  1336→  // Hard budget guard: if the chat is out of context/cost, emit a limit LINE
+  1337→  1337→  // instead of a model reply (no wasted call, no hallucinated continuation).
+  1338→  1338→  const lim=limitState(chat);
+  1339→  1339→  if(lim.blocked){
+  1340→  1340→    const ui=beginAssistant();ui.setModel(cfg.mainModel||"");
+  1341→  1341→    ui.limit(lim.blocked);
+  1342→  1342→    chat.messages.push({role:"assistant",api:null,text:"",limit:lim.blocked});
+  1343→  1343→    saveChats();return;
+  1344→  1344→  }
+  1345→  1345→
+  1346→  1346→  running=true;setSending(true);abortCtl=new AbortController();
+  1347→  1347→  // Compact ahead if near budget, then build a request that FITS the free-tier
+  1348→  1348→  // TPM by folding oldest turns into the summary as needed.
+  1349→  1349→  try{await maybeCompact(chat,abortCtl.signal);}catch(e){}
+  1350→  1350→  let hist=await buildHistory(chat,abortCtl.signal);
+  1351→  1351→  // Dynamic bits go LAST (cache-friendly): append today's date to the final user
+  1352→  1352→  // turn instead of the cached system prompt.
+  1353→  1353→  (function attachDate(){for(let i=hist.length-1;i>=0;i--){if(hist[i].role==="user"){
+  1354→  1354→    hist[i]={...hist[i],content:(hist[i].content||"")+"\n\n(Context — today is "+new Date().toDateString()+")"};break;}}})();
+  1355→  1355→  const cacheKey="tbh:"+chat.id; // keep this conversation on one prompt cache
+  1356→  1356→
+  1357→  1357→  try{
+  1358→  1358→    for(let step=0;step<10;step++){
+  1359→  1359→      saveResume(chat,step);
+  1360→  1360→      const ui=beginAssistant();let res;
+  1361→  1361→      try{
+  1362→  1362→        res=await cerebras(hist,{signal:abortCtl.signal,role:"main",cacheKey,onModel:m=>ui.setModel(m),
+  1363→  1363→          onWait:(s,label)=>ui.setWaiting(s,label),
+  1364→  1364→          onDelta:d=>{if(d.reasoning)ui.addReason(d.reasoning);if(d.content)ui.addContent(d.content);}});
+  1365→  1365→      }catch(e){if(e.name==="AbortError"){ui.stopped();}else ui.error(e.message);break;}
+  1366→  1366→      ui.setModel(res.model);
+  1367→  1367→      // total_tokens = prompt+completion for THIS request ≈ live context size.
+  1368→  1368→      if(res.usage&&res.usage.total_tokens){chat.used=Math.max(chat.used||0,res.usage.total_tokens);}
+  1369→  1369→      else chat.used=(chat.used||chatUsed(chat));
+  1370→  1370→      chat.cost=(chat.cost||0)+((res.usage&&res.usage.total_tokens)||0)/1e6*COST_PER_MTOK;
+  1371→  1371→      updateCtxBar();
+  1372→  1372→      const am={role:"assistant",content:res.content||""};if(res.tool_calls)am.tool_calls=res.tool_calls;
+  1373→  1373→      hist.push(am);
+  1374→  1374→      chat.messages.push({role:"assistant",api:am,text:res.content||"",reasoning:res.reasoning,model:res.model,tool_calls:res.tool_calls});
+  1375→  1375→      if(res.tool_calls&&res.tool_calls.length){
+  1376→  1376→        ui.finalize(res.content||"");
+  1377→  1377→        for(const tc of res.tool_calls){
+  1378→  1378→          let args={};try{args=JSON.parse(tc.function.arguments||"{}");}catch(e){}
+  1379→  1379→          const tui=addToolCard(tc.function.name,args);
+  1380→  1380→          addLog(`Calling ${tc.function.name}`);
+  1381→  1381→          const result=await runTbhTool(tc.function.name,args);
+  1382→  1382→          tui.done(result);
+  1383→  1383→          // Cap tool output going into the model (full result kept in chat.result for UI).
+  1384→  1384→          const toolMsg={role:"tool",tool_call_id:tc.id,content:JSON.stringify(result).slice(0,4000)};
+  1385→  1385→          hist.push(toolMsg);
+  1386→  1386→          chat.messages.push({role:"tool",api:toolMsg,tool:tc.function.name,args,result});
+  1387→  1387→        }
+  1388→  1388→        saveChats();
+  1389→  1389→        // Guard against runaway multi-step turns blowing the TPM budget: if this
+  1390→  1390→        // turn's history has grown too big, trim the OLDEST in-turn tool outputs.
+  1391→  1391→        while(histTokens(hist)>REQ_INPUT_BUDGET){
+  1392→  1392→          const idx=hist.findIndex(m=>m.role==="tool"&&(m.content||"").length>OLD_TOOL_CAP);
+  1393→  1393→          if(idx<0)break;hist[idx]={...hist[idx],content:hist[idx].content.slice(0,OLD_TOOL_CAP)+" …[trimmed]"};
+  1394→  1394→        }
+  1395→  1395→        continue;
+  1396→  1396→      }else{ui.finalize(res.content||"_(no response)_");saveChats();break;}
+  1397→  1397→    }
+  1398→  1398→  }finally{running=false;setSending(false);abortCtl=null;clearResume();saveChats();renderModels();updateModelChip();updateCtxBar();}
+  1399→  1399→}
+  1400→  1400→
+  1401→  1401→/* ============================ MARKDOWN ============================ */
+  1402→  1402→try{if(window.marked)marked.setOptions({breaks:true,gfm:true});}catch(e){}
+  1403→  1403→function md(t){try{if(!window.marked)return esc(t||"").replace(/\n/g,"<br>");
+  1404→  1404→  const html=marked.parse(t||"");return window.DOMPurify?DOMPurify.sanitize(html):html;}catch(e){return esc(t||"");}}
+  1405→  1405→function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+  1406→  1406→function enhanceCode(scope){scope.querySelectorAll("pre").forEach(pre=>{if(pre.querySelector(".copy-code"))return;
+  1407→  1407→  const b=document.createElement("button");b.className="copy-code";b.innerHTML='<svg class="ic sm"><use href="#i-copy"/></svg>';
+  1408→  1408→  b.onclick=()=>{navigator.clipboard.writeText(pre.innerText);b.innerHTML='<svg class="ic sm"><use href="#i-check"/></svg>';setTimeout(()=>b.innerHTML='<svg class="ic sm"><use href="#i-copy"/></svg>',1400);};
+  1409→  1409→  pre.appendChild(b);});
+  1410→  1410→  scope.querySelectorAll("table").forEach(tb=>{if(tb.parentElement.classList.contains("table-wrap"))return;
+  1411→  1411→    const w=document.createElement("div");w.className="table-wrap";tb.parentNode.insertBefore(w,tb);w.appendChild(tb);});}
+  1412→  1412→
+  1413→  1413→/* ============================ HOME/CHAT MODE ============================ */
+  1414→  1414→const scrollEl=$("#scroll"),stage=$("#stage");
+  1415→  1415→const TH=()=>document.getElementById("thread");
+  1416→  1416→function nearBottom(){return scrollEl.scrollHeight-scrollEl.scrollTop-scrollEl.clientHeight<140;}
+  1417→  1417→function toBottom(smooth){scrollEl.scrollTo({top:scrollEl.scrollHeight,behavior:smooth?"smooth":"auto"});}
+  1418→  1418→function setHome(on){stage.classList.toggle("home",!!on);}
+  1419→  1419→function hideWelcome(){const w=$("#welcome");if(w)w.remove();setHome(false);}
+  1420→  1420→
+  1421→  1421→/* ============================ RENDER MESSAGES ============================ */
+  1422→  1422→const AI_MARK='<svg viewBox="0 0 24 24"><path d="M5 6h14M12 6v13" /></svg>';
+  1423→  1423→function addUserMsg(text,idx){
+  1424→  1424→  hideWelcome();
+  1425→  1425→  const el=document.createElement("div");el.className="turn";
+  1426→  1426→  if(idx!=null)el.dataset.uidx=idx;
+  1427→  1427→  el.innerHTML=`<div class="avatar user">You</div><div class="turn-body">
+  1428→  1428→    <div class="turn-who">You</div><div class="prose"></div>
+  1429→  1429→    <div class="msg-actions"><button class="act-btn" data-copy><svg class="ic sm"><use href="#i-copy"/></svg>Copy</button><button class="act-btn" data-edit><svg class="ic sm"><use href="#i-edit"/></svg>Edit</button></div></div>`;
+  1430→  1430→  el.querySelector(".prose").innerHTML=md(text);
+  1431→  1431→  wireActions(el,text);TH().appendChild(el);toBottom();
+  1432→  1432→}
+  1433→  1433→/* Edit a past user message: cut ALL context from that message onward (so the
+  1434→  1434→   model never sees the old branch → no drift/hallucination) and resend. */
+  1435→  1435→function editUserMessage(el,oldText){
+  1436→  1436→  if(running){toast("Stop the current response first","info");return;}
+  1437→  1437→  const body=el.querySelector(".turn-body");
+  1438→  1438→  if(body.querySelector(".edit-box"))return;
+  1439→  1439→  const idx=el.dataset.uidx!=null?parseInt(el.dataset.uidx,10):null;
+  1440→  1440→  const orig=body.innerHTML;
+  1441→  1441→  body.innerHTML=`<div class="edit-box"><textarea class="edit-ta"></textarea>
+  1442→  1442→    <div class="edit-row"><button class="btn ghost edit-cancel">Cancel</button><button class="btn primary edit-send"><svg class="ic sm"><use href="#i-send"/></svg> Send</button></div></div>`;
+  1443→  1443→  const ta=body.querySelector(".edit-ta");ta.value=oldText;ta.focus();ta.style.height="auto";ta.style.height=ta.scrollHeight+"px";
+  1444→  1444→  ta.addEventListener("input",()=>{ta.style.height="auto";ta.style.height=ta.scrollHeight+"px";});
+  1445→  1445→  body.querySelector(".edit-cancel").onclick=()=>{body.innerHTML=orig;wireActions(el,oldText);};
+  1446→  1446→  const send=()=>{const nt=ta.value.trim();if(!nt)return;
+  1447→  1447→    const chat=curChat();if(!chat)return;
+  1448→  1448→    // find the message index (fallback: locate by matching from the end)
+  1449→  1449→    let cut=idx;
+  1450→  1450→    if(cut==null){for(let i=chat.messages.length-1;i>=0;i--){if(chat.messages[i].role==="user"&&chat.messages[i].text===oldText){cut=i;break;}}}
+  1451→  1451→    if(cut==null)cut=chat.messages.length;
+  1452→  1452→    chat.messages=chat.messages.slice(0,cut); // drop edited msg + everything after
+  1453→  1453→    chat.used=0;chat.cost=0;                    // recompute budget for the new branch
+  1454→  1454→    if((chat.sumIdx||0)>chat.messages.length){chat.summary="";chat.sumIdx=0;} // working memory may be stale now
+  1455→  1455→    saveChats();openChat(currentId);agentTurn(nt);
+  1456→  1456→  };
+  1457→  1457→  body.querySelector(".edit-send").onclick=send;
+  1458→  1458→  ta.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}});
+  1459→  1459→}
+  1460→  1460→function beginAssistant(){
+  1461→  1461→  hideWelcome();
+  1462→  1462→  const el=document.createElement("div");el.className="turn";
+  1463→  1463→  el.innerHTML=`<div class="avatar ai">${AI_MARK}</div><div class="turn-body">
+  1464→  1464→    <div class="turn-who">TBH Helper Ai <span class="tag" data-tag>routing…</span></div>
+  1465→  1465→    <div data-reason></div><div class="prose" data-body><span class="cursor-blink"></span></div>
+  1466→  1466→    <div class="msg-actions" style="display:none" data-acts></div></div>`;
+  1467→  1467→  TH().appendChild(el);toBottom();
+  1468→  1468→  const body=el.querySelector("[data-body]"),tag=el.querySelector("[data-tag]"),reasonHost=el.querySelector("[data-reason]"),acts=el.querySelector("[data-acts]");
+  1469→  1469→  let content="",reason="",reasonEl=null;
+  1470→  1470→  function ensureReason(){if(!reasonEl){reasonEl=document.createElement("details");reasonEl.className="reason live";reasonEl.open=true;
+  1471→  1471→    reasonEl.innerHTML=`<summary><svg class="ic sm brain"><use href="#i-brain"/></svg> Thinking…<svg class="ic sm chev"><use href="#i-chev"/></svg></summary><div class="r-body"></div>`;
+  1472→  1472→    reasonHost.appendChild(reasonEl);}return reasonEl;}
+  1473→  1473→  let waitTimer=null;
+  1474→  1474→  return {
+  1475→  1475→    setModel(m){if(waitTimer){clearInterval(waitTimer);waitTimer=null;}tag.classList.remove("waiting");tag.textContent=modelLabel(m);updateModelChip(m);},
+  1476→  1476→    setWaiting(secs,label){
+  1477→  1477→      if(waitTimer){clearInterval(waitTimer);waitTimer=null;}
+  1478→  1478→      if(!secs){tag.classList.remove("waiting");return;}
+  1479→  1479→      tag.classList.add("waiting");let left=secs;
+  1480→  1480→      const paint=()=>{tag.textContent=left>1?`waiting for capacity · ${left}s`:"waiting for capacity…";};
+  1481→  1481→      paint();waitTimer=setInterval(()=>{left=Math.max(0,left-1);paint();if(left<=0){clearInterval(waitTimer);waitTimer=null;}},1000);
+  1482→  1482→    },
+  1483→  1483→    addReason(t){reason+=t;const r=ensureReason();r.querySelector(".r-body").textContent=reason;if(nearBottom())toBottom();},
+  1484→  1484→    addContent(t){content+=t;body.innerHTML=md(content)+'<span class="cursor-blink"></span>';if(nearBottom())toBottom();},
+  1485→  1485→    finalize(t){content=(t!==undefined?t:content);body.innerHTML=md(content||"");enhanceCode(body);
+  1486→  1486→      if(reasonEl){reasonEl.className="reason";reasonEl.open=false;reasonEl.querySelector("summary").innerHTML=`<svg class="ic sm"><use href="#i-brain"/></svg> Reasoning<svg class="ic sm chev"><use href="#i-chev"/></svg>`;}
+  1487→  1487→      if(content){acts.style.display="flex";acts.innerHTML=`<button class="act-btn" data-copy><svg class="ic sm"><use href="#i-copy"/></svg>Copy</button><button class="act-btn" data-retry><svg class="ic sm"><use href="#i-refresh"/></svg>Retry</button>`;wireActions(el,content);}
+  1488→  1488→      if(nearBottom())toBottom();},
+  1489→  1489→    stopped(){body.innerHTML=md(content||"")+' <em style="color:var(--text-3)">(stopped)</em>';if(reasonEl)reasonEl.className="reason";},
+  1490→  1490→    error(msg){body.innerHTML=`<div style="color:var(--danger);display:flex;gap:8px;align-items:flex-start"><svg class="ic sm" style="margin-top:2px"><use href="#i-x"/></svg><span>${esc(msg)}</span></div>`;if(reasonEl)reasonEl.className="reason";toBottom();},
+  1491→  1491→    limit(kind){tag.classList.remove("waiting");tag.textContent="limit";
+  1492→  1492→      const title="Daily token limit reached";
+  1493→  1493→      const line=`This chat has used the free tier's daily token budget (1M tokens/day per model). It resets on a rolling basis — try again shortly, or start a new chat. Your long-term memory carries over.`;
+  1494→  1494→      body.innerHTML=`<div class="limit-note"><svg class="ic sm"><use href="#i-gauge"/></svg><div><b>${title}</b><span>${esc(line)}</span></div></div>`;
+  1495→  1495→      if(reasonEl)reasonEl.className="reason";toBottom();},
+  1496→  1496→  };
+  1497→  1497→}
+  1498→  1498→function wireActions(el,text){
+  1499→  1499→  const cp=el.querySelector("[data-copy]");if(cp)cp.onclick=()=>{navigator.clipboard.writeText(text);cp.classList.add("copied");cp.innerHTML='<svg class="ic sm"><use href="#i-check"/></svg>Copied';setTimeout(()=>{cp.classList.remove("copied");cp.innerHTML='<svg class="ic sm"><use href="#i-copy"/></svg>Copy';},1400);};
+  1500→  1500→  const ed=el.querySelector("[data-edit]");if(ed)ed.onclick=()=>editUserMessage(el,text);
+  1501→  1501→  const rt=el.querySelector("[data-retry]");if(rt)rt.onclick=()=>{if(running)return;const chat=curChat();if(!chat)return;
+  1502→  1502→    let lastUser="";for(let i=chat.messages.length-1;i>=0;i--){if(chat.messages[i].role==="user"){lastUser=chat.messages[i].text;
+  1503→  1503→      chat.messages=chat.messages.slice(0,i);break;}}
+  1504→  1504→    openChat(currentId);if(lastUser)agentTurn(lastUser);};
+  1505→  1505→}
+  1506→  1506→function addToolCard(name,args){
+  1507→  1507→  const meta=iconForTool(name);
+  1508→  1508→  const el=document.createElement("div");el.className="turn";
+  1509→  1509→  el.innerHTML=`<div class="avatar ai" style="background:var(--surface-3);color:var(--text);border-color:var(--line)"><svg style="width:16px;height:16px;stroke:var(--text)"><use href="#i-tool"/></svg></div>
+  1510→  1510→    <div class="turn-body"><details class="tool-card" open><summary>
+  1511→  1511→      <span class="tc-ic"><svg class="ic sm"><use href="#${meta}"/></svg></span>
+  1512→  1512→      <span><span class="tc-name">${esc(name)}</span><br><span class="tc-sub">${esc(toolSubLabel(name))}</span></span>
+  1513→  1513→      <span class="tc-status run" data-st><span class="spin"></span>Running</span></summary>
+  1514→  1514→      <div class="tc-body"><div><div class="tc-lbl">Arguments</div><pre>${esc(JSON.stringify(args,null,2))}</pre></div><div data-out></div></div></details></div>`;
+  1515→  1515→  TH().appendChild(el);toBottom();
+  1516→  1516→  const st=el.querySelector("[data-st]"),out=el.querySelector("[data-out]"),det=el.querySelector("details");
+  1517→  1517→  return {done(result){
+  1518→  1518→    const err=result.error||result.ok===false;
+  1519→  1519→    st.className="tc-status "+(err?"err":"ok");
+  1520→  1520→    st.innerHTML=err?`<svg class="ic sm"><use href="#i-x"/></svg>${result.status||"Error"}`:`<svg class="ic sm"><use href="#i-check"/></svg>${result.status||"OK"}`;
+  1521→  1521→    const shown=result.error?{error:result.error}:result.data;
+  1522→  1522→    out.innerHTML=`<div class="tc-lbl">Response</div><pre>${esc(JSON.stringify(shown,null,2)).slice(0,4000)}</pre>`;
+  1523→  1523→    det.open=false;addLog(`${name} → ${err?"error":(result.status||"ok")}`);if(nearBottom())toBottom();
+  1524→  1524→  }};
+  1525→  1525→}
+  1526→  1526→function iconForTool(n){
+  1527→  1527→  if(/knowledge_base|read_docs|docs/.test(n))return"i-brain";if(/scrape/.test(n))return"i-globe";if(/memory/.test(n))return"i-key";
+  1528→  1528→  if(/command/.test(n))return"i-command";if(/broadcast/.test(n))return"i-broadcast";
+  1529→  1529→  if(/store|install/.test(n))return"i-store";if(/template/.test(n))return"i-puzzle";
+  1530→  1530→  if(/list|get|status|ads|children|readme|export|download/.test(n))return"i-list";return"i-robot";}
+  1531→  1531→function toolSubLabel(n){if(/knowledge_base|read_docs|docs/.test(n))return"TBL docs";if(/scrape/.test(n))return"Web reader";if(/memory/.test(n))return"Agent memory";return"TeleBotHost tool";}
+  1532→  1532→
+  1533→  1533→/* ============================ WELCOME (animated logo) ============================ */
+  1534→  1534→const HERO_LOGO=`<svg viewBox="0 0 48 48" aria-hidden="true">
+  1535→  1535→  <g fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
+  1536→  1536→    <path d="M10 13 H38" pathLength="1" class="hl-draw hl-d1"/>
+  1537→  1537→    <path d="M24 13 V37" pathLength="1" class="hl-draw hl-d2"/>
+  1538→  1538→  </g>
+  1539→  1539→  <circle cx="24" cy="37" r="2.6" fill="currentColor" class="hl-pulse"/>
+  1540→  1540→</svg>`;
+  1541→  1541→function renderWelcome(){
+  1542→  1542→  const w=$("#welcome");if(!w)return;setHome(true);
+  1543→  1543→  const S=[
+  1544→  1544→    ["i-list","List my bots","Show every bot on my account","List all my bots"],
+  1545→  1545→    ["i-robot","Register a bot","Add a bot with its Telegram token","I want to register a new bot"],
+  1546→  1546→    ["i-command","Create a /start command","A command that greets users","Create a /start command for my bot that says hi"],
+  1547→  1547→    ["i-broadcast","Start a broadcast","Message all my subscribers","Start a broadcast to all my bot subscribers"],
+  1548→  1548→    ["i-store","Browse the store","Discover popular public bots","Browse the community bot store"],
+  1549→  1549→    ["i-puzzle","Explore templates","Find shareable bot blueprints","Show me some bot templates"],
+  1550→  1550→  ];
+  1551→  1551→  w.innerHTML=`<div class="hero-row"><span class="hero-mark">${HERO_LOGO}</span><h1>How can I help you?</h1></div>
+  1552→  1552→    <p class="lead">TBH Helper Ai turns TeleBotHost into a conversation. Register bots, build commands, run broadcasts — just ask.</p>
+  1553→  1553→    <div class="suggest">${S.map(s=>`<button class="sg" data-q="${esc(s[3])}"><span class="sg-ic"><svg class="ic"><use href="#${s[0]}"/></svg></span><span class="sg-txt"><b>${s[1]}</b><span>${s[2]}</span></span></button>`).join("")}</div>`;
+  1554→  1554→  $$("#welcome .sg").forEach(b=>b.onclick=()=>{input.value=b.dataset.q;autosize();submit();});
+  1555→  1555→}
+  1556→  1556→
+  1557→  1557→/* ============================ CHAT LIST ============================ */
+  1558→  1558→function renderChatList(){
+  1559→  1559→  const el=$("#chatList");
+  1560→  1560→  if(!chats.length){el.innerHTML=`<div style="padding:14px;font-size:12.5px;color:var(--text-3)">No chats yet.</div>`;return;}
+  1561→  1561→  el.innerHTML=chats.map(c=>`<div class="chat-item ${c.id===currentId?"active":""}" data-id="${c.id}">
+  1562→  1562→    <svg class="ic sm" style="color:var(--text-3)"><use href="#i-chat"/></svg>
+  1563→  1563→    <span class="ci-title">${esc(c.title)}</span>
+  1564→  1564→    <button class="ci-del" data-del="${c.id}" aria-label="Delete"><svg class="ic sm"><use href="#i-trash"/></svg></button></div>`).join("");
+  1565→  1565→  el.querySelectorAll(".chat-item").forEach(it=>{it.onclick=e=>{if(e.target.closest("[data-del]"))return;openChat(it.dataset.id);closeNav();};});
+  1566→  1566→  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{e.stopPropagation();delChat(b.dataset.del);});
+  1567→  1567→}
+  1568→  1568→function openChat(id){
+  1569→  1569→  currentId=id;renderChatList();
+  1570→  1570→  TH().innerHTML="";
+  1571→  1571→  const chat=curChat();
+  1572→  1572→  if(!chat||!chat.messages.length){TH().innerHTML='<div id="welcome"></div>';renderWelcome();updateModelChip();updateCtxBar();return;}
+  1573→  1573→  setHome(false);
+  1574→  1574→  for(let i=0;i<chat.messages.length;i++){
+  1575→  1575→    const m=chat.messages[i];
+  1576→  1576→    if(m.role==="user")addUserMsg(m.text,i);
+  1577→  1577→    else if(m.role==="assistant"){
+  1578→  1578→      const ui=beginAssistant();if(m.model)ui.setModel(m.model);
+  1579→  1579→      if(m.reasoning){ui.addReason(m.reasoning);}
+  1580→  1580→      if(m.limit)ui.limit(m.limit); else ui.finalize(m.text||"");
+  1581→  1581→    }else if(m.role==="tool"){const tui=addToolCard(m.tool,m.args||{});tui.done(m.result||{});}
+  1582→  1582→  }
+  1583→  1583→  toBottom();updateCtxBar();
+  1584→  1584→}
+  1585→  1585→
+  1586→  1586→/* ============================ MODELS PANEL ============================ */
+  1587→  1587→function renderModels(){
+  1588→  1588→  const list=Router.models.length?Router.models:PREFERENCE;
+  1589→  1589→  const ordered=Router.candidates("main");
+  1590→  1590→  const activeId=cfg.mainModel||ordered[0];
+  1591→  1591→  $("#tierChip").textContent=(TIERS[cfg.tier]||TIERS.free).label;
+  1592→  1592→  $("#modelList").innerHTML=(ordered.length?ordered:list).map(id=>{
+  1593→  1593→    const u=Router.usage(id),meta=MODEL_META[id]||{label:id,note:""};
+  1594→  1594→    const isAct=id===activeId&&!u.cool;
+  1595→  1595→    const rpmPct=Math.min(100,u.rpmFrac*100),tpmPct=Math.min(100,u.tpmFrac*100),tphPct=Math.min(100,u.tphFrac*100);
+  1596→  1596→    let badge,bcls;if(u.cool){const s=Math.max(0,Math.ceil((u.cooldownUntil-Date.now())/1000));badge=`waiting ${s}s`;bcls="cool";}
+  1597→  1597→      else if(u.rpm>=(u.L.rpm||1e9)||u.tpm>=(u.L.tpm||1e9)){badge="cooling";bcls="cool";}
+  1598→  1598→      else if(isAct){badge=cfg.mainModel?"main":"active";bcls="active";}else{badge="ready";bcls="ready";}
+  1599→  1599→    return `<div class="mcard ${isAct?"active":""} ${u.cool?"cool":""}">
+  1600→  1600→      <div class="mc-top"><span class="mc-name">${esc(meta.label)}</span><span class="mc-badge ${bcls}">${badge}</span></div>
+  1601→  1601→      <div class="meter"><div class="meter-top"><span>Requests / min</span><b>${u.rpm} / ${u.L.rpm||"∞"}</b></div>
+  1602→  1602→        <div class="meter-bar ${rpmPct>80?"hot":""}"><i style="width:${rpmPct}%"></i></div></div>
+  1603→  1603→      <div class="meter"><div class="meter-top"><span>Tokens / min</span><b>${(u.tpm/1000).toFixed(1)}k / ${u.L.tpm?(u.L.tpm/1000)+"k":"∞"}</b></div>
+  1604→  1604→        <div class="meter-bar ${tpmPct>80?"hot":""}"><i style="width:${tpmPct}%"></i></div></div>
+  1605→  1605→      <div class="meter"><div class="meter-top"><span>Tokens / hour</span><b>${(u.tph/1000).toFixed(0)}k / ${u.L.tph?(u.L.tph/1e6)+"M":"∞"}</b></div>
+  1606→  1606→        <div class="meter-bar ${tphPct>80?"hot":""}"><i style="width:${tphPct}%"></i></div></div>
+  1607→  1607→      <div class="meter-top" style="margin-top:2px"><span style="color:var(--text-3);font-size:10px">${esc(meta.note)}</span><span style="font-size:10px">day ${(u.tpd/1000).toFixed(0)}k / ${u.L.tpd?(u.L.tpd/1e6)+"M":"∞"}</span></div>
+  1608→  1608→    </div>`;}).join("")||`<div style="color:var(--text-3);font-size:12.5px;padding:8px">Add your Cerebras key to discover models.</div>`;
+  1609→  1609→}
+  1610→  1610→const logs=[];
+  1611→  1611→function addLog(m){logs.unshift({t:new Date().toLocaleTimeString().slice(0,8),m});if(logs.length>50)logs.pop();
+  1612→  1612→  const el=$("#routeLog");if(el)el.innerHTML=logs.map(l=>`<div><span class="lt">${l.t}</span> ${esc(l.m)}</div>`).join("");}
+  1613→  1613→
+  1614→  1614→function updateModelChip(m){
+  1615→  1615→  const chip=$("#btnModel"),name=$("#modelName");
+  1616→  1616→  if(cfg.mainModel){name.textContent=modelLabel(cfg.mainModel);}
+  1617→  1617→  else if(m){name.textContent=modelLabel(m);} // live routing target in Auto
+  1618→  1618→  else{name.textContent="Auto";}
+  1619→  1619→  chip.classList.toggle("on",!!cfg.cbKey);
+  1620→  1620→}
+  1621→  1621→
+  1622→  1622→/* ---- top-bar model picker (models only) ---- */
+  1623→  1623→function renderModelMenu(){
+  1624→  1624→  const menu=$("#modelMenu");
+  1625→  1625→  const models=Router.models.length?Router.models:PREFERENCE;
+  1626→  1626→  const row=(id,isAuto)=>{
+  1627→  1627→    const sel=isAuto?!cfg.mainModel:cfg.mainModel===id;
+  1628→  1628→    let dot="",sub="";
+  1629→  1629→    if(isAuto){dot="ready";sub="Load-balances & waits automatically";}
+  1630→  1630→    else{const u=Router.usage(id),meta=MODEL_META[id]||{note:""};
+  1631→  1631→      dot=u.cool||!Router.ready(id)?"busy":"ready";
+  1632→  1632→      sub=(u.cool||!Router.ready(id))?"busy — will auto-wait":(meta.note||"");}
+  1633→  1633→    const label=isAuto?"Auto":modelLabel(id);
+  1634→  1634→    return `<button class="mm-item ${sel?"sel":""}" role="option" aria-selected="${sel}" data-m="${isAuto?"":esc(id)}">
+  1635→  1635→      <span class="mm-dot ${dot}"></span>
+  1636→  1636→      <span class="mm-tx"><b>${esc(label)}</b><span>${esc(sub)}</span></span>
+  1637→  1637→      <svg class="ic sm mm-check"><use href="#i-check"/></svg></button>`;
+  1638→  1638→  };
+  1639→  1639→  menu.innerHTML=`<div class="mm-hd">Coding model</div>${row(null,true)}<div class="mm-sep"></div>`+
+  1640→  1640→    `<div class="mm-hd">Pick one</div>`+models.map(id=>row(id,false)).join("");
+  1641→  1641→  menu.querySelectorAll(".mm-item").forEach(b=>b.onclick=()=>{
+  1642→  1642→    cfg.mainModel=b.dataset.m||"";saveCfg();updateModelChip();closeModelMenu();
+  1643→  1643→    toast(cfg.mainModel?`Coding model: ${modelLabel(cfg.mainModel)}`:"Auto routing enabled","ok");
+  1644→  1644→  });
+  1645→  1645→}
+  1646→  1646→function openModelMenu(){renderModelMenu();$("#modelMenu").classList.add("open");$("#btnModel").setAttribute("aria-expanded","true");}
+  1647→  1647→function closeModelMenu(){$("#modelMenu").classList.remove("open");$("#btnModel").setAttribute("aria-expanded","false");}
+  1648→  1648→function toggleModelMenu(){$("#modelMenu").classList.contains("open")?closeModelMenu():openModelMenu();}
+  1649→  1649→
+  1650→  1650→/* ============================ THEME ============================ */
+  1651→  1651→function applyTheme(t){document.documentElement.setAttribute("data-theme",t);cfg.theme=t;
+  1652→  1652→  $("#segTheme").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.themeVal===t));}
+  1653→  1653→
+  1654→  1654→/* ============================ TOASTS ============================ */
+  1655→  1655→function toast(msg,type="info"){
+  1656→  1656→  const ic=type==="ok"?"i-check":type==="err"?"i-x":"i-spark";
+  1657→  1657→  const t=document.createElement("div");t.className="toast "+type;
+  1658→  1658→  t.innerHTML=`<svg class="ic ti"><use href="#${ic}"/></svg>${esc(msg)}`;
+  1659→  1659→  $("#toasts").appendChild(t);setTimeout(()=>{t.classList.add("out");setTimeout(()=>t.remove(),260);},2400);
+  1660→  1660→}
+  1661→  1661→
+  1662→  1662→/* ============================ MODAL (all settings) ============================ */
+  1663→  1663→function openModal(){
+  1664→  1664→  $("#fKey").value=cfg.cbKey;$("#fTbh").value=cfg.tbhKey;$("#fSys").value=cfg.sys;
+  1665→  1665→  sw("#swTools",cfg.useTools);sw("#swStream",cfg.stream);
+  1666→  1666→  sw("#swThink",cfg.thinking);sw("#swSearch",cfg.webSearch);
+  1667→  1667→  $("#segTheme").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.themeVal===cfg.theme));
+  1668→  1668→  const models=Router.models.length?Router.models:PREFERENCE;
+  1669→  1669→  $("#fPinned").innerHTML='<option value="">Auto (recommended)</option>'+models.map(m=>`<option value="${esc(m)}" ${cfg.mainModel===m?"selected":""}>${esc(modelLabel(m))}</option>`).join("");
+  1670→  1670→  ["#okKey","#errKey","#okTbh","#errTbh"].forEach(s=>$(s).style.display="none");
+  1671→  1671→  showOverlay("#modal");
+  1672→  1672→}
+  1673→  1673→function sw(sel,on){$(sel).classList.toggle("on",!!on);}
+  1674→  1674→function showOverlay(sel){$(sel).classList.add("show");}
+  1675→  1675→function closeModal(){$("#modal").classList.remove("show");}
+  1676→  1676→
+  1677→  1677→async function testConnections(){
+  1678→  1678→  const btn=$("#btnTest");btn.disabled=true;
+  1679→  1679→  const cb=$("#fKey").value.trim(),tb=$("#fTbh").value.trim();
+  1680→  1680→  const setTag=(ok,err,okMsg,errMsg)=>{$(ok).style.display=okMsg?"flex":"none";$(err).style.display=errMsg?"flex":"none";
+  1681→  1681→    if(okMsg)$(ok).querySelector("span").textContent=okMsg;if(errMsg)$(err).querySelector("span").textContent=errMsg;};
+  1682→  1682→  setTag("#okKey","#errKey","","");setTag("#okTbh","#errTbh","","");
+  1683→  1683→  if(cb){try{const r=await fetch(CB_BASE+"/models",{headers:{Authorization:"Bearer "+cb}});
+  1684→  1684→    if(r.ok){const j=await r.json();setTag("#okKey","#errKey",`Valid — ${(j.data||[]).length} models available`,"");}
+  1685→  1685→    else setTag("#okKey","#errKey","",`Invalid key (${r.status})`);}catch(e){setTag("#okKey","#errKey","","Network error");}}
+  1686→  1686→  if(tb){try{const r=await fetch(TBH_BASE+"/bot",{headers:{Authorization:"Bearer "+tb}});
+  1687→  1687→    const j=await r.json().catch(()=>({}));
+  1688→  1688→    if(r.ok&&j.success!==false){const n=(j.stats&&j.stats.total)!=null?j.stats.total:((j.bots||[]).length);setTag("#okTbh","#errTbh",`Valid — ${n} bot(s) found`,"");}
+  1689→  1689→    else setTag("#okTbh","#errTbh","",`Invalid key (${r.status})`);}catch(e){setTag("#okTbh","#errTbh","","Network error");}}
+  1690→  1690→  btn.disabled=false;
+  1691→  1691→}
+  1692→  1692→
+  1693→  1693→/* ============================ COMPOSER ============================ */
+  1694→  1694→const input=$("#input"),sendBtn=$("#send");
+  1695→  1695→function setSending(on){sendBtn.classList.toggle("stop",on);sendBtn.innerHTML=`<svg class="ic sm"><use href="#${on?"i-stop":"i-send"}"/></svg>`;sendBtn.setAttribute("aria-label",on?"Stop":"Send");}
+  1696→  1696→function autosize(){input.style.height="auto";input.style.height=Math.min(200,input.scrollHeight)+"px";}
+  1697→  1697→function submit(){
+  1698→  1698→  if(running){abortCtl&&abortCtl.abort();return;}
+  1699→  1699→  const t=input.value.trim();if(!t)return;
+  1700→  1700→  if(!cfg.cbKey){openModal();toast("Add your Cerebras API key to start","info");return;}
+  1701→  1701→  input.value="";autosize();agentTurn(t);
+  1702→  1702→}
+  1703→  1703→
+  1704→  1704→/* Thinking / Search chips (persist to cfg) */
+  1705→  1705→function syncChips(){
+  1706→  1706→  $("#chipThink").classList.toggle("on",cfg.thinking);$("#chipThink").setAttribute("aria-pressed",cfg.thinking);
+  1707→  1707→  $("#chipSearch").classList.toggle("on",cfg.webSearch);$("#chipSearch").setAttribute("aria-pressed",cfg.webSearch);
+  1708→  1708→}
+  1709→  1709→$("#chipThink").onclick=()=>{cfg.thinking=!cfg.thinking;saveCfg();syncChips();toast(cfg.thinking?"Extended thinking on":"Thinking off",cfg.thinking?"ok":"info");};
+  1710→  1710→$("#chipSearch").onclick=()=>{cfg.webSearch=!cfg.webSearch;saveCfg();syncChips();toast(cfg.webSearch?"Web search on":"Search off",cfg.webSearch?"ok":"info");};
+  1711→  1711→$("#btnAttach").onclick=()=>toast("Attachments coming soon","info");
+  1712→  1712→
+  1713→  1713→/* ============================ NAV / PANEL ============================ */
+  1714→  1714→const ui=Object.assign({expanded:false},JSON.parse(localStorage.getItem(LS_UI)||"{}"));
+  1715→  1715→function saveUI(){localStorage.setItem(LS_UI,JSON.stringify(ui));}
+  1716→  1716→const isMobile=()=>matchMedia("(max-width:860px)").matches;
+  1717→  1717→function setNavVar(){
+  1718→  1718→  const app=$("#app");let w=64;
+  1719→  1719→  if(isMobile())w=0; else if(app.classList.contains("expanded"))w=248; else if(app.classList.contains("collapsed"))w=0;
+  1720→  1720→  document.documentElement.style.setProperty("--nav",w+"px");
+  1721→  1721→}
+  1722→  1722→function applySidebar(){const app=$("#app");if(!isMobile())app.classList.toggle("expanded",ui.expanded);setNavVar();}
+  1723→  1723→function toggleSidebar(){if(isMobile()){$("#nav").classList.contains("open")?closeNav():openNav();return;}ui.expanded=!ui.expanded;saveUI();applySidebar();}
+  1724→  1724→function openNav(){$("#nav").classList.add("open");$("#scrim").classList.add("show");}
+  1725→  1725→function closeNav(){$("#nav").classList.remove("open");if(!$("#panel").classList.contains("open"))$("#scrim").classList.remove("show");}
+  1726→  1726→function openPanel(){$("#panel").classList.add("open");$("#scrim").classList.add("show");renderModels();}
+  1727→  1727→function closePanel(){$("#panel").classList.remove("open");if(!$("#nav").classList.contains("open"))$("#scrim").classList.remove("show");}
+  1728→  1728→
+  1729→  1729→/* ============================ WIRING ============================ */
+  1730→  1730→$("#btnSidebar").onclick=toggleSidebar;
+  1731→  1731→$("#btnNew").onclick=()=>{newChat();openChat(currentId);closeNav();input.focus();};
+  1732→  1732→$("#btnSearch").onclick=()=>{if(isMobile())openNav();else{ui.expanded=true;saveUI();applySidebar();}toast("Type to filter — coming soon","info");};
+  1733→  1733→$("#btnNav").onclick=openNav;
+  1734→  1734→$("#scrim").onclick=()=>{closeNav();closePanel();};
+  1735→  1735→$("#btnPanel").onclick=()=>{$("#panel").classList.contains("open")?closePanel():openPanel();};
+  1736→  1736→$("#btnPanelClose").onclick=closePanel;
+  1737→  1737→$("#btnModel").onclick=e=>{e.stopPropagation();toggleModelMenu();};
+  1738→  1738→document.addEventListener("click",e=>{if(!e.target.closest("#modelMenu")&&!e.target.closest("#btnModel"))closeModelMenu();});
+  1739→  1739→$("#btnSettingsSide").onclick=openModal; /* full settings ONLY from sidebar */
+  1740→  1740→$("#btnClose").onclick=closeModal;$("#btnCancel").onclick=closeModal;
+  1741→  1741→$("#btnTest").onclick=testConnections;
+  1742→  1742→$("#modal").onclick=e=>{if(e.target.id==="modal")closeModal();};
+  1743→  1743→$$(".switch").forEach(s=>s.onclick=()=>s.classList.toggle("on"));
+  1744→  1744→$("#segTheme").querySelectorAll("button").forEach(b=>b.onclick=()=>applyTheme(b.dataset.themeVal));
+  1745→  1745→$$(".eye").forEach(b=>b.onclick=()=>{const i=$("#"+b.dataset.eye);const show=i.type==="password";i.type=show?"text":"password";b.innerHTML=`<svg class="ic sm"><use href="#${show?"i-eye-off":"i-eye"}"/></svg>`;});
+  1746→  1746→$("#btnSave").onclick=async()=>{
+  1747→  1747→  cfg.cbKey=$("#fKey").value.trim();cfg.tbhKey=$("#fTbh").value.trim();cfg.sys=$("#fSys").value.trim()||DEFAULT_SYS;
+  1748→  1748→  cfg.useTools=$("#swTools").classList.contains("on");
+  1749→  1749→  cfg.stream=$("#swStream").classList.contains("on");cfg.mainModel=$("#fPinned").value;
+  1750→  1750→  cfg.thinking=$("#swThink").classList.contains("on");cfg.webSearch=$("#swSearch").classList.contains("on");
+  1751→  1751→  saveCfg();closeModal();toast("Settings saved","ok");syncChips();updateModelChip();
+  1752→  1752→  await Router.discover();renderModels();
+  1753→  1753→};
+  1754→  1754→$("#btnClearAll").onclick=()=>{if(confirm("Reset everything (keys, chats, router state)? This cannot be undone.")){localStorage.clear();location.reload();}};
+  1755→  1755→$("#fabScroll").onclick=()=>toBottom(true);
+  1756→  1756→scrollEl.addEventListener("scroll",()=>{$("#fabScroll").classList.toggle("show",!nearBottom()&&scrollEl.scrollHeight>scrollEl.clientHeight+300);});
+  1757→  1757→input.addEventListener("input",autosize);
+  1758→  1758→input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();submit();}});
+  1759→  1759→sendBtn.onclick=submit;
+  1760→  1760→addEventListener("resize",applySidebar);
+  1761→  1761→
+  1762→  1762→/* keyboard shortcuts */
+  1763→  1763→document.addEventListener("keydown",e=>{
+  1764→  1764→  const meta=e.metaKey||e.ctrlKey;
+  1765→  1765→  if(meta&&e.key.toLowerCase()==="n"){e.preventDefault();$("#btnNew").click();}
+  1766→  1766→  else if(meta&&e.key===","){e.preventDefault();openModal();}
+  1767→  1767→  else if(e.key==="Escape"){closeModal();closeNav();closePanel();}
+  1768→  1768→});
+  1769→  1769→
+  1770→  1770→/* If a previous turn was interrupted (crash/reload/close) mid-task, offer to
+  1771→  1771→   resume it so nothing is silently lost. */
+  1772→  1772→function checkResume(){
+  1773→  1773→  let r;try{r=JSON.parse(localStorage.getItem(LS_RESUME)||"null");}catch(e){}
+  1774→  1774→  if(!r||!r.chatId)return;
+  1775→  1775→  const chat=chats.find(c=>c.id===r.chatId);
+  1776→  1776→  if(!chat||!chat.messages.length){clearResume();return;}
+  1777→  1777→  const last=chat.messages[chat.messages.length-1];
+  1778→  1778→  // Only offer if the last turn wasn't a completed assistant answer.
+  1779→  1779→  if(last.role==="assistant"&&last.text&&(!last.tool_calls||!last.tool_calls.length)){clearResume();return;}
+  1780→  1780→  let lastUser="";for(let i=chat.messages.length-1;i>=0;i--){if(chat.messages[i].role==="user"){lastUser=chat.messages[i].text;break;}}
+  1781→  1781→  if(!lastUser){clearResume();return;}
+  1782→  1782→  const t=document.createElement("div");t.className="toast";t.style.pointerEvents="auto";
+  1783→  1783→  t.innerHTML=`<svg class="ic ti"><use href="#i-refresh"/></svg>Task was interrupted. <button class="btn ghost" style="padding:4px 10px;font-size:12px;margin-left:6px">Resume</button>`;
+  1784→  1784→  t.querySelector("button").onclick=()=>{t.remove();openChat(r.chatId);
+  1785→  1785→    // trim any dangling partial assistant/tool turn, then re-run the last user msg
+  1786→  1786→    for(let i=chat.messages.length-1;i>=0;i--){if(chat.messages[i].role==="user"){chat.messages=chat.messages.slice(0,i);break;}}
+  1787→  1787→    chat.used=0;chat.cost=0;saveChats();openChat(r.chatId);agentTurn(lastUser);};
+  1788→  1788→  $("#toasts").appendChild(t);clearResume();
+  1789→  1789→}
+  1790→  1790→
+  1791→  1791→/* One-time neutral hint pointing at the top-bar model picker. */
+  1792→  1792→function maybeHintModel(){
+  1793→  1793→  if(ui.hintedModel)return;ui.hintedModel=true;saveUI();
+  1794→  1794→  setTimeout(()=>toast("Tip: tap “Auto” up top to pick a coding model (optional)","info"),1200);
+  1795→  1795→}
+  1796→  1796→
+  1797→  1797→/* ============================ BOOT ============================ */
+  1798→  1798→(async function init(){
+  1799→  1799→  applyTheme(cfg.theme||"dark");applySidebar();syncChips();
+  1800→  1800→  currentId=chats[0]?chats[0].id:null;renderChatList();openChat(currentId);
+  1801→  1801→  updateModelChip();renderModels();updateCtxBar();
+  1802→  1802→  checkResume();
+  1803→  1803→  await Router.discover();renderModels();updateModelChip();
+  1804→  1804→  setInterval(()=>{if($("#panel").classList.contains("open"))renderModels();},1500);
+  1805→  1805→  if(cfg.cbKey){addLog(`Ready · ${Router.models.length} models available`);maybeHintModel();}
+  1806→  1806→  else addLog("Add a Cerebras key to begin");
+  1807→  1807→})();
+  1808→  1808→
+  1809→  1809→</script>
+  1810→  1810→</body>
+  1811→  1811→</html>
+  1812→  1812→
