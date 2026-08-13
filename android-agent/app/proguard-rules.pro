@@ -27,6 +27,10 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 
+# Tink / ErrorProne (transitive dependency)
+-dontwarn com.google.errorprone.**
+-dontwarn com.google.crypto.tink.**
+
 # Keep model classes
 -keep class com.androidagent.aiagent.agent.** { *; }
 -keep class com.androidagent.aiagent.tools.** { *; }
