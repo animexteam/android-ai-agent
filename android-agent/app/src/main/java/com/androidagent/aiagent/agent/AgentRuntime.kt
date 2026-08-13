@@ -46,7 +46,9 @@ class AgentRuntime(
     companion object {
         private const val TAG = "AgentRuntime"
         /** Maximum model call retries on transient errors. */
-        private const val MAX_MODEL_RETRIES = 2
+        private const val MAX_MODEL_RETRIES = 1
+        /** Delay after an action before re-observing (ms). Allows screen to settle. */
+        private const val POST_ACTION_SETTLE_MS = 300L
     }
 
     // -------------------------------------------------------------------
@@ -57,6 +59,8 @@ class AgentRuntime(
     val state: StateFlow<AgentState> = _state.asStateFlow()
 
     private var agentJob: Job? = null
+    // Use Main dispatcher so the agent keeps running when app goes to background.
+    // The ForegroundService keeps the process alive.
     private val agentScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /**
@@ -219,7 +223,17 @@ class AgentRuntime(
                 }
 
                 // --- Observe ---
-                val observation = observeScreen()
+                // Skip re-observation if we just observed and no action changed the screen
+                // (message decisions don't change the screen)
+                val lastEvent = _state.value.history.lastOrNull()
+                val needsObservation = lastEvent !is AgentEvent.Observation
+
+                val observation = if (needsObservation) {
+                    observeScreen()
+                } else {
+                    // Reuse the last observation if screen hasn't changed
+                    _state.value.lastObservation
+                }
                 if (observation == null) continue  // error already recorded
 
                 // --- Loop detection ---
@@ -231,17 +245,20 @@ class AgentRuntime(
                 val decision = callModel(observation, loopWarning)
                     ?: continue  // model error already recorded, step consumed
 
-                // --- Record model event ---
-                val modelEvent = AgentEvent.ModelResponse(
-                    stepNumber = _state.value.stepNumber,
-                    decisionType = decision.type,
-                    content = describeDecision(decision)
-                )
-                _state.value = _state.value.withEvent(modelEvent)
+                // --- Record model event (internal, not shown to user) ---
+                // We skip recording ModelResponse events to reduce history bloat.
+                // The user only sees tool executions and errors.
 
                 // --- Execute decision ---
                 val shouldContinue = executeDecision(decision, observation.id)
                 if (!shouldContinue) break
+
+                // --- Post-action settle ---
+                // Brief delay after tool calls to let the screen animation settle
+                // before the next observation. Skipped for non-action decisions.
+                if (decision is ToolCallDecision) {
+                    kotlinx.coroutines.delay(POST_ACTION_SETTLE_MS)
+                }
 
                 // --- Advance step ---
                 _state.value = _state.value.copy(
@@ -621,13 +638,13 @@ class AgentRuntime(
         }
     }
 
-    /** Determine whether to include a screenshot based on vision mode settings. */
+    /** Determine whether to include a screenshot. Default OFF for speed. */
     private suspend fun shouldUseVision(): Boolean {
         return withContext(Dispatchers.IO) {
             when (settingsRepository.visionMode()) {
                 "ALWAYS" -> true
-                "OFF" -> false
                 "AUTO" -> {
+                    // Only use vision as fallback when accessibility tree is sparse
                     val lastObs = _state.value.lastObservation
                     val actionableCount = lastObs?.uiTree
                         ?.count { it.isClickable || it.isEditable } ?: 0
@@ -635,7 +652,7 @@ class AgentRuntime(
                         .filterIsInstance<AgentEvent.ToolExecution>()
                         .lastOrNull()
                         ?.let { !it.result.success } ?: false
-                    actionableCount < 3 || lastToolFailed
+                    actionableCount < 2 || lastToolFailed
                 }
                 else -> false
             }

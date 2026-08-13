@@ -26,7 +26,7 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
           mkdir -p release-assets
-          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v3.0.0.apk
+          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v3.1.0.apk
           cd release-assets && sha256sum *.apk > SHA256SUMS.txt && ls -lh
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -39,22 +39,22 @@ jobs:
         if: success()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.0.0
-          name: Android-Use v3.0.0
+          tag_name: v3.1.0
+          name: Android-Use v3.1.0
           token: ${{ secrets.PAT_TOKEN }}
           body: |
-            # Android-Use v3.0.0
+            # Android-Use v3.1.0
             ## What's New
-            - **Renamed** from TaskFlow to Android-Use
-            - **Fixed background execution** — agent now runs properly in background
-            - **Fixed text input** — 3 fallback strategies (ACTION_SET_TEXT, focus detection, clipboard paste)
-            - **Fixed node ID matching** — correct hashCode-based lookup
-            - **Faster agent loop** — cached system prompt, model retry with backoff
-            - **Clean consumer UI** — no technical jargon, just actions and results
-            - **Auto tool name correction** — 30+ aliases handled transparently
+            - **Professional system prompt** — inspired by Minitap mobile-use Cortex architecture
+            - **Clean consumer UI** — no internal messages (observation, model response) shown to users
+            - **User-friendly action cards** — "Opened WhatsApp" instead of "android.launch_app"
+            - **Faster agent loop** — reduced model retries, post-action settle delay, vision optimization
+            - **Background execution** — foreground service keeps agent alive like Spotify
+            - **Pulsing status indicator** — animated working state
+            - **Empty state** — helpful placeholder when no tasks run yet
             
             ## Installation
-            1. Download Android-Use-v3.0.0.apk
+            1. Download Android-Use-v3.1.0.apk
             2. Settings > Security > Enable install from browser/source
             3. Install the APK
             4. Open app > Enable Accessibility > Enter your API details

@@ -9,12 +9,24 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.androidagent.aiagent.R
+import com.androidagent.aiagent.agent.AgentRuntime
 import com.androidagent.aiagent.agent.AgentStatus
 import com.androidagent.aiagent.ui.MainActivity
 
-
+/**
+ * Foreground service that keeps the agent alive when the app is in background.
+ *
+ * Key design: The service is started as a foreground service with a persistent
+ * notification. The AgentRuntime runs in its own coroutine scope (Main + SupervisorJob)
+ * which is NOT tied to the Activity lifecycle. This means the agent continues
+ * running even when the user switches to another app.
+ *
+ * The ViewModel starts the FGS before launching the agent task.
+ * The FGS is stopped when the agent completes or is cancelled.
+ */
 class AgentForegroundService : Service() {
 
     companion object {
@@ -25,10 +37,6 @@ class AgentForegroundService : Service() {
         private var currentGoal: String = ""
         private var currentStatusText: String = "ready"
 
-        /**
-         * Create the notification channel. MUST be called before starting
-         * the service on Android 8+. Safe to call multiple times.
-         */
         fun createChannel(context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val manager = context.getSystemService(Context.NOTIFICATION_SERVICE)
@@ -51,18 +59,22 @@ class AgentForegroundService : Service() {
             createChannel(context)
             currentGoal = goal
             currentStatusText = "working"
-            val intent = Intent(context, AgentForegroundService::class.java)
+            val intent = Intent(context, AgentForegroundService::class.java).apply {
+                putExtra("goal", goal)
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
                 context.startService(intent)
             }
+            Log.i(TAG, "FGS started with goal: ${goal.take(50)}")
         }
 
         fun stop(context: Context) {
             currentGoal = ""
             currentStatusText = "ready"
             context.stopService(Intent(context, AgentForegroundService::class.java))
+            Log.i(TAG, "FGS stopped")
         }
 
         fun updateNotification(context: Context, status: AgentStatus, goal: String) {
@@ -87,7 +99,9 @@ class AgentForegroundService : Service() {
         }
 
         private fun buildNotification(context: Context, status: String, goal: String): Notification {
-            val intent = Intent(context, MainActivity::class.java)
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
             val pendingIntent = PendingIntent.getActivity(
                 context, 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -124,14 +138,17 @@ class AgentForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        intent?.getStringExtra("goal")?.let { currentGoal = it }
         val notification = buildNotification(this, currentStatusText, currentGoal)
         startForeground(NOTIFICATION_ID, notification)
-        return START_STICKY  // Restart if killed — critical for background execution
+        // START_STICKY ensures the system restarts the service if killed
+        return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         super.onDestroy()
+        Log.i(TAG, "FGS destroyed")
     }
 }

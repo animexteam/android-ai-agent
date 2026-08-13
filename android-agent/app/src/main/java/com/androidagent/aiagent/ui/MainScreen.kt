@@ -1,5 +1,12 @@
 package com.androidagent.aiagent.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -68,10 +76,21 @@ fun MainScreen(
     val listState = rememberLazyListState()
     val isRunning = state.status.isActive
 
-    // Auto-scroll to bottom when new events arrive
-    LaunchedEffect(state.history.size) {
-        if (state.history.isNotEmpty()) {
-            listState.animateScrollToItem(state.history.size - 1)
+    // Auto-scroll to bottom on new user-visible events
+    val visibleEvents = remember(state.history) {
+        state.history.filter { event ->
+            when (event) {
+                is AgentEvent.ToolExecution -> true
+                is AgentEvent.Error -> true
+                is AgentEvent.UserMessage -> true
+                else -> false
+            }
+        }
+    }
+
+    LaunchedEffect(visibleEvents.size) {
+        if (visibleEvents.isNotEmpty()) {
+            listState.animateScrollToItem(visibleEvents.size - 1)
         }
     }
 
@@ -105,27 +124,25 @@ fun MainScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Accessibility banner (only when disabled)
                 if (!isAccessibilityEnabled) {
                     AccessibilityBanner(onEnable = { viewModel.openAccessibilitySettings() })
                 }
 
-                // Status pill (only when running)
                 if (isRunning) {
-                    StatusPill(status = state.status, stepNumber = state.stepNumber)
+                    RunningStatusCard(status = state.status, stepNumber = state.stepNumber)
                 }
 
-                // Completed / Failed banner
                 if (state.status == AgentStatus.COMPLETED) {
-                    ResultBanner(text = "Task completed", isSuccess = true)
+                    ResultBanner(text = "Task completed successfully", isSuccess = true)
                 } else if (state.status == AgentStatus.FAILED) {
                     ResultBanner(
                         text = state.lastError ?: "Task failed",
                         isSuccess = false
                     )
+                } else if (state.status == AgentStatus.CANCELLED) {
+                    ResultBanner(text = "Task stopped", isSuccess = false)
                 }
 
-                // Input bar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -184,19 +201,21 @@ fun MainScreen(
                 .padding(paddingValues)
                 .statusBarsPadding()
         ) {
-            // Goal banner
             if (state.goal.isNotBlank()) {
                 GoalBanner(goal = state.goal)
             }
 
-            // Event timeline
+            if (visibleEvents.isEmpty() && !isRunning) {
+                EmptyStateCard()
+            }
+
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(
-                    items = state.history.filter { it !is AgentEvent.Observation && it !is AgentEvent.ModelResponse },
+                    items = visibleEvents,
                     key = { "${it.stepNumber}_${it.timestamp}" }
                 ) { event ->
                     when (event) {
@@ -207,18 +226,14 @@ fun MainScreen(
                     }
                 }
 
-                // Show finish message
-                if (state.status == AgentStatus.COMPLETED || state.status == AgentStatus.FAILED) {
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
+                if (state.status == AgentStatus.COMPLETED || state.status == AgentStatus.FAILED || state.status == AgentStatus.CANCELLED) {
+                    item { Spacer(modifier = Modifier.height(8.dp)) }
                 }
 
                 item { Spacer(modifier = Modifier.height(60.dp)) }
             }
         }
 
-        // Confirmation dialog
         state.pendingConfirmation?.let { confirmation ->
             ConfirmationDialog(
                 confirmation = confirmation,
@@ -227,12 +242,36 @@ fun MainScreen(
             )
         }
 
-        // User question dialog
         state.pendingQuestion?.let { question ->
             UserQuestionDialog(
                 question = question,
                 onAnswer = { answer -> viewModel.respondToUser(answer) },
                 onDismiss = {}
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyStateCard() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 40.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                "Ready to help",
+                color = AppColors.TextMuted,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Type a task below and I will do it on your phone",
+                color = AppColors.TextMuted.copy(alpha = 0.6f),
+                fontSize = 13.sp
             )
         }
     }
@@ -285,35 +324,52 @@ private fun AccessibilityBanner(onEnable: () -> Unit) {
 }
 
 @Composable
-private fun StatusPill(status: AgentStatus, stepNumber: Int) {
+private fun RunningStatusCard(status: AgentStatus, stepNumber: Int) {
     val (label, color) = when (status) {
-        AgentStatus.THINKING -> "Thinking..." to AppColors.Primary
-        AgentStatus.EXECUTING -> "Working..." to AppColors.Warning
+        AgentStatus.THINKING -> "Analyzing screen..." to AppColors.Primary
+        AgentStatus.EXECUTING -> "Performing action..." to AppColors.Success
         AgentStatus.WAITING_FOR_USER -> "Waiting for you" to AppColors.Primary
         AgentStatus.WAITING_FOR_CONFIRMATION -> "Confirm action" to AppColors.Warning
-        AgentStatus.VERIFYING -> "Checking..." to AppColors.Primary
-        else -> "" to AppColors.Secondary
+        AgentStatus.VERIFYING -> "Verifying..." to AppColors.Primary
+        else -> "Working..." to AppColors.Secondary
     }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_alpha"
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color.copy(alpha = 0.12f), RoundedCornerShape(20.dp))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .background(color.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Animated dot
-        // Pulsing indicator
         Box(
             modifier = Modifier
                 .size(8.dp)
+                .alpha(alpha)
                 .background(color, CircleShape)
         )
         Text(
-            "$label  ·  Step $stepNumber",
+            label,
             color = color,
             fontSize = 13.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            "Step $stepNumber",
+            color = AppColors.TextMuted,
+            fontSize = 12.sp
         )
     }
 }
@@ -324,7 +380,7 @@ private fun ResultBanner(text: String, isSuccess: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -346,11 +402,13 @@ private fun ActionCard(event: AgentEvent.ToolExecution) {
         .replace("_", " ")
         .replaceFirstChar { it.uppercase() }
 
+    val friendlyDescription = describeAction(event.toolName, event.arguments)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if (isSuccess) AppColors.Surface else AppColors.Error.copy(alpha = 0.08f),
+                if (isSuccess) AppColors.Surface else AppColors.Error.copy(alpha = 0.06f),
                 RoundedCornerShape(10.dp)
             )
             .padding(horizontal = 14.dp, vertical = 10.dp)
@@ -365,18 +423,18 @@ private fun ActionCard(event: AgentEvent.ToolExecution) {
                     )
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    actionLabel,
-                    color = AppColors.TextPrimary,
+                    if (isSuccess) friendlyDescription else "$friendlyDescription (failed)",
+                    color = if (isSuccess) AppColors.TextPrimary else AppColors.Error,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
                 )
                 if (!isSuccess) {
                     event.result.error?.message?.let { errMsg ->
                         Text(
-                            errMsg.take(100),
-                            color = AppColors.Error,
+                            errMsg.take(80),
+                            color = AppColors.Error.copy(alpha = 0.7f),
                             fontSize = 11.sp,
                             maxLines = 1
                         )
@@ -385,6 +443,71 @@ private fun ActionCard(event: AgentEvent.ToolExecution) {
             }
         }
     }
+}
+
+/**
+ * Convert tool calls into user-friendly descriptions.
+ * No technical jargon — just what's happening.
+ */
+private fun describeAction(toolName: String, arguments: String): String {
+    // Parse simple JSON to extract key info
+    val text = extractJsonStringField(arguments, "text")
+    val appName = extractJsonStringField(arguments, "app_name")
+    val direction = extractJsonStringField(arguments, "direction")
+    val url = extractJsonStringField(arguments, "url")
+
+    return when {
+        toolName.contains("launch_app") -> {
+            if (!appName.isNullOrBlank()) "Opened $appName"
+            else "Opened app"
+        }
+        toolName.contains("click") -> "Tapped"
+        toolName.contains("long_click") -> "Long pressed"
+        toolName.contains("type_text") -> {
+            if (!text.isNullOrBlank()) "Typed: ${text.take(40)}${if (text.length > 40) "..." else ""}"
+            else "Typed text"
+        }
+        toolName.contains("clear_text") -> "Cleared text"
+        toolName.contains("scroll") -> {
+            if (direction == "up") "Scrolled up" else "Scrolled down"
+        }
+        toolName.contains("swipe") -> {
+            val d = extractJsonStringField(arguments, "direction") ?: ""
+            if (d.contains("up", ignoreCase = true)) "Swiped up"
+            else if (d.contains("down", ignoreCase = true)) "Swiped down"
+            else if (d.contains("left", ignoreCase = true)) "Swiped left"
+            else if (d.contains("right", ignoreCase = true)) "Swiped right"
+            else "Swiped"
+        }
+        toolName.contains("back") -> "Went back"
+        toolName.contains("home") -> "Went to home"
+        toolName.contains("recents") -> "Opened recents"
+        toolName.contains("press_key") -> {
+            val key = extractJsonStringField(arguments, "key") ?: ""
+            when {
+                key.contains("enter", ignoreCase = true) -> "Pressed Enter"
+                key.contains("space", ignoreCase = true) -> "Pressed Space"
+                else -> "Pressed key"
+            }
+        }
+        toolName.contains("wait") -> "Waiting..."
+        toolName.contains("screenshot") -> "Took screenshot"
+        toolName.contains("inspect") -> "Read screen"
+        toolName.contains("find") -> "Searching screen..."
+        toolName.contains("open_link") -> {
+            if (!url.isNullOrBlank()) "Opened: ${url.take(50)}" else "Opened link"
+        }
+        toolName.contains("finish") -> "Done"
+        toolName.contains("stop") -> "Stopped"
+        toolName.contains("analyze") -> "Analyzing screen..."
+        toolName.contains("visual") -> "Looking for element..."
+        else -> toolName.substringAfterLast(".").replace("_", " ")
+    }
+}
+
+private fun extractJsonStringField(json: String, field: String): String? {
+    val pattern = """"$field"\s*:\s*"([^"]*)""""
+    return Regex(pattern, RegexOption.IGNORE_CASE).find(json)?.groupValues?.getOrNull(1)
 }
 
 @Composable
@@ -396,7 +519,7 @@ private fun ErrorCard(event: AgentEvent.Error) {
             .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         Text(
-            event.message.take(120),
+            event.message.take(100),
             color = AppColors.Error.copy(alpha = 0.8f),
             fontSize = 12.sp
         )
