@@ -9,12 +9,16 @@ import com.androidagent.aiagent.safety.SafetyController
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 
+// ============================================================================
+// Handler interface – implemented by each concrete tool
+// ============================================================================
+
 /**
  * Handles the actual execution logic for a single named tool.
  *
- * Each concrete tool (tap, type, scroll, observe, etc.) provides an
- * implementation of this interface. The [ToolExecutor] dispatches to
- * the correct handler at runtime.
+ * Each concrete tool (tap, type, scroll, etc.) provides an implementation
+ * of this interface.  The [ToolExecutor] dispatches to the correct handler
+ * at runtime.
  */
 interface ToolHandler {
     /**
@@ -26,18 +30,23 @@ interface ToolHandler {
     suspend fun execute(args: JsonObject): ToolResult
 }
 
+// ============================================================================
+// ToolExecutor – central dispatcher with safety + alias resolution
+// ============================================================================
+
 /**
  * Central dispatcher that routes tool calls to the appropriate [ToolHandler]
- * after performing safety checks.
+ * after performing alias resolution and safety checks.
  *
  * Execution flow:
- * 1. Look up the [ToolHandler] for the requested tool name.
- * 2. Delegate to the [SafetyController] for policy evaluation.
- * 3. If the call is allowed, invoke the handler.
- * 4. If the call requires confirmation, return a sentinel [ToolResult]
- *    with `success = false` and error code `"SAFETY_CONFIRMATION_REQUIRED"`.
- * 5. If the call is blocked, return a sentinel [ToolResult]
- *    with `success = false` and error code `"SAFETY_BLOCKED"`.
+ * 1. **Alias resolution** – if the requested name is not registered but
+ *    matches a known alias, transparently redirect to the canonical name.
+ * 2. **Handler lookup** – find the [ToolHandler] for the (possibly
+ *    resolved) tool name.
+ * 3. **Safety check** – delegate to the [SafetyController] for policy
+ *    evaluation.
+ * 4. **Execution** – invoke the handler (or return a sentinel result if
+ *    confirmation/blocked).
  */
 class ToolExecutor(
     private val accessibilityObserver: AccessibilityObserver,
@@ -50,113 +59,168 @@ class ToolExecutor(
     companion object {
         private const val TAG = "ToolExecutor"
 
-        /** Error code returned when a tool call requires user confirmation. */
+        /** Error code: tool call requires user confirmation. */
         const val ERROR_CONFIRMATION_REQUIRED = "SAFETY_CONFIRMATION_REQUIRED"
 
-        /** Error code returned when a tool call is blocked by safety policy. */
+        /** Error code: tool call is blocked by safety policy. */
         const val ERROR_BLOCKED = "SAFETY_BLOCKED"
 
-        /** Error code returned when the requested tool is not registered. */
+        /** Error code: no handler registered for the requested tool. */
         const val ERROR_UNKNOWN_TOOL = "UNKNOWN_TOOL"
 
+        /** Maximum Levenshtein distance for fuzzy tool-name matching. */
+        private const val MAX_FUZZY_DISTANCE = 3
+
         /**
-         * Common tool-name mistakes the model makes, mapped to the correct
-         * canonical name that is actually registered.
+         * Common tool-name mistakes the model makes, mapped to the
+         * correct canonical name.
+         *
+         * The executor **auto-corrects** aliases at execution time, so
+         * the model's response succeeds even when it uses a wrong name.
+         * However, a warning is logged and the [AliasResolution] is
+         * returned so the runtime can inform the model.
          */
         private val TOOL_ALIASES: Map<String, String> = mapOf(
-            "android.set_text"       to "android.type_text",
-            "android.enter_text"     to "android.type_text",
-            "android.type"           to "android.type_text",
-            "android.input_text"     to "android.type_text",
-            "android.tap"            to "android.click",
-            "android.press_back"     to "android.back",
-            "android.go_back"        to "android.back",
-            "android.navigate_back"  to "android.back",
-            "android.long_press"     to "android.long_click",
-            "android.long_tap"       to "android.long_click",
-            "android.search"         to "android.find",
-            "android.look_for"       to "android.find",
-            "android.wait"           to "android.wait",
-            "android.sleep"          to "android.wait",
-            "android.delay"          to "android.wait",
-            "android.clear"          to "android.clear_text",
-            "android.erase_text"     to "android.clear_text",
-            "android.delete_text"    to "android.clear_text",
-            "android.press_home"     to "android.home",
-            "android.go_home"        to "android.home",
-            "android.show_recents"   to "android.recents",
-            "android.recent_apps"    to "android.recents",
-            "android.key"            to "android.press_key",
-            "android.send_key"       to "android.press_key",
-            "android.open_app"       to "android.launch_app",
-            "android.start_app"      to "android.launch_app",
-            "android.inspect"        to "android.inspect_screen",
-            "android.analyze"        to "android.analyze_screen",
-            "android.find_visual"    to "android.find_visual_target",
-            "android.visual_find"    to "android.find_visual_target",
-            "agent.ask"              to "agent.ask_user",
-            "agent.done"             to "agent.finish"
+            // Text input
+            "android.set_text"      to "android.type_text",
+            "android.enter_text"    to "android.type_text",
+            "android.type"          to "android.type_text",
+            "android.input_text"    to "android.type_text",
+            "android.clear"         to "android.clear_text",
+            "android.erase_text"    to "android.clear_text",
+            "android.delete_text"   to "android.clear_text",
+            // Tapping
+            "android.tap"           to "android.click",
+            "android.long_press"    to "android.long_click",
+            "android.long_tap"      to "android.long_click",
+            // Navigation
+            "android.press_back"    to "android.back",
+            "android.go_back"       to "android.back",
+            "android.navigate_back" to "android.back",
+            "android.press_home"    to "android.home",
+            "android.go_home"       to "android.home",
+            "android.show_recents"  to "android.recents",
+            "android.recent_apps"   to "android.recents",
+            // Search / observe
+            "android.search"        to "android.find",
+            "android.look_for"      to "android.find",
+            "android.inspect"       to "android.inspect_screen",
+            // Keys / time
+            "android.sleep"         to "android.wait",
+            "android.delay"         to "android.wait",
+            "android.key"           to "android.press_key",
+            "android.send_key"      to "android.press_key",
+            // App launch
+            "android.open_app"      to "android.launch_app",
+            "android.start_app"     to "android.launch_app",
+            // Vision
+            "android.analyze"       to "vision.analyze_screen",
+            "android.find_visual"   to "vision.find_visual_target",
+            "android.visual_find"   to "vision.find_visual_target",
+            // Agent
+            "agent.ask"             to "agent.ask_user",
+            "agent.done"            to "agent.finish"
         )
     }
 
+    // -------------------------------------------------------------------
+    // Result of alias resolution
+    // -------------------------------------------------------------------
+
     /**
-     * Execute a tool call end-to-end.
+     * Describes whether a tool name was auto-corrected via alias or
+     * fuzzy matching.
+     */
+    data class AliasResolution(
+        /** The original name the model supplied. */
+        val originalName: String,
+        /** The resolved canonical name (may equal [originalName]). */
+        val resolvedName: String,
+        /** How the resolution was performed. */
+        val method: ResolutionMethod
+    ) {
+        enum class ResolutionMethod {
+            /** No correction needed – exact match. */
+            EXACT,
+            /** Matched via the [TOOL_ALIASES] table. */
+            ALIAS,
+            /** Matched via Levenshtein distance or suffix. */
+            FUZZY
+        }
+
+        /** True if the name was changed from the original. */
+        val wasCorrected: Boolean get() = originalName != resolvedName
+    }
+
+    // -------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------
+
+    /**
+     * Execute a tool call end-to-end, including alias resolution and
+     * safety evaluation.
      *
-     * @param toolName The name of the tool to invoke.
+     * @param toolName The name of the tool to invoke (may be an alias).
      * @param args The JSON arguments supplied by the AI model.
-     * @param observationId Optional observation ID for tracing/log correlation.
-     * @return A [ToolResult] describing the outcome of the call.
+     * @param observationId Optional observation ID for tracing.
+     * @return A [ToolResult] describing the outcome.
      */
     suspend fun execute(
         toolName: String,
         args: JsonObject,
         observationId: String? = null
     ): ToolResult {
-        Log.d(TAG, "execute($toolName) observationId=$observationId")
+        // 1. Resolve aliases / fuzzy-match
+        val resolution = resolveToolName(toolName)
+        val canonicalName = resolution.resolvedName
 
-        // 1. Resolve handler
-        val handler = toolHandlers[toolName]
+        if (resolution.wasCorrected) {
+            Log.i(TAG, "Resolved tool '$toolName' → '$canonicalName' (${resolution.method})")
+        }
+
+        // 2. Look up handler
+        val handler = toolHandlers[canonicalName]
         if (handler == null) {
-            Log.w(TAG, "No handler registered for tool: $toolName")
+            Log.w(TAG, "No handler registered for tool: $canonicalName (original: $toolName)")
             return ToolResult(
                 success = false,
-                toolName = toolName,
+                toolName = canonicalName,
                 error = ToolError(
                     code = ERROR_UNKNOWN_TOOL,
-                    message = "No handler registered for tool '$toolName'"
+                    message = "No handler registered for tool '$canonicalName'"
                 ),
                 observationRequired = false
             )
         }
 
-        // 2. Safety check
-        val safetyResult = try {
-            safetyController.checkToolCall(toolName, args)
-        } catch (e: Exception) {
-            Log.e(TAG, "SafetyController threw during checkToolCall", e)
+        // 3. Safety check
+        val safetyResult = runCatching { safetyController.checkToolCall(canonicalName, args) }
+            .onFailure { e ->
+                Log.e(TAG, "SafetyController threw during checkToolCall", e)
+            }
+            .getOrNull()
+
+        if (safetyResult == null) {
             return ToolResult(
                 success = false,
-                toolName = toolName,
+                toolName = canonicalName,
                 error = ToolError(
                     code = "SAFETY_CHECK_ERROR",
-                    message = "Safety check failed: ${e.message}"
+                    message = "Safety check failed unexpectedly"
                 ),
                 observationRequired = false
             )
         }
 
-        // 3. Handle safety verdict
+        // 4. Handle safety verdict
         when (safetyResult) {
             SafetyCheckResult.BLOCKED -> {
                 val reason = safetyController.lastReason ?: "Blocked by safety policy"
-                Log.w(TAG, "Tool '$toolName' blocked: $reason")
+                Log.w(TAG, "Tool '$canonicalName' blocked: $reason")
                 return ToolResult(
                     success = false,
-                    toolName = toolName,
-                    error = ToolError(
-                        code = ERROR_BLOCKED,
-                        message = reason
-                    ),
+                    toolName = canonicalName,
+                    error = ToolError(code = ERROR_BLOCKED, message = reason),
                     observationRequired = false
                 )
             }
@@ -164,41 +228,33 @@ class ToolExecutor(
             SafetyCheckResult.REQUIRES_CONFIRMATION -> {
                 val reason = safetyController.lastReason
                     ?: "This action requires user confirmation"
-                Log.i(TAG, "Tool '$toolName' requires confirmation: $reason")
+                Log.i(TAG, "Tool '$canonicalName' requires confirmation: $reason")
                 return ToolResult(
                     success = false,
-                    toolName = toolName,
-                    error = ToolError(
-                        code = ERROR_CONFIRMATION_REQUIRED,
-                        message = reason
-                    ),
+                    toolName = canonicalName,
+                    error = ToolError(code = ERROR_CONFIRMATION_REQUIRED, message = reason),
                     observationRequired = false
                 )
             }
 
-            SafetyCheckResult.ALLOWED -> {
-                // Fall through to execution
-            }
+            SafetyCheckResult.ALLOWED -> { /* fall through */ }
         }
 
-        // 4. Execute the handler
+        // 5. Execute the handler
         return try {
             val startTime = System.currentTimeMillis()
             val result = handler.execute(args)
             val elapsed = System.currentTimeMillis() - startTime
-            Log.d(
-                TAG,
-                "Tool '$toolName' executed in ${elapsed}ms, success=${result.success}"
-            )
+            Log.d(TAG, "Tool '$canonicalName' executed in ${elapsed}ms, success=${result.success}")
             result
         } catch (e: CancellationException) {
-            Log.w(TAG, "Tool '$toolName' execution cancelled")
+            Log.w(TAG, "Tool '$canonicalName' execution cancelled")
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Tool '$toolName' execution failed", e)
+            Log.e(TAG, "Tool '$canonicalName' execution failed", e)
             ToolResult(
                 success = false,
-                toolName = toolName,
+                toolName = canonicalName,
                 error = ToolError(
                     code = "EXECUTION_ERROR",
                     message = e.message ?: "Unknown error during tool execution"
@@ -209,38 +265,34 @@ class ToolExecutor(
     }
 
     /**
-     * Check whether a handler exists for the given tool name without
-     * performing any safety evaluation.
-     *
-     * @param toolName The tool name to look up.
-     * @return `true` if a [ToolHandler] is registered for this name.
-     */
-    fun hasHandler(toolName: String): Boolean = toolHandlers.containsKey(toolName)
-
-    /**
-     * Return the names of all registered tool handlers.
-     */
-    fun getRegisteredHandlerNames(): Set<String> = toolHandlers.keys
-
-    /**
-     * Attempt to find the closest matching registered tool name for a
-     * name the model supplied that does not exist.
+     * Resolve a potentially-incorrect tool name to a canonical name.
      *
      * Resolution order:
-     * 1. Exact alias lookup via [TOOL_ALIASES].
-     * 2. Levenshtein distance ≤ 3 against all registered names.
-     * 3. Substring / suffix match (e.g. `"click"` → `"android.click"`).
+     * 1. Exact match → no correction needed.
+     * 2. Alias lookup via [TOOL_ALIASES].
+     * 3. Levenshtein distance ≤ [MAX_FUZZY_DISTANCE].
+     * 4. Suffix match (e.g. `"click"` → `"android.click"`).
      *
-     * @return The best-matching canonical tool name, or `null` if nothing
-     *         is close enough.
+     * @return An [AliasResolution] describing the result.
      */
-    fun findClosestToolName(requestedName: String): String? {
+    fun resolveToolName(requestedName: String): AliasResolution {
         val normalised = requestedName.trim().lowercase()
 
-        // 1. Alias lookup
-        TOOL_ALIASES[normalised]?.let { return it }
+        // 1. Exact match
+        if (normalised in toolHandlers) {
+            return AliasResolution(requestedName, normalised, AliasResolution.ResolutionMethod.EXACT)
+        }
 
-        // 2. Levenshtein distance
+        // 2. Alias lookup
+        TOOL_ALIASES[normalised]?.let { canonical ->
+            if (canonical in toolHandlers) {
+                return AliasResolution(
+                    requestedName, canonical, AliasResolution.ResolutionMethod.ALIAS
+                )
+            }
+        }
+
+        // 3. Levenshtein distance
         var bestName: String? = null
         var bestDist = Int.MAX_VALUE
         for (registered in toolHandlers.keys) {
@@ -250,40 +302,57 @@ class ToolExecutor(
                 bestName = registered
             }
         }
-        if (bestDist <= 3 && bestName != null) return bestName
+        if (bestDist <= MAX_FUZZY_DISTANCE && bestName != null) {
+            return AliasResolution(
+                requestedName, bestName, AliasResolution.ResolutionMethod.FUZZY
+            )
+        }
 
-        // 3. Suffix match: if the requested name ends with the part after
-        //    the last dot of a registered name, suggest it.
+        // 4. Suffix match
         val suffix = normalised.substringAfterLast(".", normalised)
-        if (suffix != normalised) {
-            // already had a dot – try matching the suffix part
-            val noDotMatch = toolHandlers.keys.firstOrNull {
-                it.substringAfterLast(".") == suffix
-            }
-            if (noDotMatch != null) return noDotMatch
-        }
-        // Try matching the whole requested name against registered suffixes
         val suffixMatch = toolHandlers.keys.firstOrNull {
-            it.substringAfterLast(".") == normalised
+            it.substringAfterLast(".") == suffix
         }
-        if (suffixMatch != null) return suffixMatch
+        if (suffixMatch != null) {
+            return AliasResolution(
+                requestedName, suffixMatch, AliasResolution.ResolutionMethod.FUZZY
+            )
+        }
 
-        return null
+        // No resolution possible
+        return AliasResolution(requestedName, normalised, AliasResolution.ResolutionMethod.EXACT)
     }
 
-    /** Simple Levenshtein distance between two strings. */
+    /** Check whether a handler exists for the given name. */
+    fun hasHandler(toolName: String): Boolean = toolHandlers.containsKey(toolName)
+
+    /** Return the names of all registered tool handlers. */
+    fun getRegisteredHandlerNames(): Set<String> = toolHandlers.keys
+
+    // -------------------------------------------------------------------
+    // Levenshtein distance
+    // -------------------------------------------------------------------
+
+    /** Simple O(n*m) Levenshtein distance with O(min(n,m)) space. */
     private fun levenshtein(a: String, b: String): Int {
         if (a == b) return 0
         val la = a.length
         val lb = b.length
         if (la == 0) return lb
         if (lb == 0) return la
-        var prev = IntArray(lb + 1) { it }
-        var curr = IntArray(lb + 1)
-        for (i in 1..la) {
+
+        // Ensure we allocate the shorter array
+        val (shorter, longer) = if (la <= lb) a to b else b to a
+        val ls = shorter.length
+        val ll = longer.length
+
+        var prev = IntArray(ls + 1) { it }
+        var curr = IntArray(ls + 1)
+
+        for (i in 1..ll) {
             curr[0] = i
-            for (j in 1..lb) {
-                val cost = if (a[i - 1] == b[j - 1]) 0 else 1
+            for (j in 1..ls) {
+                val cost = if (longer[i - 1] == shorter[j - 1]) 0 else 1
                 curr[j] = minOf(
                     prev[j] + 1,      // deletion
                     curr[j - 1] + 1,  // insertion
@@ -294,6 +363,6 @@ class ToolExecutor(
             prev = curr
             curr = tmp
         }
-        return prev[lb]
+        return prev[ls]
     }
 }

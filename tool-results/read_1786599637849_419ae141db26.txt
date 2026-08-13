@@ -1,0 +1,703 @@
+     1→# Android AI Computer-Use Agent
+     2→
+     3→[![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+     4→[![Jetpack Compose](https://img.shields.io/badge/Jetpack_Compose-BOM_2024.12-4285F4?logo=android&logoColor=white)](https://developer.android.com/develop/ui/compose)
+     5→[![Material 3](https://img.shields.io/badge/Material_3-1.3.1-2196F3)](https://m3.material.io)
+     6→[![Ollama](https://img.shields.io/badge/Ollama_Cloud_API-gemma4%3A31b-000000?logo=ollama)](https://ollama.com)
+     7→[![Gemma](https://img.shields.io/badge/Powered_by-Gemma_4_31B-4285F4?logo=google&logoColor=white)](https://ai.google.dev/gemma)
+     8→[![Android SDK](https://img.shields.io/badge/Android_SDK-35-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
+     9→[![Min SDK](https://img.shields.io/badge/Min_SDK-28-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
+    10→[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+    11→
+    12→---
+    13→
+    14→## Overview
+    15→
+    16→**Android AI Computer-Use Agent** is a native Android application that functions as a private, on-device AI computer-use agent. Unlike a chatbot, this app operates an iterative **observe → reason → act → verify** loop to autonomously complete tasks on the device.
+    17→
+    18→The AI observes the device screen via Android's `AccessibilityService`, reasons about the current state using **Gemma 4 31B** served through the **Ollama Cloud API**, selects and executes tools dynamically, observes the result, and continues until the user's task is completed — all running locally on your phone with no middleman server.
+    19→
+    20→### Key Differentiators
+    21→
+    22→- **Not a chatbot.** The agent is a goal-driven autonomous system that takes real actions on the device.
+    23→- **Fully private.** The API key is encrypted at rest. Screenshots are off by default and never leave the device unless vision mode is enabled (and even then, they go only to your configured API endpoint).
+    24→- **No dangerous permissions.** The app requests only `INTERNET`, `FOREGROUND_SERVICE`, `POST_NOTIFICATIONS`, and `SYSTEM_ALERT_WINDOW`. No `READ_CONTACTS`, no `READ_SMS`, no `WRITE_SETTINGS`.
+    25→- **No arbitrary code execution.** The AI can only invoke a predefined, registered set of tools. It cannot run shell commands, install APKs, or access arbitrary Android APIs.
+    26→
+    27→---
+    28→
+    29→## Architecture
+    30→
+    31→The agent follows a classic sense-think-act cycle. Below is the end-to-end flow:
+    32→
+    33→```
+    34→┌──────────────┐     ┌──────────────────┐     ┌────────────────────────────┐
+    35→│  User Goal   │────▶│  Agent Runtime   │────▶│  Gemma 4 31B (Ollama Cloud) │
+    36→│  (natural    │     │  (AgentLoop)     │     │  https://ollama.com/api/chat│
+    37→│   language)  │     │                  │     │  Model: gemma4:31b          │
+    38→└──────────────┘     └───────┬──────────┘     └──────────────┬─────────────┘
+    39→                             │                               │
+    40→                    ┌────────▼──────────┐          ┌────────▼─────────┐
+    41→                    │  Tool Call        │          │  Tool Call JSON  │
+    42→                    │  (DecisionParser) │◀─────────│  Response        │
+    43→                    └───────┬──────────┘          └──────────────────┘
+    44→                            │
+    45→                   ┌────────▼──────────┐
+    46→                   │  SafetyController │
+    47→                   │  (allow/confirm/  │
+    48→                   │   block)          │
+    49→                   └───────┬──────────┘
+    50→                            │
+    51→                   ┌────────▼──────────┐
+    52→                   │  ToolExecutor     │
+    53→                   │  (dispatches to   │
+    54→                   │   registered      │
+    55→                   │   handlers)       │
+    56→                   └───────┬──────────┘
+    57→                            │
+    58→            ┌───────────────▼───────────────┐
+    59→            │     Android Device            │
+    60→            │  (AccessibilityService,       │
+    61→            │   GestureController,          │
+    62→            │   TakeScreenshot API)         │
+    63→            └───────────────┬───────────────┘
+    64→                            │
+    65→                   ┌────────▼──────────┐
+    66→                   │  AccessibilityObserver    │
+    67→                   │  (new observation:        │
+    68→                   │   UI tree + screenshot)   │
+    69→                   └───────┬──────────┘
+    70→                            │
+    71→                   ┌────────▼──────────┐     (loop back to Gemma)
+    72→                   │  Next Iteration   │────────────────────────▶
+    73→                   └──────────────────┘
+    74→```
+    75→
+    76→### Key Modules
+    77→
+    78→| Module | Package | Description |
+    79→|--------|---------|-------------|
+    80→| **Accessibility Layer** | `accessibility` | `AndroidAgentAccessibilityService`, `AccessibilityObserver`, `AccessibilityNodeMapper`, `GestureController` — reads UI trees, performs gestures, captures screenshots |
+    81→| **AI Layer** | `ai` | `GemmaClient`, `VisionAnalyzer`, `OllamaModels` — communicates with Ollama Cloud API, handles multimodal vision input |
+    82→| **Tool Registry** | `tools` | `ToolRegistry`, `AgentTool`, `ToolExecutor`, `ToolHandler` — dynamic tool registration, dispatch, and execution |
+    83→| **Agent Runtime** | `agent` | `AgentRuntime`, `AgentState`, `AgentLoopGuard`, `AgentPromptBuilder`, `DecisionParser` — the core observe-reason-act loop |
+    84→| **Safety Controller** | `safety` | `SafetyController`, `ConfirmationManager`, `RiskLevel` — policy-driven safety checks before tool execution |
+    85→| **UI Layer** | `ui` | `MainActivity`, `MainScreen`, `SettingsScreen`, `HistoryScreen`, `DebugScreen`, `AgentViewModel` — Jetpack Compose Material 3 interface |
+    86→| **Data Layer** | `data` | `SettingsRepository`, `SecureStorage`, `TaskRepository` — encrypted preferences, DataStore settings, task persistence |
+    87→
+    88→---
+    89→
+    90→## How It Works
+    91→
+    92→### Gemma Integration
+    93→
+    94→The app communicates with **Gemma 4 31B** via the Ollama Cloud API:
+    95→
+    96→- **Endpoint:** `https://ollama.com/api/chat`
+    97→- **Model:** `gemma4:31b`
+    98→- **Authentication:** Bearer token (API key) stored in encrypted shared preferences
+    99→- **Request format:** JSON with `model`, `messages`, `options` (temperature), and `stream: false`
+   100→- **Supports both text-only and multimodal (vision) inputs**
+   101→
+   102→For multimodal requests, the user message content becomes an array containing a text part and an `image_url` part with the base64-encoded screenshot:
+   103→
+   104→```json
+   105→{
+   106→  "role": "user",
+   107→  "content": [
+   108→    { "type": "text", "text": "Analyze this screen..." },
+   109→    { "type": "image_url", "image_url": { "url": "data:image/png;base64,..." } }
+   110→  ]
+   111→}
+   112→```
+   113→
+   114→### Vision System
+   115→
+   116→Screenshots are captured via Android's `TakeScreenshot` API (requires **API 34+ / Android 14**). The workflow:
+   117→
+   118→1. The `AccessibilityService` calls `takeScreenshot()` (declared in `accessibility_service_config.xml` with `android:canTakeScreenshot="true"`)
+   119→2. The resulting `Bitmap` is compressed to JPEG at 70% quality
+   120→3. The byte array is base64-encoded
+   121→4. The base64 string is attached to the model request as a multimodal image input
+   122→5. Gemma reasons about the visual content and selects the appropriate tool call
+   123→
+   124→**Vision Modes:**
+   125→
+   126→| Mode | Behavior |
+   127→|------|----------|
+   128→| `AUTO` (default) | Screenshots are taken when the accessibility tree has fewer than 3 actionable nodes (clickable/editable), or when the last tool execution failed |
+   129→| `ALWAYS` | A screenshot is captured and sent with every model request |
+   130→| `WHEN_NEEDED` | Vision is available as a tool (`vision.analyze_screen`, `vision.find_visual_target`) but not automatically attached |
+   131→| `OFF` | No screenshots are ever captured or sent |
+   132→
+   133→### AccessibilityService
+   134→
+   135→The `AndroidAgentAccessibilityService` is the backbone of the agent's ability to observe and interact with the device. It:
+   136→
+   137→- **Reads the UI hierarchy** via `AccessibilityNodeInfo`, extracting:
+   138→  - `text`, `contentDescription`, `resourceId` (view identifier)
+   139→  - `className` (e.g., `android.widget.Button`)
+   140→  - `bounds` (screen coordinates: left, top, right, bottom)
+   141→  - `isClickable`, `isEditable`, `isScrollable`, `isFocusable`, `isEnabled`
+   142→  - Parent-child relationships for tree structure
+   143→- **Performs actions** on nodes: `click()`, `longClick()`, `setText()`, `performAction(ACTION_SCROLL_FORWARD/BACKWARD)`
+   144→- **Dispatches gestures** via `GestureController` for swipe, scroll, and tap operations when node-level actions are insufficient
+   145→- **Configured flags:** `flagReportViewIds`, `flagRetrieveInteractiveWindows`, `flagIncludeNotImportantViews`, `canPerformGestures`, `canRetrieveWindowContent`, `canTakeScreenshot`
+   146→
+   147→---
+   148→
+   149→## Tool System
+   150→
+   151→The agent has access to **20+ registered tools** organized by namespace. Tools are discovered and registered at startup via the `ToolRegistry`. Each tool exposes a JSON schema (`inputSchema`) that is injected into the system prompt so the model knows exactly what arguments to provide.
+   152→
+   153→### Tool Call Format
+   154→
+   155→Every model response must be a single JSON object. For tool calls:
+   156→
+   157→```json
+   158→{
+   159→  "type": "tool_call",
+   160→  "tool_name": "android.click",
+   161→  "arguments": {
+   162→    "node_id": "node_42"
+   163→  }
+   164→}
+   165→```
+   166→
+   167→### All Registered Tools
+   168→
+   169→#### `android.*` — Device Interaction
+   170→
+   171→| Tool Name | Description |
+   172→|-----------|-------------|
+   173→| `android.launch_app` | Launch an application by package name or display name |
+   174→| `android.find` | Search the accessibility tree for nodes matching text, content description, or resource ID |
+   175→| `android.click` | Click on a UI element by its `node_id` from the most recent observation |
+   176→| `android.long_click` | Long-press on a UI element by its `node_id` |
+   177→| `android.type_text` | Type text into an editable field by its `node_id` |
+   178→| `android.clear_text` | Clear the text content of an editable field by its `node_id` |
+   179→| `android.scroll` | Scroll a scrollable container forward or backward |
+   180→| `android.swipe` | Perform a swipe gesture between two coordinates |
+   181→| `android.press_key` | Simulate a hardware key press (e.g., Enter, Backspace, Search) |
+   182→| `android.back` | Press the system Back button |
+   183→| `android.home` | Press the system Home button |
+   184→| `android.recents` | Open the recent apps screen |
+   185→| `android.wait` | Wait for a specified duration (milliseconds) to allow UI transitions to complete |
+   186→| `android.screenshot` | Manually capture and return a screenshot (for use when vision is in `WHEN_NEEDED` mode) |
+   187→| `android.inspect_screen` | Return the current accessibility tree observation for analysis |
+   188→
+   189→#### `vision.*` — Visual Analysis
+   190→
+   191→| Tool Name | Description |
+   192→|-----------|-------------|
+   193→| `vision.analyze_screen` | Capture a screenshot and ask the model to describe what it sees visually |
+   194→| `vision.find_visual_target` | Search the screenshot for a visual element described in natural language (e.g., "the blue submit button") and return its coordinates |
+   195→
+   196→#### `agent.*` — Meta / Control
+   197→
+   198→| Tool Name | Description |
+   199→|-----------|-------------|
+   200→| `agent.ask_user` | Ask the user a clarifying question and pause the loop until they respond |
+   201→| `agent.confirm` | Request explicit user confirmation before proceeding with a sensitive action |
+   202→| `agent.finish` | Signal task completion (with `success: true/false` and a summary message) |
+   203→| `agent.stop` | Abort the current task immediately |
+   204→
+   205→### Decision Types
+   206→
+   207→The `DecisionParser` supports five response types from the model:
+   208→
+   209→| Type | JSON Format | Behavior |
+   210→|------|------------|----------|
+   211→| `tool_call` | `{"type":"tool_call","tool_name":"...","arguments":{...}}` | Execute the named tool |
+   212→| `message` | `{"type":"message","content":"..."}` | Status update; loop continues |
+   213→| `ask_user` | `{"type":"ask_user","question":"..."}` | Pause and wait for user input |
+   214→| `finish` | `{"type":"finish","success":true/false,"message":"..."}` | End the task |
+   215→| `error` | `{"type":"error","message":"..."}` | Model-reported error; loop continues |
+   216→
+   217→---
+   218→
+   219→## Features
+   220→
+   221→### Dynamic Tool Discovery and Registry
+   222→
+   223→Tools are registered at startup via `ToolRegistry`. New tools can be added by implementing the `ToolHandler` interface and registering the `AgentTool` definition (name, description, inputSchema, riskLevel). The model automatically receives updated tool definitions in every prompt — no prompt hardcoding required.
+   224→
+   225→### Stale Node Protection
+   226→
+   227→Every observation is assigned a unique `observation_id` (e.g., `observation_1719000000000_4217`). Node IDs are **only valid within that specific observation**. The system prompt instructs the model to never reuse node IDs from older observations. If the agent attempts to reference a node from a stale observation, the executor returns a `NODE_STALE` error, and the agent automatically re-observes.
+   228→
+   229→### Intelligent Retry on Action Failure
+   230→
+   231→When a tool execution fails, the error is fed back to the model in the next iteration. The model can then reason about the failure and choose a different approach — whether that's finding a different node, scrolling to reveal new content, or asking the user for help.
+   232→
+   233→### Loop Detection and Prevention
+   234→
+   235→The `AgentLoopGuard` tracks two signals:
+   236→
+   237→1. **Consecutive identical actions:** If the same tool + arguments are executed 3 times in a row, a loop warning is injected into the prompt
+   238→2. **Unchanged observations:** If the screen state hash doesn't change for 4 consecutive observations, a loop warning is triggered
+   239→
+   240→When a loop is detected, the model receives a message like:
+   241→
+   242→```
+   243→### ⚠️ Loop Warning
+   244→The screen state has not changed after 4 consecutive observations.
+   245→The same action has been repeated 3 time(s).
+   246→Choose a different strategy, try a different approach, or stop.
+   247→```
+   248→
+   249→### Context Compaction for Long Conversations
+   250→
+   251→The `AgentPromptBuilder.buildHistoryMessages()` method compacts the event history for multi-turn conversations, summarizing tool executions and truncating model responses to 200 characters. This keeps the context window manageable for long tasks.
+   252→
+   253→### Safety and Confirmation System
+   254→
+   255→Every tool call passes through the `SafetyController` before execution:
+   256→
+   257→- **BLOCKED tools** are never executed (e.g., `android.install_app`, `android.uninstall_app`, `android.factory_reset`, `system.root_device`)
+   258→- **Blocked keywords** in tool names or arguments trigger automatic blocking (e.g., "install", "root", "flash_firmware")
+   259→- **Sensitive keywords** (send, post, delete, share, purchase, payment, account, password, login, logout) escalate to confirmation
+   260→- **Confirmation policies** are configurable (see Configuration section)
+   261→
+   262→### Emergency Stop Button
+   263→
+   264→A prominent stop button in the UI immediately cancels the running agent coroutine via `Job.cancel()`. The agent status transitions to `CANCELLED` and the loop halts.
+   265→
+   266→### Task History Persistence
+   267→
+   268→Completed, failed, and cancelled tasks are saved to local storage via `TaskRepository` with goal, status, step count, timing, and error information. View past tasks in the History screen.
+   269→
+   270→### Debug Mode with Redacted Reports
+   271→
+   272→When debug logging is enabled in settings, the Debug screen shows detailed step-by-step traces with API keys and sensitive data automatically redacted.
+   273→
+   274→### Secure API Key Storage
+   275→
+   276→The Ollama API key is stored using `EncryptedSharedPreferences` with:
+   277→- **MasterKey scheme:** `AES256_GCM`
+   278→- **Key encryption:** `AES256_SIV`
+   279→- **Value encryption:** `AES256_GCM`
+   280→
+   281→The key is never logged, never included in source code, and never sent in crash reports.
+   282→
+   283→### Dark Material 3 Theme
+   284→
+   285→The UI is built with Jetpack Compose and Material 3, featuring a dark theme consistent with modern Android design language.
+   286→
+   287→---
+   288→
+   289→## Prerequisites
+   290→
+   291→| Requirement | Version / Details |
+   292→|-------------|-------------------|
+   293→| **Android Studio** | Hedgehog (2023.1.1) or newer |
+   294→| **Android SDK** | Compile SDK 35, Min SDK 28, Target SDK 35 |
+   295→| **Kotlin** | 2.1.0 |
+   296→| **JDK** | Java 17 |
+   297→| **Ollama Cloud API Key** | Required — obtain from [ollama.com](https://ollama.com) |
+   298→| **Physical Android device** | API 28+ (API 34+ required for screenshot/vision features) |
+   299→| **Emulator** | Android 14+ emulator works but gesture dispatch and screenshots may be limited |
+   300→| **Internet connection** | Required for API calls to Ollama Cloud |
+   301→
+   302→---
+   303→
+   304→## Setup Instructions
+   305→
+   306→### Step 1: Clone and Open the Project
+   307→
+   308→```bash
+   309→git clone <repository-url>
+   310→cd android-agent
+   311→```
+   312→
+   313→Open the project in Android Studio (Hedgehog 2023.1.1 or newer).
+   314→
+   315→### Step 2: Sync Gradle
+   316→
+   317→Android Studio will prompt you to sync Gradle. Click **Sync Now**. Ensure you have:
+   318→- Android SDK 35 installed (via SDK Manager)
+   319→- JDK 17 configured
+   320→
+   321→### Step 3: Build the Debug APK
+   322→
+   323→```
+   324→Build > Build Bundle(s)/APK(s) > Build APK(s)
+   325→```
+   326→
+   327→The APK will be generated at:
+   328→
+   329→```
+   330→app/build/outputs/apk/debug/app-debug.apk
+   331→```
+   332→
+   333→### Step 4: Install on Device
+   334→
+   335→Connect your Android device via USB with **USB Debugging** enabled, then:
+   336→
+   337→```bash
+   338→adb install app/build/outputs/apk/debug/app-debug.apk
+   339→```
+   340→
+   341→### Step 5: Open the App
+   342→
+   343→Launch **Android AI Agent** from your home screen or app drawer.
+   344→
+   345→### Step 6: Configure API Settings
+   346→
+   347→1. Tap the **Settings** tab (gear icon) in the bottom navigation bar
+   348→2. Enter your **Ollama API Key** in the API Key field
+   349→3. Verify the **Endpoint** is set to `https://ollama.com/api/chat`
+   350→4. Verify the **Model** is set to `gemma4:31b`
+   351→5. Adjust other settings as desired (temperature, max steps, timeout, vision mode)
+   352→
+   353→### Step 7: Enable the Accessibility Service
+   354→
+   355→1. On the main screen, tap the **Accessibility Service status card** — it will redirect you to system Accessibility settings
+   356→2. Alternatively, navigate manually: **Settings > Accessibility > Android AI Agent > Enable**
+   357→3. Toggle the service **On**
+   358→4. Return to the app — the status card should now show "Connected"
+   359→
+   360→### Step 8: Grant Notification Permission
+   361→
+   362→On Android 13+, the app will request notification permission on first launch. If you missed it:
+   363→
+   364→```
+   365→Settings > Apps > Android AI Agent > Notifications > Allow notifications
+   366→```
+   367→
+   368→### Step 9: Run Your First Task
+   369→
+   370→Return to the main screen, type a task in the text field, and press **Send**.
+   371→
+   372→---
+   373→
+   374→## Running Your First Task
+   375→
+   376→Let's walk through a concrete example:
+   377→
+   378→**Task:** `Open Chrome and search Google for cats`
+   379→
+   380→Here's what the agent does step by step:
+   381→
+   382→| Step | Agent Status | Action |
+   383→|------|-------------|--------|
+   384→| 1 | **THINKING** | Observes the current screen (homescreen). Gets the accessibility tree with all visible UI elements. |
+   385→| 2 | **THINKING** | Sends observation + task goal to Gemma 4 31B. Model decides to launch Chrome. |
+   386→| 3 | **EXECUTING** | Executes `android.launch_app` with the Chrome package name. Chrome opens. |
+   387→| 4 | **THINKING** | Re-observes the screen. Sees the Chrome browser UI (address bar, homepage). |
+   388→| 5 | **THINKING** | Model decides to click the address bar to focus it. |
+   389→| 6 | **EXECUTING** | Executes `android.click` on the address bar node. |
+   390→| 7 | **THINKING** | Re-observes. Address bar is focused and editable. |
+   391→| 8 | **EXECUTING** | Executes `android.type_text` with `"cats"` and then `android.press_key` with Enter. |
+   392→| 9 | **THINKING** | Re-observes. Google search results for "cats" are displayed. |
+   393→| 10 | **COMPLETED** | Model calls `agent.finish` with `success: true` and message "Searched Google for cats successfully." |
+   394→
+   395→The entire process typically completes in 30–90 seconds depending on model latency and network speed.
+   396→
+   397→---
+   398→
+   399→## Configuration
+   400→
+   401→All settings are accessible from the **Settings** screen and persisted via `DataStore` (general settings) and `EncryptedSharedPreferences` (API key).
+   402→
+   403→### Settings Reference
+   404→
+   405→| Setting | Key | Default | Description |
+   406→|---------|-----|---------|-------------|
+   407→| **API Key** | `secure_api_key` | — | Ollama Cloud API key (encrypted with AES256_GCM) |
+   408→| **Endpoint** | `endpoint` | `https://ollama.com/api/chat` | Ollama API endpoint URL |
+   409→| **Model** | `model` | `gemma4:31b` | Model identifier for the Ollama API |
+   410→| **Temperature** | `temperature` | `0.3` | Sampling temperature (lower = more deterministic) |
+   411→| **Max Steps** | `max_steps` | `50` | Maximum agent loop iterations before auto-stop |
+   412→| **Timeout** | `timeout_ms` | `120000` (2 min) | Per-request timeout in milliseconds |
+   413→| **Vision Mode** | `vision_mode` | `AUTO` | When to capture screenshots (see below) |
+   414→| **Confirmation Policy** | `confirmation_policy` | `SENSITIVE_ONLY` | When to ask for user confirmation (see below) |
+   415→| **Save Screenshots** | `save_screenshots` | `false` | Whether to persist captured screenshots to disk |
+   416→| **Debug Logging** | `debug_logging` | `false` | Enable verbose debug output in the Debug screen |
+   417→| **Screenshot Resolution** | `screenshot_resolution` | `1024` | Target max dimension for downscaled screenshots |
+   418→
+   419→### Vision Modes
+   420→
+   421→| Mode | When Screenshots Are Sent |
+   422→|------|--------------------------|
+   423→| `AUTO` | Sent when the accessibility tree has < 3 actionable (clickable/editable) nodes, or when the previous tool call failed. Best balance of performance and capability. |
+   424→| `ALWAYS` | Sent with every model request. Slowest but most capable — the model always sees the actual screen. |
+   425→| `WHEN_NEEDED` | Not sent automatically. The model can explicitly call `vision.analyze_screen` or `vision.find_visual_target` when it needs visual information. |
+   426→| `OFF` | Never captures or sends screenshots. Vision tools are unavailable. Fastest mode but limited to accessibility tree only. |
+   427→
+   428→### Confirmation Policies
+   429→
+   430→| Policy | Behavior |
+   431→|--------|----------|
+   432→| `SENSITIVE_ONLY` | Only actions involving sensitive keywords (send, post, delete, share, purchase, payment, account, password, login, logout) require confirmation. Default and recommended for most users. |
+   433→| `ASK_EVERY_TIME` | **Every** tool call requires explicit user approval before execution. Slowest but safest — full manual oversight. |
+   434→| `MANUAL_MODE` | Similar to `ASK_EVERY_TIME` — all actions require confirmation. Useful for auditing or learning how the agent operates. |
+   435→
+   436→---
+   437→
+   438→## Troubleshooting
+   439→
+   440→### Accessibility Service Not Connecting
+   441→
+   442→**Symptoms:** The status card on the main screen shows "Disconnected" or the agent reports "Failed to observe screen."
+   443→
+   444→**Solutions:**
+   445→1. Go to **Settings > Accessibility** and verify **Android AI Agent** is toggled **On**
+   446→2. Some OEMs (Xiaomi, Samsung, OnePlus) aggressively kill background services. Add the app to the battery optimization whitelist:
+   447→   - **Settings > Battery > Battery Optimization > Android AI Agent > Don't optimize**
+   448→3. On Samsung devices, also check **Settings > Apps > Android AI Agent > Battery > Unrestricted**
+   449→4. Restart the device if the service was recently enabled
+   450→5. Check that no other accessibility service is conflicting
+   451→
+   452→### API Connection Errors
+   453→
+   454→**Symptoms:** Agent shows "Model call failed" or "HTTP 401/403/429/500."
+   455→
+   456→**Solutions:**
+   457→1. Verify your API key is correct in Settings
+   458→2. Check your internet connection
+   459→3. Ensure the endpoint URL is correct: `https://ollama.com/api/chat`
+   460→4. If you receive HTTP 429, you may have hit rate limits — wait and retry
+   461→5. If you receive HTTP 401/403, your API key is invalid or expired
+   462→6. Check the **Timeout** setting — increase to 180000ms (3 min) if the model is slow to respond
+   463→
+   464→### Agent Stuck in Loops
+   465→
+   466→**Symptoms:** The agent repeats the same action without making progress.
+   467→
+   468→**Solutions:**
+   469→1. The `AgentLoopGuard` should detect this automatically after 3 repeated actions or 4 unchanged observations
+   470→2. Press the **Stop** button to manually abort
+   471→3. Rephrase your task to be more specific
+   472→4. If the target app uses custom views with poor accessibility, enable vision mode (`ALWAYS`) so the model can see the screen
+   473→
+   474→### Screenshots Not Working
+   475→
+   476→**Symptoms:** Vision mode is enabled but the agent never sends screenshots.
+   477→
+   478→**Solutions:**
+   479→1. **Android 14+ (API 34) is required** for the `TakeScreenshot` API. Check your Android version.
+   480→2. Ensure the Accessibility Service has `canTakeScreenshot` enabled in its config (included by default)
+   481→3. On some devices, the first screenshot after enabling the service may fail — try again
+   482→4. Check logcat for errors tagged `AccessibilityObserver`
+   483→
+   484→### Model Returning Malformed JSON
+   485→
+   486→**Symptoms:** Agent shows "Failed to parse model response" errors.
+   487→
+   488→**Solutions:**
+   489→1. The `DecisionParser` automatically strips markdown fences and extracts JSON objects from responses
+   490→2. Lower the **temperature** setting (try `0.1` or `0.2`) for more deterministic outputs
+   491→3. Ensure the model is `gemma4:31b` — other models may not follow the JSON response format
+   492→4. This is sometimes caused by context overflow — try reducing the max steps or enabling debug mode to inspect raw responses
+   493→
+   494→### App Crashes
+   495→
+   496→**Symptoms:** The app unexpectedly closes.
+   497→
+   498→**Solutions:**
+   499→1. Check logcat: `adb logcat -s AndroidRuntime:E *:F`
+   500→2. Ensure you're running on a device with **API 28+**
+   501→3. If using an emulator, ensure it has sufficient RAM (at least 2GB) and storage
+   502→4. Clear app data: **Settings > Apps > Android AI Agent > Storage > Clear Data** (this will erase your API key and settings)
+   503→5. File a bug report with the full logcat output
+   504→
+   505→---
+   506→
+   507→## Security Considerations
+   508→
+   509→### API Key Storage
+   510→
+   511→- Stored in `EncryptedSharedPreferences` using the **AES256_GCM** master key scheme
+   512→- Key encryption uses **AES256_SIV**; value encryption uses **AES256_GCM**
+   513→- The key is **never** logged, **never** included in source code, and **never** transmitted in crash reports
+   514→- The `GemmaClient` deliberately omits the API key from all log statements
+   515→
+   516→### Screenshot Privacy
+   517→
+   518→- Screenshots are **off by default** (vision mode defaults to `AUTO`, which only captures when needed)
+   519→- When captured, screenshots are compressed to JPEG at 70% quality and base64-encoded
+   520→- Screenshots are sent **only** to the configured Ollama API endpoint
+   521→- Screenshots are **not** persisted to disk unless "Save Screenshots" is explicitly enabled in settings
+   522→- Screenshots may contain sensitive information (notifications, messages, passwords on screen) — use vision with caution
+   523→
+   524→### Permission Model
+   525→
+   526→The app requests **only four permissions**:
+   527→
+   528→| Permission | Purpose |
+   529→|------------|---------|
+   530→| `INTERNET` | Required for API calls to Ollama Cloud |
+   531→| `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | Keeps the Accessibility Service alive during task execution |
+   532→| `POST_NOTIFICATIONS` | Displays task status notifications |
+   533→| `SYSTEM_ALERT_WINDOW` | Required for overlay features on some devices |
+   534→
+   535→**No** access to contacts, SMS, call logs, camera, microphone, location, or storage.
+   536→
+   537→### Safety System
+   538→
+   539→- **Blocked tools:** `install_app`, `uninstall_app`, `grant_permission`, `revoke_permission`, `factory_reset`, `enable_developer_options`, `enable_usb_debugging`, `root_device`, `flash_firmware`, and any tool containing blocked keywords
+   540→- **Sensitive actions** (involving keywords like send, delete, share, purchase, payment, password, login, etc.) require explicit user confirmation
+   541→- **No arbitrary code execution:** The AI can only invoke registered tools. It cannot run shell commands, install APKs, or access arbitrary Android APIs
+   542→- **Max step limit:** The agent automatically stops after the configured maximum number of steps (default: 50) to prevent runaway execution
+   543→
+   544→---
+   545→
+   546→## Known Android Limitations
+   547→
+   548→| Limitation | Details |
+   549→|-----------|--------|
+   550→| **Screenshot API** | Requires Android 14+ (API 34). On older devices, only the accessibility tree is available for observation. |
+   551→| **Custom UI frameworks** | Apps that render their own UI (games, canvas-based apps, some custom Views) may not expose meaningful accessibility nodes. |
+   552→| **WebView content** | Web content rendered in `WebView` has limited accessibility support. Some web elements may not be discoverable via the accessibility tree. |
+   553→| **App restrictions** | Some apps (banking apps, DRM-protected content) explicitly disable accessibility services or restrict node information. |
+   554→| **Gesture dispatch** | `canPerformGestures` may not work reliably on all devices and OEM skins. Some manufacturers restrict gesture accessibility features. |
+   555→| **OEM battery optimization** | Chinese OEMs (Xiaomi, Huawei, Oppo, Vivo) aggressively kill background services, which can disconnect the Accessibility Service. |
+   556→| **Multi-window / split-screen** | The accessibility tree may not accurately reflect the visual layout in multi-window mode. |
+   557→| **Overlay dialogs** | System dialogs (permission prompts, app overlays) may not appear in the accessibility tree immediately. |
+   558→
+   559→---
+   560→
+   561→## Project Structure
+   562→
+   563→```
+   564→android-agent/
+   565→├── build.gradle.kts                          # Root build configuration
+   566→├── settings.gradle.kts                       # Module inclusion
+   567→├── gradle.properties                         # Gradle properties
+   568→├── gradle/
+   569→│   ├── wrapper/
+   570→│   │   └── gradle-wrapper.properties         # Gradle wrapper version
+   571→│   └── libs.versions.toml                    # Centralized dependency versions
+   572→└── app/
+   573→    ├── build.gradle.kts                      # App module build config (compileSdk 35, minSdk 28)
+   574→    ├── proguard-rules.pro                    # ProGuard/R8 rules for release builds
+   575→    └── src/main/
+   576→        ├── AndroidManifest.xml               # Permissions, service declarations
+   577→        ├── res/
+   578→        │   ├── xml/
+   579→        │   │   └── accessibility_service_config.xml  # AccessibilityService flags & config
+   580→        │   ├── values/
+   581→        │   │   ├── strings.xml                # App strings & accessibility description
+   582→        │   │   └── themes.xml                 # Material 3 theme
+   583→        │   └── ...                            # Drawable resources, etc.
+   584→        └── java/com/androidagent/aiagent/
+   585→            ├── AgentApplication.kt            # Application class, dependency initialization
+   586→            ├── accessibility/
+   587→            │   ├── AndroidAgentAccessibilityService.kt  # Core service: observes & controls device
+   588→            │   ├── AccessibilityObserver.kt   # Captures observations (UI tree + screenshots)
+   589→            │   ├── AccessibilityNodeMapper.kt # Converts AccessibilityNodeInfo → UiNode tree
+   590→                       │   └── GestureController.kt      # Dispatches touch gestures (swipe, tap)
+   591→            ├── ai/
+   592→            │   ├── GemmaClient.kt             # HTTP client for Ollama Cloud API
+   593→            │   ├── VisionAnalyzer.kt          # Vision-based screen analysis
+   594→            │   └── OllamaModels.kt            # Model metadata and capabilities
+   595→            ├── agent/
+   596→            │   ├── AgentRuntime.kt            # Core agent loop (observe→reason→act→verify)
+   597→            │   ├── AgentState.kt              # State types: AgentStatus, AndroidObservation, UiNode, etc.
+   598→            │   ├── AgentLoopGuard.kt          # Loop detection: repeated actions, unchanged observations
+   599→            │   ├── AgentPromptBuilder.kt      # System prompt & user message construction
+   600→            │   └── DecisionParser.kt          # Parses model JSON responses into AgentDecision
+   601→            ├── safety/
+   602→            │   ├── SafetyController.kt        # Policy engine: ALLOWED / REQUIRES_CONFIRMATION / BLOCKED
+   603→            │   ├── ConfirmationManager.kt     # Configurable confirmation policies
+   604→            │   └── RiskLevel.kt               # Risk enum: SAFE, CONFIRM, BLOCKED
+   605→            ├── tools/
+   606→            │   ├── AgentTool.kt               # Data classes: AgentTool, ToolResult, ToolCall, AgentDecision
+   607→            │   ├── ToolRegistry.kt            # Dynamic tool registration & schema serialization
+   608→            │   ├── ToolExecutor.kt            # Central dispatcher with safety checks
+   609→            │   ├── android/
+   610→            │   │   ├── LaunchAppTool.kt        # android.launch_app
+   611→            │   │   ├── FindTool.kt             # android.find
+   612→            │   │   ├── ClickTool.kt            # android.click
+   613→            │   │   ├── LongClickTool.kt        # android.long_click
+   614→            │   │   ├── TypeTextTool.kt         # android.type_text
+   615→            │   │   ├── ClearTextTool.kt        # android.clear_text
+   616→            │   │   ├── ScrollTool.kt           # android.scroll
+   617→            │   │   ├── SwipeTool.kt            # android.swipe
+   618→            │   │   ├── PressKeyTool.kt         # android.press_key
+   619→            │   │   ├── BackTool.kt             # android.back
+   620→            │   │   ├── HomeTool.kt             # android.home
+   621→            │   │   ├── RecentsTool.kt          # android.recents
+   622→            │   │   ├── WaitTool.kt             # android.wait
+   623→            │   │   ├── ScreenshotTool.kt       # android.screenshot
+   624→            │   │   └── InspectScreenTool.kt   # android.inspect_screen
+   625→            │   ├── vision/
+   626→            │   │   ├── AnalyzeScreenTool.kt    # vision.analyze_screen
+   627→            │   │   └── FindVisualTargetTool.kt # vision.find_visual_target
+   628→            │   └── agent/
+   629→            │       ├── AskUserTool.kt          # agent.ask_user
+   630→            │       ├── ConfirmTool.kt          # agent.confirm
+   631→            │       ├── FinishTool.kt           # agent.finish
+   632→            │       └── StopTool.kt             # agent.stop
+   633→            ├── data/
+   634→            │   ├── SettingsRepository.kt       # DataStore-backed user preferences
+   635→            │   ├── SecureStorage.kt           # EncryptedSharedPreferences (AES256_GCM)
+   636→            │   └── TaskRepository.kt          # Task history persistence
+   637→            └── ui/
+   638→                ├── MainActivity.kt            # Single-activity entry point
+   639→                ├── MainScreen.kt              # Main chat/task screen
+   640→                ├── SettingsScreen.kt          # Configuration screen
+   641→                ├── HistoryScreen.kt           # Past task list
+   642→                ├── DebugScreen.kt             # Debug trace viewer
+   643→                ├── Components.kt              # Reusable Compose components
+   644→                ├── AgentViewModel.kt          # ViewModel bridging UI and AgentRuntime
+   645→                └── Theme.kt                   # Material 3 dark theme definition
+   646→```
+   647→
+   648→---
+   649→
+   650→## Dependencies
+   651→
+   652→| Library | Version | Purpose |
+   653→|---------|---------|---------|
+   654→| AndroidX Core KTX | 1.15.0 | Kotlin extensions for Android core |
+   655→| Jetpack Compose BOM | 2024.12.01 | Compose UI framework |
+   656→| Material 3 | 1.3.1 | Material Design 3 components |
+   657→| Lifecycle | 2.8.7 | ViewModel and lifecycle-aware components |
+   658→| Navigation Compose | 2.8.5 | In-app navigation |
+   659→| Room | 2.6.1 | Local database for task persistence |
+   660→| OkHttp | 4.12.0 | HTTP client for Ollama API |
+   661→| Kotlinx Coroutines | 1.9.0 | Asynchronous programming |
+   662→| Kotlinx Serialization | 1.7.3 | JSON parsing and serialization |
+   663→| Security Crypto | 1.1.0-alpha06 | EncryptedSharedPreferences |
+   664→| DataStore Preferences | 1.1.1 | Type-safe key-value storage |
+   665→| Coil Compose | 2.7.0 | Image loading (screenshots, icons) |
+   666→
+   667→---
+   668→
+   669→## Build Variants
+   670→
+   671→| Variant | Minification | Description |
+   672→|---------|-------------|-------------|
+   673→| `debug` | Off | Faster builds, full debug info, no obfuscation |
+   674→| `release` | R8 enabled | Shrunk resources, obfuscated code, optimized APK |
+   675→
+   676→---
+   677→
+   678→## License
+   679→
+   680→```
+   681→MIT License
+   682→
+   683→Copyright (c) 2025
+   684→
+   685→Permission is hereby granted, free of charge, to any person obtaining a copy
+   686→of this software and associated documentation files (the "Software"), to deal
+   687→in the Software without restriction, including without limitation the rights
+   688→to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   689→copies of the Software, and to permit persons to whom the Software is
+   690→furnished to do so, subject to the following conditions:
+   691→
+   692→The above copyright notice and this permission notice shall be included in all
+   693→copies or substantial portions of the Software.
+   694→
+   695→THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   696→IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   697→FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   698→AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   699→LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   700→OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   701→SOFTWARE.
+   702→```
+   703→

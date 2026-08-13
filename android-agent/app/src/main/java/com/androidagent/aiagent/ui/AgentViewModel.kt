@@ -81,6 +81,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         registerAllTools()
+        AgentForegroundService.createChannel(context)
         observeAgentState()
     }
 
@@ -176,7 +177,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun isAccessibilityServiceEnabled(): Boolean {
-        return AndroidAgentAccessibilityService.isConnected
+        return try { AndroidAgentAccessibilityService.isConnected } catch (_: Exception) { false }
     }
 
     fun openAccessibilitySettings() {

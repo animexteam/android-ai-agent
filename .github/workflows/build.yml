@@ -1,4 +1,4 @@
-name: Build & Release Android APK
+name: Build & Release Android-Use APK
 
 on:
   push:
@@ -17,43 +17,51 @@ jobs:
           distribution: 'temurin'
       - uses: android-actions/setup-android@v3
       - name: Build
+        working-directory: android-agent
         run: |
-          cd android-agent
           GRADLE_VERSION=8.11.1
           mkdir -p gradle/wrapper
           curl -sL https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
           curl -sL https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradlew -o gradlew
           chmod +x gradlew
-          keytool -genkeypair -v -keystore app/release.keystore -alias taskflow -keyalg RSA -keysize 2048 -validity 10000 -storepass taskflow2025 -keypass taskflow2025 -dname "CN=TaskFlow,OU=Dev,O=TaskFlow,L=Unknown,ST=Unknown,C=US"
           ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
           mkdir -p release-assets
-          cp app/build/outputs/apk/release/*.apk release-assets/TaskFlow-v2.0.0.apk
+          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v3.0.0.apk
           cd release-assets && sha256sum *.apk > SHA256SUMS.txt && ls -lh
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: taskflow-apk
+          name: android-use-apk
           path: android-agent/release-assets/*
           if-no-files-found: warn
       - name: Create GitHub Release
         if: success()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.0
-          name: TaskFlow v2.0.0
+          tag_name: v3.0.0
+          name: Android-Use v3.0.0
           token: ${{ secrets.PAT_TOKEN }}
           body: |
-            # TaskFlow v2.0.0
-            ## Installation (OPPO/ColorOS)
-            1. Settings > Password & security > Install unknown apps > Enable your browser
-            2. Play Store > Profile > Play Protect > Gear > Turn OFF scanning temporarily
-            3. Download TaskFlow-v2.0.0.apk and install
-            4. Re-enable Play Protect after install
-            5. Open app > Enable Screen Control Service > Enter API key
+            # Android-Use v3.0.0
+            ## What's New
+            - **Renamed** from TaskFlow to Android-Use
+            - **Fixed background execution** — agent now runs properly in background
+            - **Fixed text input** — 3 fallback strategies (ACTION_SET_TEXT, focus detection, clipboard paste)
+            - **Fixed node ID matching** — correct hashCode-based lookup
+            - **Faster agent loop** — cached system prompt, model retry with backoff
+            - **Clean consumer UI** — no technical jargon, just actions and results
+            - **Auto tool name correction** — 30+ aliases handled transparently
+            
+            ## Installation
+            1. Download Android-Use-v3.0.0.apk
+            2. Settings > Security > Enable install from browser/source
+            3. Install the APK
+            4. Open app > Enable Accessibility > Enter your API details
+            
             ## Compatibility
-            - Android 9+ (minSdk 28), Android 15 (targetSdk 35)
-            - Tested on OPPO A3 Pro 5G (ColorOS 15.0)
+            - Android 9+ (minSdk 28), optimized for Android 15 (targetSdk 35)
+            - Works on all Android devices with Accessibility services
           files: android-agent/release-assets/*
           draft: false
           prerelease: false

@@ -81,19 +81,12 @@ class GemmaClient(private val settingsRepository: SettingsRepository) {
     }
 
     private fun buildUserMessageWithImage(text: String, screenshotBase64: String): JsonObject {
+        // Ollama native format: images array with raw base64 (no data URI prefix)
         return buildJsonObject {
             put("role", "user")
-            put("content", buildJsonArray {
-                add(buildJsonObject {
-                    put("type", "text")
-                    put("text", text)
-                })
-                add(buildJsonObject {
-                    put("type", "image_url")
-                    put("image_url", buildJsonObject {
-                        put("url", "data:image/png;base64,$screenshotBase64")
-                    })
-                })
+            put("content", text)
+            put("images", buildJsonArray {
+                add(screenshotBase64)
             })
         }
     }

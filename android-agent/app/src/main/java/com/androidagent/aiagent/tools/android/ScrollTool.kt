@@ -5,7 +5,6 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.androidagent.aiagent.accessibility.AccessibilityObserver
 import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
 import com.androidagent.aiagent.accessibility.GestureController
-import com.androidagent.aiagent.agent.AndroidObservation
 import com.androidagent.aiagent.tools.AgentTool
 import com.androidagent.aiagent.tools.RiskLevel
 import com.androidagent.aiagent.tools.ToolError
@@ -76,7 +75,7 @@ class ScrollTool : ToolHandler {
                 }
 
                 val rootNode = service.rootInActiveWindow
-                val targetNode = findNodeById(rootNode, node.nodeId)
+                val targetNode = findNodeByHashId(rootNode, node.nodeId)
 
                 if (targetNode != null && targetNode.isScrollable) {
                     val scrollAction = if (direction == "down") {
@@ -160,14 +159,32 @@ class ScrollTool : ToolHandler {
         }
     }
 
-    private fun findNodeById(node: AccessibilityNodeInfo?, nodeId: String): AccessibilityNodeInfo? {
+    private fun findNodeByHashId(node: AccessibilityNodeInfo?, nodeId: String): AccessibilityNodeInfo? {
         if (node == null) return null
-        if (node.viewIdResourceName == nodeId || node.hashCode().toString() == nodeId) {
-            return node
+        val hashStr = nodeId.removePrefix("node_")
+        val targetHash = hashStr.toIntOrNull()
+        return if (targetHash != null) {
+            findByHashCode(node, targetHash)
+        } else {
+            findByViewId(node, nodeId)
         }
+    }
+
+    private fun findByHashCode(node: AccessibilityNodeInfo, targetHash: Int): AccessibilityNodeInfo? {
+        if (node.hashCode() == targetHash) return node
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            val found = findNodeById(child, nodeId)
+            val found = findByHashCode(child, targetHash)
+            if (found != null) return found
+        }
+        return null
+    }
+
+    private fun findByViewId(node: AccessibilityNodeInfo, viewId: String): AccessibilityNodeInfo? {
+        if (node.viewIdResourceName == viewId) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findByViewId(child, viewId)
             if (found != null) return found
         }
         return null
