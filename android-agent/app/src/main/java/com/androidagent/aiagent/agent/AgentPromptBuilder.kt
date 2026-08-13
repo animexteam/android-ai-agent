@@ -220,7 +220,7 @@ class AgentPromptBuilder {
 
     companion object {
         /** Static fallback when the tool registry has not been populated yet. */
-        private const val DEFAULT_TOOL_CATALOGUE = """
+        private val DEFAULT_TOOL_CATALOGUE = """
             ## Available Tools
 
             ### Navigation & Interaction
