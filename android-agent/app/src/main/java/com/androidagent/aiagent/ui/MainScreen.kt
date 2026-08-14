@@ -295,9 +295,9 @@ private fun EmptyStateCard() {
             Spacer(modifier = Modifier.height(24.dp))
             Text("Examples:", color = AppColors.TextMuted.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(""Open WhatsApp and tell Rahul I will be late", color = AppColors.TextMuted.copy(alpha = 0.4f), fontSize = 12.sp)
-            Text(""Search for best biryani recipe on YouTube", color = AppColors.TextMuted.copy(alpha = 0.4f), fontSize = 12.sp)
-            Text(""What is 15% of 847?", color = AppColors.TextMuted.copy(alpha = 0.4f), fontSize = 12.sp)
+            Text("Open WhatsApp and tell Rahul I'll be late", color = AppColors.TextMuted.copy(alpha = 0.4f), fontSize = 12.sp)
+            Text("Search for best biryani recipe on YouTube", color = AppColors.TextMuted.copy(alpha = 0.4f), fontSize = 12.sp)
+            Text("What is 15% of 847?", color = AppColors.TextMuted.copy(alpha = 0.4f), fontSize = 12.sp)
         }
     }
 }
