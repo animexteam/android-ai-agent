@@ -35,3 +35,5 @@
 -keep class com.androidagent.aiagent.agent.** { *; }
 -keep class com.androidagent.aiagent.tools.** { *; }
 -keep class com.androidagent.aiagent.data.** { *; }
+-keep class com.androidagent.aiagent.service.OverlayService { *; }
+-keep class com.androidagent.aiagent.ui.AssistActivity { *; }

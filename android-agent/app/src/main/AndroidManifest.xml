@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"
         tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:name=".AgentApplication"
@@ -19,6 +20,7 @@
         android:theme="@style/Theme.AndroidAgent"
         tools:targetApi="35">
 
+        <!-- Main launcher activity -->
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
@@ -29,6 +31,22 @@
             </intent-filter>
         </activity>
 
+        <!-- Default assistant (triggered by long-press home / bottom corner swipe) -->
+        <activity
+            android:name=".ui.AssistActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AndroidAgent"
+            android:excludeFromRecents="true">
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/accessibility_service_config" />
+        </activity>
+
+        <!-- Accessibility service for device control -->
         <service
             android:name=".accessibility.AndroidAgentAccessibilityService"
             android:exported="false"
@@ -42,6 +60,7 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- Foreground service for background agent execution -->
         <service
             android:name=".service.AgentForegroundService"
             android:exported="false"
@@ -49,6 +68,16 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="AI agent automation: performs UI tasks on behalf of the user while running in the background" />
+        </service>
+
+        <!-- Overlay service for floating assistant ball -->
+        <service
+            android:name=".service.OverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Floating assistant overlay ball" />
         </service>
 
     </application>

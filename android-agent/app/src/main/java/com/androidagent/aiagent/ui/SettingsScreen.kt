@@ -1,29 +1,39 @@
 package com.androidagent.aiagent.ui
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.androidagent.aiagent.data.SettingsRepository
+import com.androidagent.aiagent.service.OverlayService
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     settingsRepository: SettingsRepository,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onClearMemory: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var apiKey by remember { mutableStateOf("") }
     var endpoint by remember { mutableStateOf(SettingsRepository.DEFAULT_ENDPOINT) }
     var model by remember { mutableStateOf(SettingsRepository.DEFAULT_MODEL) }
@@ -36,7 +46,8 @@ fun SettingsScreen(
     var debugLogging by remember { mutableStateOf(SettingsRepository.DEFAULT_DEBUG_LOGGING) }
     var screenshotResolution by remember { mutableIntStateOf(SettingsRepository.DEFAULT_SCREENSHOT_RESOLUTION) }
     var showApiKey by remember { mutableStateOf(false) }
-    var loaded by remember { mutableStateOf(false) }
+
+    val hasOverlayPermission = remember { mutableStateOf(OverlayService.canDrawOverlays(context)) }
 
     LaunchedEffect(Unit) {
         try {
@@ -52,33 +63,32 @@ fun SettingsScreen(
             debugLogging = settingsRepository.debugLogging()
             screenshotResolution = settingsRepository.screenshotResolution()
         } catch (_: Exception) { }
-        loaded = true
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text("Settings", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = AppColors.Surface)
             )
-        }
+        },
+        containerColor = AppColors.DarkBackground
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Ollama Configuration
-            Text("Ollama Configuration", style = MaterialTheme.typography.titleMedium,
-                color = AppColors.Primary)
+            // ── API Configuration ──
+            SectionHeader("API Configuration")
 
-            // API Key
             OutlinedTextField(
                 value = apiKey,
                 onValueChange = { apiKey = it; scope.launch { settingsRepository.setApiKey(it) } },
@@ -90,30 +100,33 @@ fun SettingsScreen(
                         Icon(if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, "Toggle")
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = outlinedFieldColors()
             )
 
-            // Endpoint
             OutlinedTextField(
                 value = endpoint,
                 onValueChange = { endpoint = it; scope.launch { settingsRepository.setEndpoint(it) } },
                 label = { Text("API Endpoint") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = outlinedFieldColors()
             )
 
-            // Model
             OutlinedTextField(
                 value = model,
                 onValueChange = { model = it; scope.launch { settingsRepository.setModel(it) } },
                 label = { Text("Model Name") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = outlinedFieldColors()
             )
 
             // Temperature
-            Text("Temperature: ${"%.1f".format(temperature)}", style = MaterialTheme.typography.bodySmall,
-                color = AppColors.TextSecondary)
+            Text("Temperature: ${"%.1f".format(temperature)}", color = AppColors.TextSecondary, fontSize = 13.sp)
             Slider(
                 value = temperature,
                 onValueChange = { temperature = it; scope.launch { settingsRepository.setTemperature(it) } },
@@ -127,29 +140,27 @@ fun SettingsScreen(
                 onValueChange = { text -> text.toLongOrNull()?.let { v -> timeoutMs = v; scope.launch { settingsRepository.setTimeout(v) } } },
                 label = { Text("Request Timeout (ms)") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = outlinedFieldColors()
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = AppColors.SurfaceVariant)
 
-            // Agent Configuration
-            Text("Agent Configuration", style = MaterialTheme.typography.titleMedium,
-                color = AppColors.Primary)
+            // ── Agent Configuration ──
+            SectionHeader("Agent")
 
-            // Max Steps
-            Text("Max Agent Steps: $maxSteps", style = MaterialTheme.typography.bodySmall,
-                color = AppColors.TextSecondary)
+            Text("Max Agent Steps: $maxSteps", color = AppColors.TextSecondary, fontSize = 13.sp)
             Slider(
                 value = maxSteps.toFloat(),
                 onValueChange = { maxSteps = it.toInt(); scope.launch { settingsRepository.setMaxSteps(it.toInt()) } },
-                valueRange = 10f..100f,
+                valueRange = 10f..500f,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Vision Mode
-            Text("Vision Mode", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+            Text("Vision Mode", color = AppColors.TextSecondary, fontSize = 13.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("AUTO", "ALWAYS", "WHEN_NEEDED", "OFF").forEach { mode ->
+                listOf("AUTO", "ALWAYS", "OFF").forEach { mode ->
                     FilterChip(
                         selected = visionMode == mode,
                         onClick = { visionMode = mode; scope.launch { settingsRepository.setVisionMode(mode) } },
@@ -158,58 +169,78 @@ fun SettingsScreen(
                 }
             }
 
-            // Screenshot Resolution
-            Text("Screenshot Resolution", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(512, 768, 1024, 1536).forEach { res ->
-                    FilterChip(
-                        selected = screenshotResolution == res,
-                        onClick = { screenshotResolution = res },
-                        label = { Text("${res}px") }
-                    )
-                }
-            }
+            HorizontalDivider(color = AppColors.SurfaceVariant)
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            // ── Overlay & Assistant ──
+            SectionHeader("Overlay & Assistant")
 
-            // Safety
-            Text("Safety", style = MaterialTheme.typography.titleMedium,
-                color = AppColors.Primary)
+            // Overlay permission
+            SettingRow(
+                title = "Floating Ball",
+                subtitle = if (hasOverlayPermission.value) "Enabled" else "Disabled — tap to enable",
+                onClick = {
+                    if (!OverlayService.canDrawOverlays(context)) {
+                        context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                            data = Uri.parse("package:${context.packageName}")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        })
+                    }
+                },
+                icon = if (hasOverlayPermission.value) Icons.Default.CheckCircle else Icons.Default.AddCircle,
+                iconColor = if (hasOverlayPermission.value) AppColors.Success else AppColors.Warning
+            )
 
-            Text("Confirmation Policy", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+            // Default assistant info
+            SettingRow(
+                title = "Default Assistant",
+                subtitle = "Long-press home → Default Digital Assistant → Android-Use",
+                onClick = {
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_ASSIST)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    } catch (_: Exception) {}
+                },
+                icon = Icons.Default.Assistant,
+                iconColor = AppColors.Primary
+            )
+
+            HorizontalDivider(color = AppColors.SurfaceVariant)
+
+            // ── Safety ──
+            SectionHeader("Safety")
+
+            Text("Confirmation Policy", color = AppColors.TextSecondary, fontSize = 13.sp)
             listOf("SENSITIVE_ONLY", "ASK_EVERY_TIME", "MANUAL_MODE").forEach { policy ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
                         selected = confirmationPolicy == policy,
                         onClick = { confirmationPolicy = policy; scope.launch { settingsRepository.setConfirmationPolicy(policy) } }
                     )
-                    Text(when (policy) {
-                        "SENSITIVE_ONLY" -> "Sensitive actions only"
-                        "ASK_EVERY_TIME" -> "Ask every time"
-                        else -> "Manual mode"
-                    }, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        when (policy) {
+                            "SENSITIVE_ONLY" -> "Sensitive actions only"
+                            "ASK_EVERY_TIME" -> "Ask every time"
+                            else -> "Manual mode"
+                        }
+                    )
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = AppColors.SurfaceVariant)
 
-            // Data
-            Text("Data", style = MaterialTheme.typography.titleMedium,
-                color = AppColors.Primary)
+            // ── Data & Debug ──
+            SectionHeader("Data")
 
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()) {
-                Text("Save Screenshots", style = MaterialTheme.typography.bodyMedium)
-                Switch(checked = saveScreenshots, onCheckedChange = { saveScreenshots = it })
-            }
-            if (saveScreenshots) {
-                Text("Screenshots may contain sensitive information.",
-                    style = MaterialTheme.typography.bodySmall, color = AppColors.Warning)
-            }
+            SettingRow(
+                title = "Clear AI Memory",
+                subtitle = "Remove all remembered facts about you",
+                onClick = onClearMemory,
+                icon = Icons.Default.DeleteSweep,
+                iconColor = AppColors.Error
+            )
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()) {
-                Text("Debug Logging", style = MaterialTheme.typography.bodyMedium)
+                Text("Debug Logging")
                 Switch(checked = debugLogging, onCheckedChange = { debugLogging = it })
             }
 
@@ -217,3 +248,46 @@ fun SettingsScreen(
         }
     }
 }
+
+@Composable
+private fun SectionHeader(title: String) {
+ Text(title, color = AppColors.Primary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+}
+
+@Composable
+private fun SettingRow(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = AppColors.SurfaceVariant,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(22.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                Text(subtitle, color = AppColors.TextSecondary, fontSize = 12.sp, maxLines = 2)
+            }
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.TextMuted, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun outlinedFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = AppColors.TextPrimary,
+    unfocusedTextColor = AppColors.TextPrimary,
+    focusedBorderColor = AppColors.Primary,
+    unfocusedBorderColor = AppColors.SurfaceVariant,
+    cursorColor = AppColors.Primary
+)

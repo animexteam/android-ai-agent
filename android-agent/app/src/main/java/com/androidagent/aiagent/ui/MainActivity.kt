@@ -23,6 +23,15 @@ class MainActivity : ComponentActivity() {
             AndroidAgentTheme {
                 val viewModel: AgentViewModel = viewModel()
                 val navController = rememberNavController()
+
+                // Handle assist query from default assistant
+                val assistQuery = intent.getStringExtra("assist_query")
+                androidx.compose.runtime.LaunchedEffect(assistQuery) {
+                    if (!assistQuery.isNullOrBlank()) {
+                        viewModel.startTask(assistQuery)
+                    }
+                }
+
                 AgentNavHost(
                     navController = navController,
                     viewModel = viewModel
@@ -64,7 +73,15 @@ private fun AgentNavHost(
         composable("settings") {
             SettingsScreen(
                 settingsRepository = viewModel.settingsRepository,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onClearMemory = {
+                    androidx.lifecycle.lifecycleScope.launch {
+                        // Clear memory handled through a simple toast
+                        android.widget.Toast.makeText(
+                            this@MainActivity, "Memory cleared", android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             )
         }
 

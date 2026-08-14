@@ -3,7 +3,6 @@ package com.androidagent.aiagent.tools.android
 import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.androidagent.aiagent.accessibility.AccessibilityObserver
 import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
 import com.androidagent.aiagent.accessibility.GestureController
 import com.androidagent.aiagent.tools.AgentTool
@@ -40,34 +39,16 @@ class TypeTextTool : ToolHandler {
                 val targetNode = findNodeByHashId(rootNode, nodeId)
 
                 if (targetNode != null) {
-                    // Focus the node first
-                    targetNode.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-                    delay(50)
-
-                    // Use ACTION_SET_TEXT (most reliable)
-                    val args = Bundle().apply {
-                        putCharSequence(
-                            AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                            text
-                        )
+                    val result = setTextViaSetAction(targetNode, text)
+                    if (result != null) {
+                        // Verify the text was set correctly
+                        delay(100)
+                        if (verifyText(service, text)) {
+                            return result
+                        }
+                        Log.w(TAG, "Verification failed after ACTION_SET_TEXT, trying fallback")
                     }
-                    val setResult = targetNode.performAction(
-                        AccessibilityNodeInfo.ACTION_SET_TEXT, args
-                    )
-
-                    if (setResult) {
-                        return ToolResult(
-                            success = true,
-                            toolName = TOOL_NAME,
-                            result = buildJsonObject {
-                                put("nodeId", nodeId)
-                                put("text", text)
-                                put("method", "ACTION_SET_TEXT")
-                                put("characters", text.length)
-                            }
-                        )
-                    }
-                    // If ACTION_SET_TEXT failed, try click-to-focus then paste
+                    // Click to focus for fallback strategies
                     targetNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     delay(100)
                 }
@@ -76,26 +57,44 @@ class TypeTextTool : ToolHandler {
             // Strategy 2: Use AccessibilityService performAction with SET_TEXT on focused node
             val focusedSet = setTextOnFocusedField(service, text)
             if (focusedSet) {
-                return ToolResult(
-                    success = true,
-                    toolName = TOOL_NAME,
+                delay(100)
+                if (verifyText(service, text)) {
+                    return ToolResult(
+                        success = true,
+                        toolName = TOOL_NAME,
                     result = buildJsonObject {
                         put("text", text)
                         put("method", "focused_set_text")
                         put("characters", text.length)
                     }
-                )
+                    )
+                }
+                Log.w(TAG, "Verification failed after focused set, trying clipboard")
             }
 
             // Strategy 3: Paste via clipboard + gesture tap on EditText
             val clipboardResult = setTextViaClipboard(service, text)
             if (clipboardResult) {
+                delay(150)
+                if (verifyText(service, text)) {
+                    return ToolResult(
+                        success = true,
+                        toolName = TOOL_NAME,
+                        result = buildJsonObject {
+                            put("text", text)
+                            put("method", "clipboard_paste")
+                            put("characters", text.length)
+                        }
+                    )
+                }
+                // Clipboard was the last resort — return success even if verify fails
+                // (some apps don't expose text via accessibility after paste)
                 return ToolResult(
                     success = true,
                     toolName = TOOL_NAME,
                     result = buildJsonObject {
                         put("text", text)
-                        put("method", "clipboard_paste")
+                        put("method", "clipboard_paste_unverified")
                         put("characters", text.length)
                     }
                 )
@@ -117,8 +116,56 @@ class TypeTextTool : ToolHandler {
     }
 
     /**
+     * Set text using ACTION_SET_TEXT on a specific node.
+     * Returns ToolResult on success, null on failure.
+     */
+    private fun setTextViaSetAction(
+        node: AccessibilityNodeInfo,
+        text: String
+    ): ToolResult? {
+        node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+        val args = Bundle().apply {
+            putCharSequence(
+                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                text
+            )
+        }
+        val setResult = node.performAction(
+            AccessibilityNodeInfo.ACTION_SET_TEXT, args
+        )
+        return if (setResult) {
+            ToolResult(
+                success = true,
+                toolName = TOOL_NAME,
+                result = buildJsonObject {
+                    put("method", "ACTION_SET_TEXT")
+                    put("characters", text.length)
+                }
+            )
+        } else null
+    }
+
+    /**
+     * Verify that the text in the focused editable field matches what we set.
+     * This catches cases where the app modifies the input (auto-correct, formatting).
+     */
+    private fun verifyText(service: AndroidAgentAccessibilityService, expected: String): Boolean {
+        return try {
+            val rootNode = service.safeGetRootInActiveWindow() ?: return true // Can't verify, assume OK
+            val focusedNode = findFocusedEditable(rootNode) ?: return true
+            val actual = focusedNode.text?.toString() ?: return true
+            val match = actual.trim() == expected.trim()
+            if (!match) {
+                Log.w(TAG, "Text mismatch! Expected: '$expected', Got: '$actual'")
+            }
+            match
+        } catch (e: Exception) {
+            true // Can't verify, don't fail
+        }
+    }
+
+    /**
      * Find a node in the live tree by its hashed node_id (format: "node_12345").
-     * The number after "node_" is the hashCode of the original AccessibilityNodeInfo.
      */
     private fun findNodeByHashId(
         root: AccessibilityNodeInfo?,
@@ -126,14 +173,12 @@ class TypeTextTool : ToolHandler {
     ): AccessibilityNodeInfo? {
         if (root == null) return null
 
-        // Extract the hash code from the node_id format "node_12345"
         val hashStr = nodeId.removePrefix("node_")
         val targetHash = hashStr.toIntOrNull()
 
         return if (targetHash != null) {
             findByHashCode(root, targetHash)
         } else {
-            // Try matching by viewIdResourceName
             findByViewId(root, nodeId)
         }
     }
@@ -165,8 +210,7 @@ class TypeTextTool : ToolHandler {
     }
 
     /**
-     * Try to set text on the currently focused editable node by walking
-     * the tree and finding a focused editable node.
+     * Try to set text on the currently focused editable node.
      */
     private suspend fun setTextOnFocusedField(
         service: AndroidAgentAccessibilityService,
@@ -218,7 +262,6 @@ class TypeTextTool : ToolHandler {
             clipboard.setPrimaryClip(clip)
             delay(100)
 
-            // Find the editable field and long-press it
             val rootNode = service.safeGetRootInActiveWindow() ?: return false
             val editNode = findFocusedEditable(rootNode) ?: findFirstEditable(rootNode)
             if (editNode != null) {
@@ -232,8 +275,8 @@ class TypeTextTool : ToolHandler {
                 delay(500)
 
                 // Look for "Paste" in the tree
-                val pasteNode = findNodeByText(service.safeGetRootInActiveWindow(), "Paste")
-                    ?: findNodeByText(service.safeGetRootInActiveWindow(), "Paste")
+                val newRoot = service.safeGetRootInActiveWindow()
+                val pasteNode = findNodeByText(newRoot, "Paste")
 
                 if (pasteNode != null) {
                     val pb = android.graphics.Rect()
@@ -291,13 +334,13 @@ class TypeTextTool : ToolHandler {
 
         fun definition(): AgentTool = AgentTool(
             name = TOOL_NAME,
-            description = "Type text into a field. Provide 'text' (required). Optionally provide 'node_id' of the target editable field. Uses multiple strategies: ACTION_SET_TEXT, focused field detection, and clipboard paste as fallback.",
+            description = "Type text into a field. Provide 'text' (required) — type EXACTLY what the user said, character by character. No auto-correct, no modifications. If user said '786687', type exactly '786687'. Optionally provide 'node_id' of the target editable field.",
             inputSchema = buildJsonObject {
                 put("type", "object")
                 put("properties", buildJsonObject {
                     put("text", buildJsonObject {
                         put("type", "string")
-                        put("description", "The text to type")
+                        put("description", "The EXACT text to type — character-perfect, no modifications")
                     })
                     put("node_id", buildJsonObject {
                         put("type", "string")

@@ -21,6 +21,7 @@ import com.androidagent.aiagent.data.UserMemory
 import com.androidagent.aiagent.safety.ConfirmationManager
 import com.androidagent.aiagent.safety.SafetyController
 import com.androidagent.aiagent.service.AgentForegroundService
+import com.androidagent.aiagent.service.OverlayService
 import com.androidagent.aiagent.tools.ToolExecutor
 import com.androidagent.aiagent.tools.ToolHandler
 import com.androidagent.aiagent.tools.ToolRegistry
@@ -94,6 +95,22 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
                                 AgentForegroundService.updateNotification(context, state.status, state.goal)
                             }
                             AgentForegroundService.stop(context)
+                            OverlayService.stop(context)
+                        }
+                        AgentStatus.EXECUTING -> {
+                            AgentForegroundService.updateNotification(context, state.status, state.goal)
+                            val statusText = when (state.status) {
+                                AgentStatus.EXECUTING -> "Android-Use is using mobile..."
+                                AgentStatus.THINKING -> "Analyzing screen..."
+                                else -> "Working..."
+                            }
+                            if (OverlayService.canDrawOverlays(context)) {
+                                val intent = android.content.Intent(context, OverlayService::class.java).apply {
+                                    action = OverlayService.ACTION_SHOW_STATUS
+                                    putExtra(OverlayService.EXTRA_STATUS_TEXT, statusText)
+                                }
+                                context.startService(intent)
+                            }
                         }
                         else -> {
                             AgentForegroundService.updateNotification(context, state.status, state.goal)
@@ -172,11 +189,13 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     fun newChat() {
         agentRuntime.newChat()
         AgentForegroundService.stop(context)
+        OverlayService.stop(context)
     }
 
     fun stopAgent() {
         agentRuntime.stopAgent()
         AgentForegroundService.stop(context)
+        OverlayService.stop(context)
     }
 
     fun respondToUser(answer: String) = agentRuntime.respondToUser(answer)
@@ -193,9 +212,21 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         })
     }
 
+    fun isOverlayPermissionGranted(): Boolean {
+        return OverlayService.canDrawOverlays(context)
+    }
+
+    fun openOverlaySettings() {
+        context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            data = android.net.Uri.parse("package:${context.packageName}")
+        })
+    }
+
     override fun onCleared() {
         super.onCleared()
         agentRuntime.stopAgent()
         AgentForegroundService.stop(context)
+        OverlayService.stop(context)
     }
 }

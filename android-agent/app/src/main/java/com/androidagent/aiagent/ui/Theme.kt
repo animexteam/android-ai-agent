@@ -11,20 +11,43 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+/**
+ * v4.1: Refined color palette inspired by Gemini/ChatGPT dark themes.
+ * Clean, modern, high-contrast dark theme.
+ */
 object AppColors {
-    val DarkBackground = Color(0xFF0D1117)
-    val Surface = Color(0xFF161B22)
-    val SurfaceVariant = Color(0xFF21262D)
-    val Primary = Color(0xFF58A6FF)
-    val PrimaryVariant = Color(0xFF1F6FEB)
+    // Backgrounds
+    val DarkBackground = Color(0xFF0A0A0F)
+    val Surface = Color(0xFF141419)
+    val SurfaceVariant = Color(0xFF1E1E26)
+    val SurfaceHover = Color(0xFF26262F)
+    val CardBackground = Color(0xFF1A1A22)
+
+    // Primary — vibrant blue (Gemini-inspired)
+    val Primary = Color(0xFF4A9EFF)
+    val PrimaryVariant = Color(0xFF1A6FEB)
+    val PrimaryDim = Color(0xFF2A5DB0)
     val OnPrimary = Color.White
-    val Secondary = Color(0xFF8B949E)
-    val Success = Color(0xFF3FB950)
-    val Error = Color(0xFFF85149)
-    val Warning = Color(0xFFD29922)
-    val TextPrimary = Color(0xFFE6EDF3)
-    val TextSecondary = Color(0xFF8B949E)
-    val TextMuted = Color(0xFF484F58)
+
+    // Accent
+    val Secondary = Color(0xFF7C83FF)
+    val Accent = Color(0xFF00C9A7)
+
+    // Status
+    val Success = Color(0xFF34D399)
+    val Error = Color(0xFFEF4444)
+    val Warning = Color(0xFFFBBF24)
+    val Info = Color(0xFF60A5FA)
+
+    // Text
+    val TextPrimary = Color(0xFFF0F0F5)
+    val TextSecondary = Color(0xFF9898A6)
+    val TextMuted = Color(0xFF5A5A6E)
+
+    // Chat specific
+    val UserBubble = Color(0xFF2A4A7F)
+    val AgentBubble = Color(0xFF1E1E26)
+    val AgentBubbleBorder = Color(0xFF2A2A36)
 }
 
 private val DarkColorScheme = darkColorScheme(
@@ -56,7 +79,7 @@ fun AndroidAgentTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = AppColors.DarkBackground.toArgb()
-            window.navigationBarColor = AppColors.DarkBackground.toArgb()
+            window.navigationBarColor = Color(0xFF0A0A0F).toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
             WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
         }

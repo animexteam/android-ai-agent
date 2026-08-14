@@ -113,6 +113,13 @@ sealed class AgentEvent {
         val text: String
     ) : AgentEvent()
 
+    /** Agent's chat response shown in the UI. */
+    data class AgentMessage(
+        override val timestamp: Long = System.currentTimeMillis(),
+        override val stepNumber: Int,
+        val text: String
+    ) : AgentEvent()
+
     data class StatusChange(
         override val timestamp: Long = System.currentTimeMillis(),
         override val stepNumber: Int,

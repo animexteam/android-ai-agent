@@ -21,11 +21,12 @@ import kotlinx.coroutines.withContext
 /**
  * The agent runtime — runs the observe-reason-act loop.
  *
- * v4.0 Architecture:
- * - Multi-turn conversation: full chat history sent to the LLM each turn
- * - User memory: injected into system prompt
- * - No hard step limit: runs until task is done or user stops
- * - Chat + Agent dual mode: auto-detects when to just respond vs control device
+ * v4.1 Key improvements:
+ * - Chat mode: For simple messages, responds in chat UI and finishes (no screen control)
+ * - AgentMessage events: Agent chat responses visible to user
+ * - Speed: Adaptive screenshot usage, reduced settle times
+ * - No action limits: Runs until task done or user stops
+ * - Memory-safe: Doesn't let old memories corrupt new tasks
  */
 class AgentRuntime(
     private val gemmaClient: GemmaClient,
@@ -41,7 +42,8 @@ class AgentRuntime(
     companion object {
         private const val TAG = "AgentRuntime"
         private const val MAX_MODEL_RETRIES = 1
-        private const val POST_ACTION_SETTLE_MS = 300L
+        private const val POST_ACTION_SETTLE_MS = 250L
+        private const val POST_CLICK_SETTLE_MS = 300L
     }
 
     private val _state = MutableStateFlow(AgentState())
@@ -53,6 +55,9 @@ class AgentRuntime(
     private var cachedSystemPrompt: String? = null
     private var knownToolNames: Set<String> = emptySet()
 
+    // Track if we've done any tool calls (to distinguish chat-only from agent tasks)
+    private var hasTakenAnyAction = false
+
     // ===================================================================
     // Public API
     // ===================================================================
@@ -61,6 +66,7 @@ class AgentRuntime(
         agentJob?.cancel()
         loopGuard.reset()
         cachedSystemPrompt = null
+        hasTakenAnyAction = false
 
         _state.value = AgentState(
             goal = goal,
@@ -72,10 +78,15 @@ class AgentRuntime(
             )
         )
 
+        // Add user message event for UI
+        _state.value = _state.value.withEvent(
+            AgentEvent.UserMessage(stepNumber = 0, text = goal)
+        )
+
         agentJob = agentScope.launch { runAgentLoop(memoryBlock) }
     }
 
-    /** Start a fresh task but keep any previous chat context. */
+    /** Start a fresh task but keep previous chat context. */
     fun continueChat(message: String, memoryBlock: String = "") {
         val current = _state.value
         if (current.status.isActive) {
@@ -98,6 +109,11 @@ class AgentRuntime(
             endTime = null
         )
 
+        // Add user message event for UI
+        _state.value = _state.value.withEvent(
+            AgentEvent.UserMessage(stepNumber = 0, text = message)
+        )
+
         agentJob = agentScope.launch { runAgentLoop(memoryBlock) }
     }
 
@@ -106,6 +122,7 @@ class AgentRuntime(
         agentJob?.cancel()
         agentJob = null
         cachedSystemPrompt = null
+        hasTakenAnyAction = false
         _state.value = AgentState()
     }
 
@@ -120,6 +137,10 @@ class AgentRuntime(
                 status = AgentStatus.THINKING,
                 chatHistory = currentState.chatHistory + userMsg
             )
+
+        _state.value = _state.value.withEvent(
+            AgentEvent.UserMessage(stepNumber = currentState.stepNumber, text = answer)
+        )
 
         agentJob = agentScope.launch { runAgentLoop() }
     }
@@ -149,6 +170,7 @@ class AgentRuntime(
                         result = toolResult
                     )
                     loopGuard.recordAction(pending.toolName, pending.arguments)
+                    hasTakenAnyAction = true
 
                     _state.value = _state.value
                         .withEvent(toolEvent)
@@ -203,7 +225,7 @@ class AgentRuntime(
             while (_state.value.status.isActive) {
                 val current = _state.value
 
-                // --- Observe ---
+                // --- Observe (skip for chat-only mode) ---
                 val observation = observeScreen()
                 if (observation == null) continue
 
@@ -220,9 +242,15 @@ class AgentRuntime(
                 val shouldContinue = executeDecision(decision, observation.id)
                 if (!shouldContinue) break
 
-                // --- Post-action settle ---
+                // --- Post-action settle (adaptive) ---
                 if (decision is ToolCallDecision) {
-                    kotlinx.coroutines.delay(POST_ACTION_SETTLE_MS)
+                    val settleTime = when {
+                        decision.toolName.contains("click") || decision.toolName.contains("long_click") -> POST_CLICK_SETTLE_MS
+                        decision.toolName.contains("wait") -> 50L
+                        decision.toolName.contains("press_key") -> 100L
+                        else -> POST_ACTION_SETTLE_MS
+                    }
+                    kotlinx.coroutines.delay(settleTime)
                 }
 
                 _state.value = _state.value.copy(
@@ -290,9 +318,8 @@ class AgentRuntime(
 
         // Build chat history: existing messages + new screen state
         val historyForModel = mutableListOf<GemmaClient.ChatMessage>()
-        // Keep system-level context from early messages, but trim old screen states
         val existingHistory = current.chatHistory
-        val trimThreshold = maxOf(0, existingHistory.size - 20) // Keep last 20 messages
+        val trimThreshold = maxOf(0, existingHistory.size - 16) // Keep last 16 messages (reduced for speed)
         for ((i, msg) in existingHistory.withIndex()) {
             if (i >= trimThreshold) {
                 historyForModel.add(msg)
@@ -334,7 +361,7 @@ class AgentRuntime(
                 lastError = e.message
                 Log.w(TAG, "Model call failed (attempt ${attempt + 1}): ${e.message}")
                 if (attempt == MAX_MODEL_RETRIES) break
-                kotlinx.coroutines.delay(500L * (attempt + 1))
+                kotlinx.coroutines.delay(300L * (attempt + 1)) // Faster retry
             }
         }
 
@@ -374,8 +401,23 @@ class AgentRuntime(
                 false
             }
             is MessageDecision -> {
-                // Agent sent a status message — it's already in chat history.
-                // Just continue the loop so it can take the next action.
+                // CRITICAL FIX: Show the agent's chat response in the UI
+                _state.value = _state.value.withEvent(
+                    AgentEvent.AgentMessage(
+                        stepNumber = _state.value.stepNumber,
+                        text = decision.content
+                    )
+                )
+
+                // If no tool calls have been made, this is a chat-only interaction
+                // — show the response and finish
+                if (!hasTakenAnyAction) {
+                    finishTask(AgentStatus.COMPLETED, null)
+                    return false
+                }
+
+                // If we've been doing agentic work and the model sends a message,
+                // it might be a status update — continue the loop
                 true
             }
             is ErrorDecisionData -> {
@@ -415,6 +457,8 @@ class AgentRuntime(
                 .copy(status = AgentStatus.THINKING, lastError = e.message)
             return true
         }
+
+        hasTakenAnyAction = true
 
         if (!toolResult.success && toolResult.error?.code == ToolExecutor.ERROR_UNKNOWN_TOOL) {
             _state.value = _state.value
@@ -524,10 +568,11 @@ class AgentRuntime(
             when (settingsRepository.visionMode()) {
                 "ALWAYS" -> true
                 "AUTO" -> {
+                    // Only use vision when accessibility tree is sparse
                     val lastObs = _state.value.lastObservation
                     val actionableCount = lastObs?.uiTree
                         ?.count { it.isClickable || it.isEditable } ?: 0
-                    actionableCount < 2
+                    actionableCount < 3
                 }
                 else -> false
             }
