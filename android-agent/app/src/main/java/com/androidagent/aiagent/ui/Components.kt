@@ -80,7 +80,8 @@ fun UserQuestionDialog(
                         unfocusedBorderColor = AppColors.SurfaceVariant,
                         cursorColor = AppColors.Primary
                     )
-                }
+                )
+            }
         },
         confirmButton = { Button(onClick = { if (answer.isNotBlank()) onAnswer(answer) }, enabled = answer.isNotBlank()) { Text("Reply") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Skip", color = AppColors.TextSecondary) } },
