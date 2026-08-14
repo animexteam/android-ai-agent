@@ -327,7 +327,8 @@ private fun buildDebugReport(
                 is AgentEvent.UserMessage -> appendLine("[Step ${event.stepNumber}] User: ${truncate(event.text, 100)}")
                 is AgentEvent.StatusChange -> appendLine("[Step ${event.stepNumber}] ${event.from} -> ${event.to}")
                 is AgentEvent.Error -> appendLine("[Step ${event.stepNumber}] Error: ${truncate(event.message, 100)}")
-            }
+                is AgentEvent.AgentMessage -> appendLine("[Step ${event.stepNumber}] Agent: ${truncate(event.text, 100)}")
+                else -> {}
         }
         appendLine()
         appendLine("[REDACTED: API keys, tokens, and credentials are not included in this report]")
