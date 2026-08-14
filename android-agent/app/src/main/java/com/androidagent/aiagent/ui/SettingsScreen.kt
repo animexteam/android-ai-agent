@@ -3,6 +3,7 @@ package com.androidagent.aiagent.ui
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -68,10 +70,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.SemiBold) },
+                title = { Text("Settings", fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = AppColors.TextSecondary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = AppColors.Surface)
@@ -82,102 +84,93 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .padding(padding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // ── API Configuration ──
-            SectionHeader("API Configuration")
+            SectionHeader("API Configuration", Icons.Default.Cloud)
 
-            OutlinedTextField(
+            SettingsTextField(
                 value = apiKey,
                 onValueChange = { apiKey = it; scope.launch { settingsRepository.setApiKey(it) } },
-                label = { Text("API Key") },
+                label = "API Key",
                 singleLine = true,
                 visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { showApiKey = !showApiKey }) {
-                        Icon(if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, "Toggle")
+                        Icon(if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, "Toggle", tint = AppColors.TextMuted)
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = outlinedFieldColors()
+                }
             )
 
-            OutlinedTextField(
+            SettingsTextField(
                 value = endpoint,
                 onValueChange = { endpoint = it; scope.launch { settingsRepository.setEndpoint(it) } },
-                label = { Text("API Endpoint") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = outlinedFieldColors()
+                label = "API Endpoint",
+                singleLine = true
             )
 
-            OutlinedTextField(
+            SettingsTextField(
                 value = model,
                 onValueChange = { model = it; scope.launch { settingsRepository.setModel(it) } },
-                label = { Text("Model Name") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = outlinedFieldColors()
+                label = "Model Name",
+                singleLine = true
             )
 
-            // Temperature
-            Text("Temperature: ${"%.1f".format(temperature)}", color = AppColors.TextSecondary, fontSize = 13.sp)
-            Slider(
-                value = temperature,
+            // Temperature slider
+            SettingsSliderRow(
+                label = "Temperature",
+                value = "%.1f".format(temperature),
+                sliderValue = temperature,
                 onValueChange = { temperature = it; scope.launch { settingsRepository.setTemperature(it) } },
-                valueRange = 0f..1f,
-                modifier = Modifier.fillMaxWidth()
+                valueRange = 0f..1f
             )
 
-            // Timeout
-            OutlinedTextField(
+            SettingsTextField(
                 value = timeoutMs.toString(),
                 onValueChange = { text -> text.toLongOrNull()?.let { v -> timeoutMs = v; scope.launch { settingsRepository.setTimeout(v) } } },
-                label = { Text("Request Timeout (ms)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = outlinedFieldColors()
+                label = "Request Timeout (ms)",
+                singleLine = true
             )
 
-            HorizontalDivider(color = AppColors.SurfaceVariant)
+            HorizontalDivider(color = AppColors.SurfaceVariant, thickness = 1.dp)
 
             // ── Agent Configuration ──
-            SectionHeader("Agent")
+            SectionHeader("Agent", Icons.Default.SmartToy)
 
-            Text("Max Agent Steps: $maxSteps", color = AppColors.TextSecondary, fontSize = 13.sp)
-            Slider(
-                value = maxSteps.toFloat(),
+            SettingsSliderRow(
+                label = "Max Agent Steps",
+                value = "$maxSteps",
+                sliderValue = maxSteps.toFloat(),
                 onValueChange = { maxSteps = it.toInt(); scope.launch { settingsRepository.setMaxSteps(it.toInt()) } },
-                valueRange = 10f..500f,
-                modifier = Modifier.fillMaxWidth()
+                valueRange = 10f..500f
             )
 
-            Text("Vision Mode", color = AppColors.TextSecondary, fontSize = 13.sp)
+            // Vision mode chips
+            Text("Vision Mode", color = AppColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("AUTO", "ALWAYS", "OFF").forEach { mode ->
                     FilterChip(
                         selected = visionMode == mode,
                         onClick = { visionMode = mode; scope.launch { settingsRepository.setVisionMode(mode) } },
-                        label = { Text(mode) }
+                        label = { Text(mode, fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AppColors.Primary.copy(alpha = 0.2f),
+                            selectedLabelColor = AppColors.Primary
+                        )
                     )
                 }
             }
 
-            HorizontalDivider(color = AppColors.SurfaceVariant)
+            HorizontalDivider(color = AppColors.SurfaceVariant, thickness = 1.dp)
 
-            // ── Overlay & Assistant ──
-            SectionHeader("Overlay & Assistant")
+            // ── Assistant Integration ──
+            SectionHeader("Assistant", Icons.Default.Assistant)
 
-            // Overlay permission
-            SettingRow(
+            SettingsClickableRow(
                 title = "Floating Ball",
-                subtitle = if (hasOverlayPermission.value) "Enabled" else "Disabled — tap to enable",
+                subtitle = if (hasOverlayPermission.value) "Enabled - drag to move, tap to open" else "Tap to enable overlay permission",
                 onClick = {
                     if (!OverlayService.canDrawOverlays(context)) {
                         context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
@@ -190,10 +183,9 @@ fun SettingsScreen(
                 iconColor = if (hasOverlayPermission.value) AppColors.Success else AppColors.Warning
             )
 
-            // Default assistant info
-            SettingRow(
+            SettingsClickableRow(
                 title = "Default Assistant",
-                subtitle = "Long-press home → Default Digital Assistant → Android-Use",
+                subtitle = "Long-press home > Default Digital Assistant > Android-Use",
                 onClick = {
                     try {
                         val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
@@ -204,34 +196,54 @@ fun SettingsScreen(
                 iconColor = AppColors.Primary
             )
 
-            HorizontalDivider(color = AppColors.SurfaceVariant)
+            SettingsClickableRow(
+                title = "Accessibility Service",
+                subtitle = "Required for screen control. Tap to check settings.",
+                onClick = {
+                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    })
+                },
+                icon = Icons.Default.AccessibilityNew,
+                iconColor = AppColors.Info
+            )
+
+            HorizontalDivider(color = AppColors.SurfaceVariant, thickness = 1.dp)
 
             // ── Safety ──
-            SectionHeader("Safety")
+            SectionHeader("Safety", Icons.Default.Security)
 
-            Text("Confirmation Policy", color = AppColors.TextSecondary, fontSize = 13.sp)
-            listOf("SENSITIVE_ONLY", "ASK_EVERY_TIME", "MANUAL_MODE").forEach { policy ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Confirmation Policy", color = AppColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
+            listOf(
+                "SENSITIVE_ONLY" to "Sensitive actions only (recommended)",
+                "ASK_EVERY_TIME" to "Ask every time",
+                "MANUAL_MODE" to "Manual mode"
+            ).forEach { (policy, desc) ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 2.dp)
+                ) {
                     RadioButton(
                         selected = confirmationPolicy == policy,
-                        onClick = { confirmationPolicy = policy; scope.launch { settingsRepository.setConfirmationPolicy(policy) } }
+                        onClick = { confirmationPolicy = policy; scope.launch { settingsRepository.setConfirmationPolicy(policy) } },
+                        colors = RadioButtonDefaults.colors(selectedColor = AppColors.Primary)
                     )
-                    Text(
-                        when (policy) {
-                            "SENSITIVE_ONLY" -> "Sensitive actions only"
-                            "ASK_EVERY_TIME" -> "Ask every time"
-                            else -> "Manual mode"
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Column {
+                        Text(desc.split(" (").first(), color = AppColors.TextPrimary, fontSize = 14.sp)
+                        if (desc.contains("(")) {
+                            Text("(${desc.substringAfter("(")}", color = AppColors.TextMuted, fontSize = 11.sp)
                         }
-                    )
+                    }
                 }
             }
 
-            HorizontalDivider(color = AppColors.SurfaceVariant)
+            HorizontalDivider(color = AppColors.SurfaceVariant, thickness = 1.dp)
 
             // ── Data & Debug ──
-            SectionHeader("Data")
+            SectionHeader("Data", Icons.Default.Storage)
 
-            SettingRow(
+            SettingsClickableRow(
                 title = "Clear AI Memory",
                 subtitle = "Remove all remembered facts about you",
                 onClick = onClearMemory,
@@ -239,10 +251,31 @@ fun SettingsScreen(
                 iconColor = AppColors.Error
             )
 
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()) {
-                Text("Debug Logging")
-                Switch(checked = debugLogging, onCheckedChange = { debugLogging = it })
+            // Debug logging toggle
+            Surface(
+                color = AppColors.SurfaceVariant,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.BugReport, contentDescription = null, tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Debug Logging", fontWeight = FontWeight.Medium, fontSize = 14.sp, color = AppColors.TextPrimary)
+                            Text("Extra logs for troubleshooting", fontSize = 12.sp, color = AppColors.TextMuted)
+                        }
+                    }
+                    Switch(
+                        checked = debugLogging,
+                        onCheckedChange = { debugLogging = it },
+                        colors = SwitchDefaults.colors(checkedTrackColor = AppColors.Primary.copy(alpha = 0.4f), checkedThumbColor = AppColors.Primary)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -250,17 +283,81 @@ fun SettingsScreen(
     }
 }
 
+// ===================================================================
+// Reusable Settings Components
+// ===================================================================
+
 @Composable
-private fun SectionHeader(title: String) {
- Text(title, color = AppColors.Primary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+private fun SectionHeader(title: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+        Icon(icon, contentDescription = null, tint = AppColors.Primary, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(title, color = AppColors.Primary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+    }
 }
 
 @Composable
-private fun SettingRow(
+private fun SettingsTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    singleLine: Boolean = true,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailingIcon: @Composable (() -> Unit)? = null
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label, color = AppColors.TextMuted, fontSize = 13.sp) },
+        singleLine = singleLine,
+        visualTransformation = visualTransformation,
+        trailingIcon = trailingIcon,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = AppColors.TextPrimary,
+            unfocusedTextColor = AppColors.TextPrimary,
+            focusedBorderColor = AppColors.Primary,
+            unfocusedBorderColor = AppColors.SurfaceVariant,
+            cursorColor = AppColors.Primary
+        )
+    )
+}
+
+@Composable
+private fun SettingsSliderRow(
+    label: String,
+    value: String,
+    sliderValue: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = AppColors.TextSecondary, fontSize = 13.sp)
+        Text(value, color = AppColors.Primary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+    }
+    Slider(
+        value = sliderValue,
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        colors = SliderDefaults.colors(
+            thumbColor = AppColors.Primary,
+            activeTrackColor = AppColors.Primary
+        )
+    )
+}
+
+@Composable
+private fun SettingsClickableRow(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     iconColor: Color
 ) {
     Surface(
@@ -276,19 +373,10 @@ private fun SettingRow(
             Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(22.dp))
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-                Text(subtitle, color = AppColors.TextSecondary, fontSize = 12.sp, maxLines = 2)
+                Text(title, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = AppColors.TextPrimary)
+                Text(subtitle, color = AppColors.TextMuted, fontSize = 12.sp, maxLines = 2, lineHeight = 16.sp)
             }
             Icon(Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.TextMuted, modifier = Modifier.size(20.dp))
         }
     }
 }
-
-@Composable
-private fun outlinedFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = AppColors.TextPrimary,
-    unfocusedTextColor = AppColors.TextPrimary,
-    focusedBorderColor = AppColors.Primary,
-    unfocusedBorderColor = AppColors.SurfaceVariant,
-    cursorColor = AppColors.Primary
-)

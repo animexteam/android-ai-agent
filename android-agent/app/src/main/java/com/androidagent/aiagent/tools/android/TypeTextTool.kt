@@ -41,12 +41,14 @@ class TypeTextTool : ToolHandler {
                 if (targetNode != null) {
                     val result = setTextViaSetAction(targetNode, text)
                     if (result != null) {
-                        // Verify the text was set correctly
-                        delay(100)
-                        if (verifyText(service, text)) {
-                            return result
+                        delay(150)
+                        // Verify and retry with clipboard if mismatch
+                        if (!verifyText(service, text)) {
+                            Log.w(TAG, "Verification failed after ACTION_SET_TEXT, trying clipboard for exact text")
+                            val retryResult = retryWithClipboard(service, text)
+                            if (retryResult != null) return retryResult
                         }
-                        Log.w(TAG, "Verification failed after ACTION_SET_TEXT, trying fallback")
+                        return result
                     }
                     // Click to focus for fallback strategies
                     targetNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
@@ -57,25 +59,28 @@ class TypeTextTool : ToolHandler {
             // Strategy 2: Use AccessibilityService performAction with SET_TEXT on focused node
             val focusedSet = setTextOnFocusedField(service, text)
             if (focusedSet) {
-                delay(100)
+                delay(150)
                 if (verifyText(service, text)) {
                     return ToolResult(
                         success = true,
                         toolName = TOOL_NAME,
-                    result = buildJsonObject {
-                        put("text", text)
-                        put("method", "focused_set_text")
-                        put("characters", text.length)
-                    }
+                        result = buildJsonObject {
+                            put("text", text)
+                            put("method", "focused_set_text")
+                            put("characters", text.length)
+                        }
                     )
                 }
                 Log.w(TAG, "Verification failed after focused set, trying clipboard")
+                // Verification failed — try clipboard as retry
+                val retryResult = retryWithClipboard(service, text)
+                if (retryResult != null) return retryResult
             }
 
             // Strategy 3: Paste via clipboard + gesture tap on EditText
             val clipboardResult = setTextViaClipboard(service, text)
             if (clipboardResult) {
-                delay(150)
+                delay(200)
                 if (verifyText(service, text)) {
                     return ToolResult(
                         success = true,
@@ -116,8 +121,49 @@ class TypeTextTool : ToolHandler {
     }
 
     /**
+     * When verification fails, clear the field and retry with clipboard paste.
+     * This is the MOST RELIABLE method for exact text (especially numbers).
+     */
+    private suspend fun retryWithClipboard(service: AndroidAgentAccessibilityService, text: String): ToolResult? {
+        return try {
+            // First clear the field
+            val rootNode = service.safeGetRootInActiveWindow() ?: return null
+            val editNode = findFocusedEditable(rootNode) ?: findFirstEditable(rootNode)
+            if (editNode != null) {
+                // Clear existing wrong text
+                editNode.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+                val clearArgs = Bundle().apply {
+                    putCharSequence(
+                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                        ""
+                    )
+                }
+                editNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, clearArgs)
+                delay(100)
+            }
+
+            // Now paste via clipboard
+            val clipboardOk = setTextViaClipboard(service, text)
+            if (clipboardOk) {
+                delay(200)
+                ToolResult(
+                    success = true,
+                    toolName = TOOL_NAME,
+                    result = buildJsonObject {
+                        put("text", text)
+                        put("method", "clipboard_retry_after_verify_fail")
+                        put("characters", text.length)
+                    }
+                )
+            } else null
+        } catch (e: Exception) {
+            Log.w(TAG, "Clipboard retry failed", e)
+            null
+        }
+    }
+
+    /**
      * Set text using ACTION_SET_TEXT on a specific node.
-     * Returns ToolResult on success, null on failure.
      */
     private fun setTextViaSetAction(
         node: AccessibilityNodeInfo,
@@ -147,11 +193,10 @@ class TypeTextTool : ToolHandler {
 
     /**
      * Verify that the text in the focused editable field matches what we set.
-     * This catches cases where the app modifies the input (auto-correct, formatting).
      */
     private fun verifyText(service: AndroidAgentAccessibilityService, expected: String): Boolean {
         return try {
-            val rootNode = service.safeGetRootInActiveWindow() ?: return true // Can't verify, assume OK
+            val rootNode = service.safeGetRootInActiveWindow() ?: return true
             val focusedNode = findFocusedEditable(rootNode) ?: return true
             val actual = focusedNode.text?.toString() ?: return true
             val match = actual.trim() == expected.trim()
@@ -160,12 +205,12 @@ class TypeTextTool : ToolHandler {
             }
             match
         } catch (e: Exception) {
-            true // Can't verify, don't fail
+            true
         }
     }
 
     /**
-     * Find a node in the live tree by its hashed node_id (format: "node_12345").
+     * Find a node in the live tree by its hashed node_id.
      */
     private fun findNodeByHashId(
         root: AccessibilityNodeInfo?,
@@ -209,9 +254,6 @@ class TypeTextTool : ToolHandler {
         return null
     }
 
-    /**
-     * Try to set text on the currently focused editable node.
-     */
     private suspend fun setTextOnFocusedField(
         service: AndroidAgentAccessibilityService,
         text: String

@@ -6,7 +6,7 @@ import com.androidagent.aiagent.tools.AgentTool
 /**
  * Constructs prompts for the AI agent.
  *
- * v4.1: AGI-level prompt with Manus.im inspired behavior.
+ * v4.2: Improved number accuracy, better anti-loop, stronger chat/agent mode separation.
  */
 class AgentPromptBuilder {
 
@@ -28,11 +28,12 @@ class AgentPromptBuilder {
             → You see the phone screen through accessibility services.
 
             ## CRITICAL TEXT ACCURACY RULES
-            When typing text, you MUST type EXACTLY what the user specifies:
-            - If user says "type 786687", you type exactly "786687" — NOT "7768867" or any variation
-            - If user says "send Hello to Rahul", you type exactly "Hello" — NOT "Hello Hello" or "hello"
-            - NEVER add, remove, or modify characters from user-specified text
-            - Each task is INDEPENDENT — do not repeat actions from previous tasks
+            When using android.type_text, the 'text' field MUST contain EXACTLY the characters the user specified:
+            - If user says "type 786687", the text field must be EXACTLY "786687"
+            - If user says "send Hello to Rahul", the text field must be EXACTLY "Hello"
+            - NEVER add extra characters, NEVER remove characters, NEVER reorder
+            - Copy the text character-by-character. Double-check every digit.
+            - This is the #1 accuracy requirement.
 
             ## CRITICAL ANTI-LOOP RULES
             1. NEVER close an app and immediately reopen it. If an app is open, USE it.

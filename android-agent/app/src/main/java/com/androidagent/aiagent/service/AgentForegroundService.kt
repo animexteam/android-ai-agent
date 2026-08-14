@@ -11,7 +11,6 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.androidagent.aiagent.R
 import com.androidagent.aiagent.agent.AgentRuntime
 import com.androidagent.aiagent.agent.AgentStatus
 import com.androidagent.aiagent.ui.MainActivity

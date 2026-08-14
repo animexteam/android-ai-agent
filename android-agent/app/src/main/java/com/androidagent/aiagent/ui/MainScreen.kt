@@ -139,6 +139,18 @@ fun MainScreen(
         }
     }
 
+    fun sendTask(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isNotBlank()) {
+            if (state.goal.isBlank()) {
+                viewModel.startTask(trimmed)
+            } else {
+                viewModel.continueChat(trimmed)
+            }
+            taskInput = ""
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -149,7 +161,8 @@ fun MainScreen(
             TopBar(
                 onNewChat = { viewModel.newChat() },
                 onHistory = onNavigateToHistory,
-                onSettings = onNavigateToSettings
+                onSettings = onNavigateToSettings,
+                onDebug = onNavigateToDebug
             )
 
             // ── Status bar (when running) ──
@@ -173,7 +186,7 @@ fun MainScreen(
 
             // ── Chat / Event List ──
             if (displayItems.isEmpty() && !isRunning) {
-                EmptyState()
+                EmptyState(onSuggestionClick = { sendTask(it) })
             } else {
                 LazyColumn(
                     state = listState,
@@ -206,17 +219,7 @@ fun MainScreen(
         BottomInputBar(
             input = taskInput,
             onInputChange = { taskInput = it },
-            onSend = {
-                val trimmed = taskInput.trim()
-                if (trimmed.isNotBlank()) {
-                    if (state.goal.isBlank()) {
-                        viewModel.startTask(trimmed)
-                    } else {
-                        viewModel.continueChat(trimmed)
-                    }
-                    taskInput = ""
-                }
-            },
+            onSend = { sendTask(taskInput) },
             onStop = { viewModel.stopAgent() },
             isRunning = isRunning,
             isListening = isListening,
@@ -268,24 +271,25 @@ private sealed class DisplayItem {
 private fun TopBar(
     onNewChat: () -> Unit,
     onHistory: () -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    onDebug: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(AppColors.Surface)
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 4.dp, vertical = 2.dp)
             .statusBarsPadding(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // App name with gradient accent
+        // App logo + name
         Row(
-            modifier = Modifier.weight(1f).padding(start = 8.dp),
+            modifier = Modifier.weight(1f).padding(start = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(30.dp)
                     .background(
                         brush = androidx.compose.ui.graphics.Brush.linearGradient(
                             colors = listOf(AppColors.Primary, AppColors.Secondary)
@@ -298,7 +302,7 @@ private fun TopBar(
                     Icons.Default.SmartToy,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(17.dp)
                 )
             }
             Spacer(modifier = Modifier.width(10.dp))
@@ -310,11 +314,15 @@ private fun TopBar(
             )
         }
 
+        // Actions: New Chat, History, Debug (long press), Settings
         IconButton(onClick = onNewChat) {
             Icon(Icons.Default.EditNote, contentDescription = "New Chat", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
         }
         IconButton(onClick = onHistory) {
             Icon(Icons.Default.History, contentDescription = "History", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
+        }
+        IconButton(onClick = onDebug) {
+            Icon(Icons.Default.BugReport, contentDescription = "Debug", tint = AppColors.TextMuted, modifier = Modifier.size(20.dp))
         }
         IconButton(onClick = onSettings) {
             Icon(Icons.Default.Settings, contentDescription = "Settings", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
@@ -324,7 +332,7 @@ private fun TopBar(
 }
 
 // ===================================================================
-// Running Status Bar (Manus-style)
+// Running Status Bar
 // ===================================================================
 
 @Composable
@@ -393,11 +401,31 @@ private fun AgentChatBubble(text: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.Start
     ) {
+        // Agent avatar
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                        colors = listOf(AppColors.Primary, AppColors.Secondary)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.SmartToy,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
         Surface(
             color = AppColors.AgentBubble,
             shape = RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.AgentBubbleBorder),
-            modifier = Modifier.widthIn(max = 340.dp)
+            modifier = Modifier.widthIn(max = 320.dp)
         ) {
             Text(
                 text,
@@ -456,7 +484,7 @@ private fun ErrorText(message: String) {
 }
 
 // ===================================================================
-// Bottom Input Bar (Gemini-style)
+// Bottom Input Bar
 // ===================================================================
 
 @Composable
@@ -576,7 +604,7 @@ private fun BottomInputBar(
 // ===================================================================
 
 @Composable
-private fun EmptyState() {
+private fun EmptyState(onSuggestionClick: (String) -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize().padding(bottom = 80.dp),
         contentAlignment = Alignment.Center
@@ -584,11 +612,11 @@ private fun EmptyState() {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             // Logo
             Box(
-                modifier = Modifier.size(64.dp).background(
+                modifier = Modifier.size(72.dp).background(
                     brush = androidx.compose.ui.graphics.Brush.linearGradient(
                         colors = listOf(AppColors.Primary, AppColors.Secondary)
                     ),
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(20.dp)
                 ),
                 contentAlignment = Alignment.Center
             ) {
@@ -596,14 +624,14 @@ private fun EmptyState() {
                     Icons.Default.SmartToy,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 "Android-Use",
                 color = AppColors.TextPrimary,
-                fontSize = 24.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -614,7 +642,7 @@ private fun EmptyState() {
             )
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Suggestion chips
+            // Suggestion chips — NOW CLICKABLE
             val suggestions = listOf(
                 "Say Hello" to Icons.Default.EmojiEmotions,
                 "Open WhatsApp" to Icons.Default.Chat,
@@ -628,13 +656,13 @@ private fun EmptyState() {
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
                         .padding(vertical = 3.dp)
-                        .clickable(enabled = true) { }
+                        .clickable { onSuggestionClick(text) }
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(icon, contentDescription = null, tint = AppColors.TextMuted, modifier = Modifier.size(18.dp))
+                        Icon(icon, contentDescription = null, tint = AppColors.Primary, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(text, color = AppColors.TextSecondary, fontSize = 13.sp)
                     }
@@ -663,8 +691,16 @@ private fun AccessibilityBanner(onEnable: () -> Unit) {
             Spacer(modifier = Modifier.width(10.dp))
             Text("Enable accessibility service", color = AppColors.Warning, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         }
-        TextButton(onClick = onEnable) {
-            Text("Enable", color = AppColors.Warning, fontWeight = FontWeight.Bold)
+        FilledTonalButton(
+            onClick = onEnable,
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = AppColors.Warning.copy(alpha = 0.2f),
+                contentColor = AppColors.Warning
+            ),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+        ) {
+            Text("Enable", fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
     }
 }
@@ -751,5 +787,5 @@ private fun getActionIcon(toolName: String): ImageVector = when {
 }
 
 private fun extractJsonField(json: String, field: String): String? {
-    return Regex(""""$field"\s*:\s*"([^"']*)"""", RegexOption.IGNORE_CASE).find(json)?.groupValues?.getOrNull(1)
+    return Regex(""""$field"\s*:\s*"([^"\x27]*)"""", RegexOption.IGNORE_CASE).find(json)?.groupValues?.getOrNull(1)
 }

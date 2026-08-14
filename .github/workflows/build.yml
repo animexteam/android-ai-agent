@@ -26,7 +26,7 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
           mkdir -p release-assets
-          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v4.1.0.apk
+          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v4.2.0.apk
           cd release-assets && sha256sum *.apk > SHA256SUMS.txt && ls -lh
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -39,37 +39,38 @@ jobs:
         if: success()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v4.1.0
-          name: Android-Use v4.1.0
+          tag_name: v4.2.0
+          name: Android-Use v4.2.0
           token: ${{ secrets.PAT_TOKEN }}
           body: |
-            # Android-Use v4.1.0 — AGI-Level Agent
+            # Android-Use v4.2.0 — UI Overhaul & Fixes
+            
             ## What's New
-            - **Chat responses visible** — Agent shows responses in chat UI ("Hello, how can I help?")
-            - **Memory fix** — No more wrong action repetition from old memories
-            - **Number typing fix** — Exact text verification after typing (786687 stays 786687)
-            - **Anti-loop system** — Never closes/reopens apps, detects loops in 3 actions
-            - **Voice input** — Mic button for speech-to-text
-            - **Gemini-style UI** — Clean dark theme, chat bubbles, modern input bar
-            - **Floating assistant ball** — Draggable overlay (enable in Settings > Apps > Special access)
-            - **Default assistant** — Set Android-Use as your phone assistant (long-press home)
-            - **Faster agent loop** — Adaptive settle times, reduced history for speed
-            - **AGI-level prompt** — Manus.im inspired instructions for complex continuous tasks
+            - **Complete UI redesign** — Polished mobile-first design with proper spacing, colors, and components
+            - **App icon** — New AI robot icon (raster + adaptive, works on all devices)
+            - **Default assistant overlay** — Appears on current display (not full screen), Gemini-style bottom panel
+            - **Clickable suggestions** — Empty state chips now actually send tasks
+            - **Agent chat avatar** — Agent messages show robot avatar icon
+            - **Better Settings UI** — Section headers with icons, proper grouping, styled components
+            - **Accessibility banner** — Proper FilledTonalButton for enable action
+            - **Number typing retry** — If text verification fails, auto-clears and retries via clipboard
+            - **Stronger prompt** — Better number accuracy instructions for the AI model
             
             ## Bug Fixes
-            - Fixed: Agent repeating past actions (e.g., sending Hello twice from memory)
-            - Fixed: Number typing inaccuracy (786687 → 7768867)
-            - Fixed: Chat responses not shown in UI
-            - Fixed: Speed inconsistency (slow/fast alternation)
-            - Fixed: App close/reopen loops
+            - Fixed: White square icon (broken vector drawable replaced with proper icon)
+            - Fixed: Default assistant opening full screen (now bottom overlay panel)
+            - Fixed: Suggestion chips not clickable
+            - Fixed: Wrong regex in extractJsonField
+            - Fixed: TypeTextTool 'val val' compile error
+            - Removed: Incorrect meta-data from AssistActivity manifest
             
             ## Installation
-            1. Download Android-Use-v4.1.0.apk
+            1. Download Android-Use-v4.2.0.apk
             2. Settings > Security > Enable install from browser/source
             3. Install the APK
             4. Open app > Enable Accessibility > Enter your API details
-            5. (Optional) Set as default assistant: Settings > Apps > Default Digital Assistant
-            6. (Optional) Enable overlay: Settings > Apps > Android-Use > Special access > Display over other apps
+            5. (Optional) Set as default assistant: Settings > Apps > Default Digital Assistant > Android-Use
+            6. (Optional) Enable floating ball: Settings > Apps > Android-Use > Special access > Display over other apps
             
             ## Compatibility
             - Android 9+ (minSdk 28), optimized for Android 15 (targetSdk 35)

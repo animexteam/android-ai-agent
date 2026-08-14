@@ -1,0 +1,756 @@
+     1→package com.androidagent.aiagent.ui
+     2→
+     3→import android.content.ActivityNotFoundException
+     4→import android.content.Intent
+     5→import android.os.Bundle
+     6→import android.speech.RecognitionListener
+     7→import android.speech.RecognizerIntent
+     8→import android.speech.SpeechRecognizer
+     9→import androidx.compose.animation.animateColorAsState
+    10→import androidx.compose.animation.core.LinearEasing
+    11→import androidx.compose.animation.core.RepeatMode
+    12→import androidx.compose.animation.core.animateFloat
+    13→import androidx.compose.animation.core.infiniteRepeatable
+    14→import androidx.compose.animation.core.rememberInfiniteTransition
+    15→import androidx.compose.animation.core.tween
+    16→import androidx.compose.foundation.background
+    17→import androidx.compose.foundation.clickable
+    18→import androidx.compose.foundation.layout.*
+    19→import androidx.compose.foundation.lazy.LazyColumn
+    20→import androidx.compose.foundation.lazy.items
+    21→import androidx.compose.foundation.lazy.rememberLazyListState
+    22→import androidx.compose.foundation.shape.CircleShape
+    23→import androidx.compose.foundation.shape.RoundedCornerShape
+    24→import androidx.compose.material.icons.Icons
+    25→import androidx.compose.material.icons.automirrored.filled.Send
+    26→import androidx.compose.material.icons.filled.*
+    27→import androidx.compose.material3.*
+    28→import androidx.compose.runtime.*
+    29→import androidx.compose.ui.Alignment
+    30→import androidx.compose.ui.Modifier
+    31→import androidx.compose.ui.draw.alpha
+    32→import androidx.compose.ui.draw.clip
+    33→import androidx.compose.ui.graphics.Color
+    34→import androidx.compose.ui.graphics.vector.ImageVector
+    35→import androidx.compose.ui.platform.LocalConfiguration
+    36→import androidx.compose.ui.platform.LocalContext
+    37→import androidx.compose.ui.text.font.FontWeight
+    38→import androidx.compose.ui.unit.dp
+    39→import androidx.compose.ui.unit.sp
+    40→import com.androidagent.aiagent.agent.AgentEvent
+    41→import com.androidagent.aiagent.agent.AgentStatus
+    42→
+    43→@OptIn(ExperimentalMaterial3Api::class)
+    44→@Composable
+    45→fun MainScreen(
+    46→    viewModel: AgentViewModel,
+    47→    onNavigateToSettings: () -> Unit,
+    48→    onNavigateToDebug: () -> Unit,
+    49→    onNavigateToHistory: () -> Unit
+    50→) {
+    51→    val state by viewModel.stateFlow.collectAsState()
+    52→    val isAccessibilityEnabled by remember {
+    53→        mutableStateOf(viewModel.isAccessibilityServiceEnabled())
+    54→    }
+    55→    var taskInput by remember { mutableStateOf("") }
+    56→    val listState = rememberLazyListState()
+    57→    val isRunning = state.status.isActive
+    58→    val context = LocalContext.current
+    59→
+    60→    // Voice input state
+    61→    var isListening by remember { mutableStateOf(false) }
+    62→    var voiceText by remember { mutableStateOf("") }
+    63→
+    64→    // Build display items: chat messages + tool actions
+    65→    val displayItems = remember(state.history) {
+    66→        state.history.mapNotNull { event ->
+    67→            when (event) {
+    68→                is AgentEvent.UserMessage -> DisplayItem.UserMessage(event.text, event.timestamp)
+    69→                is AgentEvent.AgentMessage -> DisplayItem.AgentMessage(event.text, event.timestamp)
+    70→                is AgentEvent.ToolExecution -> DisplayItem.ToolAction(
+    71→                    name = event.toolName,
+    72→                    args = event.arguments,
+    73→                    success = event.result.success,
+    74→                    error = event.result.error?.message
+    75→                )
+    76→                is AgentEvent.Error -> DisplayItem.ErrorItem(event.message)
+    77→                else -> null
+    78→            }
+    79→        }
+    80→    }
+    81→
+    82→    LaunchedEffect(displayItems.size) {
+    83→        if (displayItems.isNotEmpty()) {
+    84→            listState.animateScrollToItem(displayItems.size - 1)
+    85→        }
+    86→    }
+    87→
+    88→    // Voice recognizer
+    89→    val speechRecognizer = remember {
+    90→        try {
+    91→            SpeechRecognizer.createSpeechRecognizer(context)
+    92→        } catch (e: Exception) { null }
+    93→    }
+    94→
+    95→    DisposableEffect(Unit) {
+    96→        onDispose {
+    97→            speechRecognizer?.destroy()
+    98→        }
+    99→    }
+   100→
+   101→    fun startVoiceInput() {
+   102→        if (speechRecognizer == null) return
+   103→        isListening = true
+   104→        voiceText = ""
+   105→        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+   106→            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+   107→            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-IN")
+   108→            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to Android-Use...")
+   109→        }
+   110→        try {
+   111→            speechRecognizer.setRecognitionListener(object : RecognitionListener {
+   112→                override fun onReadyForSpeech(params: Bundle?) {}
+   113→                override fun onBeginningOfSpeech() {}
+   114→                override fun onRmsChanged(rmsdB: Float) {}
+   115→                override fun onBufferReceived(buffer: ByteArray?) {}
+   116→                override fun onEndOfSpeech() {
+   117→                    isListening = false
+   118→                }
+   119→                override fun onError(error: Int) {
+   120→                    isListening = false
+   121→                }
+   122→                override fun onResults(results: Bundle?) {
+   123→                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+   124→                    val text = matches?.firstOrNull() ?: ""
+   125→                    if (text.isNotBlank()) {
+   126→                        taskInput = text
+   127→                    }
+   128→                    isListening = false
+   129→                }
+   130→                override fun onPartialResults(partialResults: Bundle?) {
+   131→                    val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+   132→                    voiceText = matches?.firstOrNull() ?: ""
+   133→                }
+   134→                override fun onEvent(eventType: Int, params: Bundle?) {}
+   135→            })
+   136→            speechRecognizer.startListening(intent)
+   137→        } catch (e: ActivityNotFoundException) {
+   138→            isListening = false
+   139→        }
+   140→    }
+   141→
+   142→    Box(
+   143→        modifier = Modifier
+   144→            .fillMaxSize()
+   145→            .background(AppColors.DarkBackground)
+   146→    ) {
+   147→        Column(modifier = Modifier.fillMaxSize()) {
+   148→            // ── Top Bar ──
+   149→            TopBar(
+   150→                onNewChat = { viewModel.newChat() },
+   151→                onHistory = onNavigateToHistory,
+   152→                onSettings = onNavigateToSettings
+   153→            )
+   154→
+   155→            // ── Status bar (when running) ──
+   156→            if (isRunning) {
+   157→                RunningStatusBar(state = state)
+   158→            }
+   159→
+   160→            // ── Accessibility banner ──
+   161→            if (!isAccessibilityEnabled) {
+   162→                AccessibilityBanner(onEnable = { viewModel.openAccessibilitySettings() })
+   163→            }
+   164→
+   165→            // ── Result banners ──
+   166→            if (state.status == AgentStatus.COMPLETED && !isRunning) {
+   167→                ResultBanner(text = "Done", isSuccess = true)
+   168→            } else if (state.status == AgentStatus.FAILED && !isRunning) {
+   169→                ResultBanner(text = state.lastError ?: "Something went wrong", isSuccess = false)
+   170→            } else if (state.status == AgentStatus.CANCELLED && !isRunning) {
+   171→                ResultBanner(text = "Stopped", isSuccess = false)
+   172→            }
+   173→
+   174→            // ── Chat / Event List ──
+   175→            if (displayItems.isEmpty() && !isRunning) {
+   176→                EmptyState()
+   177→            } else {
+   178→                LazyColumn(
+   179→                    state = listState,
+   180→                    modifier = Modifier
+   181→                        .fillMaxSize()
+   182→                        .padding(horizontal = 16.dp),
+   183→                    verticalArrangement = Arrangement.spacedBy(6.dp),
+   184→                    contentPadding = PaddingValues(vertical = 8.dp)
+   185→                ) {
+   186→                    items(
+   187→                        items = displayItems,
+   188→                        key = { it.timestamp.toString() + it::class.simpleName }
+   189→                    ) { item ->
+   190→                        when (item) {
+   191→                            is DisplayItem.UserMessage -> UserChatBubble(text = item.text)
+   192→                            is DisplayItem.AgentMessage -> AgentChatBubble(text = item.text)
+   193→                            is DisplayItem.ToolAction -> ToolActionCard(item)
+   194→                            is DisplayItem.ErrorItem -> ErrorText(item.message)
+   195→                        }
+   196→                    }
+   197→                    // Bottom padding for input bar
+   198→                    item {
+   199→                        Spacer(modifier = Modifier.height(80.dp))
+   200→                    }
+   201→                }
+   202→            }
+   203→        }
+   204→
+   205→        // ── Bottom Input Bar ──
+   206→        BottomInputBar(
+   207→            input = taskInput,
+   208→            onInputChange = { taskInput = it },
+   209→            onSend = {
+   210→                val trimmed = taskInput.trim()
+   211→                if (trimmed.isNotBlank()) {
+   212→                    if (state.goal.isBlank()) {
+   213→                        viewModel.startTask(trimmed)
+   214→                    } else {
+   215→                        viewModel.continueChat(trimmed)
+   216→                    }
+   217→                    taskInput = ""
+   218→                }
+   219→            },
+   220→            onStop = { viewModel.stopAgent() },
+   221→            isRunning = isRunning,
+   222→            isListening = isListening,
+   223→            onVoiceClick = { startVoiceInput() },
+   224→            canSend = taskInput.isNotBlank() && !isRunning
+   225→        )
+   226→
+   227→        // ── Dialogs ──
+   228→        state.pendingConfirmation?.let { confirmation ->
+   229→            ConfirmationDialog(
+   230→                confirmation = confirmation,
+   231→                onConfirm = { viewModel.respondToConfirmation(true) },
+   232→                onDeny = { viewModel.respondToConfirmation(false) }
+   233→            )
+   234→        }
+   235→
+   236→        state.pendingQuestion?.let { question ->
+   237→            UserQuestionDialog(
+   238→                question = question,
+   239→                onAnswer = { answer -> viewModel.respondToUser(answer) },
+   240→                onDismiss = {}
+   241→            )
+   242→        }
+   243→    }
+   244→}
+   245→
+   246→// ===================================================================
+   247→// Display items
+   248→// ===================================================================
+   249→
+   250→private sealed class DisplayItem {
+   251→    abstract val timestamp: Long
+   252→    data class UserMessage(val text: String, override val timestamp: Long) : DisplayItem()
+   253→    data class AgentMessage(val text: String, override val timestamp: Long) : DisplayItem()
+   254→    data class ToolAction(
+   255→        val name: String,
+   256→        val args: String,
+   257→        val success: Boolean,
+   258→        val error: String?
+   259→    ) : DisplayItem() { override val timestamp: Long = System.currentTimeMillis() }
+   260→    data class ErrorItem(val message: String) : DisplayItem() { override val timestamp: Long = System.currentTimeMillis() }
+   261→}
+   262→
+   263→// ===================================================================
+   264→// Top Bar
+   265→// ===================================================================
+   266→
+   267→@Composable
+   268→private fun TopBar(
+   269→    onNewChat: () -> Unit,
+   270→    onHistory: () -> Unit,
+   271→    onSettings: () -> Unit
+   272→) {
+   273→    Row(
+   274→        modifier = Modifier
+   275→            .fillMaxWidth()
+   276→            .background(AppColors.Surface)
+   277→            .padding(horizontal = 8.dp, vertical = 4.dp)
+   278→            .statusBarsPadding(),
+   279→        verticalAlignment = Alignment.CenterVertically
+   280→    ) {
+   281→        // App name with gradient accent
+   282→        Row(
+   283→            modifier = Modifier.weight(1f).padding(start = 8.dp),
+   284→            verticalAlignment = Alignment.CenterVertically
+   285→        ) {
+   286→            Box(
+   287→                modifier = Modifier
+   288→                    .size(28.dp)
+   289→                    .background(
+   290→                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
+   291→                            colors = listOf(AppColors.Primary, AppColors.Secondary)
+   292→                        ),
+   293→                        shape = RoundedCornerShape(8.dp)
+   294→                    ),
+   295→                contentAlignment = Alignment.Center
+   296→            ) {
+   297→                Icon(
+   298→                    Icons.Default.SmartToy,
+   299→                    contentDescription = null,
+   300→                    tint = Color.White,
+   301→                    modifier = Modifier.size(16.dp)
+   302→                )
+   303→            }
+   304→            Spacer(modifier = Modifier.width(10.dp))
+   305→            Text(
+   306→                "Android-Use",
+   307→                color = AppColors.TextPrimary,
+   308→                fontWeight = FontWeight.SemiBold,
+   309→                fontSize = 18.sp
+   310→            )
+   311→        }
+   312→
+   313→        IconButton(onClick = onNewChat) {
+   314→            Icon(Icons.Default.EditNote, contentDescription = "New Chat", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
+   315→        }
+   316→        IconButton(onClick = onHistory) {
+   317→            Icon(Icons.Default.History, contentDescription = "History", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
+   318→        }
+   319→        IconButton(onClick = onSettings) {
+   320→            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
+   321→        }
+   322→    }
+   323→    HorizontalDivider(color = AppColors.SurfaceVariant, thickness = 1.dp)
+   324→}
+   325→
+   326→// ===================================================================
+   327→// Running Status Bar (Manus-style)
+   328→// ===================================================================
+   329→
+   330→@Composable
+   331→private fun RunningStatusBar(state: com.androidagent.aiagent.agent.AgentState) {
+   332→    val (label, icon, color) = when (state.status) {
+   333→        AgentStatus.THINKING -> Triple("Analyzing screen", Icons.Default.Psychology, AppColors.Info)
+   334→        AgentStatus.EXECUTING -> Triple("Using mobile...", Icons.Default.TouchApp, AppColors.Success)
+   335→        AgentStatus.WAITING_FOR_USER -> Triple("Waiting for you", Icons.Default.QuestionAnswer, AppColors.Primary)
+   336→        AgentStatus.WAITING_FOR_CONFIRMATION -> Triple("Confirm action", Icons.Default.Security, AppColors.Warning)
+   337→        AgentStatus.VERIFYING -> Triple("Verifying...", Icons.Default.VerifiedUser, AppColors.Info)
+   338→        else -> Triple("Working...", Icons.Default.Autorenew, AppColors.Secondary)
+   339→    }
+   340→
+   341→    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+   342→    val alpha by infiniteTransition.animateFloat(
+   343→        initialValue = 0.3f, targetValue = 1f,
+   344→        animationSpec = infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Reverse),
+   345→        label = "alpha"
+   346→    )
+   347→
+   348→    Row(
+   349→        modifier = Modifier
+   350→            .fillMaxWidth()
+   351→            .background(color.copy(alpha = 0.08f))
+   352→            .padding(horizontal = 16.dp, vertical = 8.dp),
+   353→        verticalAlignment = Alignment.CenterVertically
+   354→    ) {
+   355→        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp).alpha(alpha))
+   356→        Spacer(modifier = Modifier.width(10.dp))
+   357→        Text(label, color = color, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+   358→        Text("${state.durationFormatted}", color = AppColors.TextMuted, fontSize = 11.sp)
+   359→        Spacer(modifier = Modifier.width(12.dp))
+   360→        Text("Step ${state.stepNumber}", color = AppColors.TextMuted, fontSize = 11.sp)
+   361→    }
+   362→}
+   363→
+   364→// ===================================================================
+   365→// Chat Bubbles
+   366→// ===================================================================
+   367→
+   368→@Composable
+   369→private fun UserChatBubble(text: String) {
+   370→    Row(
+   371→        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+   372→        horizontalArrangement = Arrangement.End
+   373→    ) {
+   374→        Surface(
+   375→            color = AppColors.UserBubble,
+   376→            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+   377→            modifier = Modifier.widthIn(max = 320.dp)
+   378→        ) {
+   379→            Text(
+   380→                text,
+   381→                color = Color.White,
+   382→                fontSize = 14.sp,
+   383→                lineHeight = 20.sp,
+   384→                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+   385→            )
+   386→        }
+   387→    }
+   388→}
+   389→
+   390→@Composable
+   391→private fun AgentChatBubble(text: String) {
+   392→    Row(
+   393→        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+   394→        horizontalArrangement = Arrangement.Start
+   395→    ) {
+   396→        Surface(
+   397→            color = AppColors.AgentBubble,
+   398→            shape = RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+   399→            border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.AgentBubbleBorder),
+   400→            modifier = Modifier.widthIn(max = 340.dp)
+   401→        ) {
+   402→            Text(
+   403→                text,
+   404→                color = AppColors.TextPrimary,
+   405→                fontSize = 14.sp,
+   406→                lineHeight = 20.sp,
+   407→                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+   408→            )
+   409→        }
+   410→    }
+   411→}
+   412→
+   413→// ===================================================================
+   414→// Tool Action Card (compact)
+   415→// ===================================================================
+   416→
+   417→@Composable
+   418→private fun ToolActionCard(action: DisplayItem.ToolAction) {
+   419→    val desc = describeAction(action.name, action.args)
+   420→    val icon = getActionIcon(action.name)
+   421→    val color = if (action.success) AppColors.TextMuted else AppColors.Error
+   422→
+   423→    Row(
+   424→        modifier = Modifier
+   425→            .fillMaxWidth()
+   426→            .clip(RoundedCornerShape(10.dp))
+   427→            .background(AppColors.SurfaceVariant.copy(alpha = 0.5f))
+   428→            .padding(horizontal = 12.dp, vertical = 6.dp),
+   429→        verticalAlignment = Alignment.CenterVertically
+   430→    ) {
+   431→        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+   432→        Spacer(modifier = Modifier.width(8.dp))
+   433→        Text(
+   434→            desc,
+   435→            color = color,
+   436→            fontSize = 12.sp,
+   437→            maxLines = 1,
+   438→            modifier = Modifier.weight(1f)
+   439→        )
+   440→        if (action.success) {
+   441→            Icon(Icons.Default.Check, contentDescription = null, tint = AppColors.Success, modifier = Modifier.size(14.dp))
+   442→        } else {
+   443→            Icon(Icons.Default.Close, contentDescription = null, tint = AppColors.Error, modifier = Modifier.size(14.dp))
+   444→        }
+   445→    }
+   446→}
+   447→
+   448→@Composable
+   449→private fun ErrorText(message: String) {
+   450→    Text(
+   451→        message.take(120),
+   452→        color = AppColors.Error.copy(alpha = 0.7f),
+   453→        fontSize = 12.sp,
+   454→        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+   455→    )
+   456→}
+   457→
+   458→// ===================================================================
+   459→// Bottom Input Bar (Gemini-style)
+   460→// ===================================================================
+   461→
+   462→@Composable
+   463→private fun BottomInputBar(
+   464→    input: String,
+   465→    onInputChange: (String) -> Unit,
+   466→    onSend: () -> Unit,
+   467→    onStop: () -> Unit,
+   468→    isRunning: Boolean,
+   469→    isListening: Boolean,
+   470→    onVoiceClick: () -> Unit,
+   471→    canSend: Boolean
+   472→) {
+   473→    Column(
+   474→        modifier = Modifier
+   475→            .fillMaxWidth()
+   476→            .background(AppColors.Surface)
+   477→            .navigationBarsPadding()
+   478→            .padding(horizontal = 12.dp, vertical = 8.dp)
+   479→    ) {
+   480→        // Listening indicator
+   481→        if (isListening) {
+   482→            val infiniteTransition = rememberInfiniteTransition(label = "mic_pulse")
+   483→            val scale by infiniteTransition.animateFloat(
+   484→                initialValue = 0.8f, targetValue = 1.2f,
+   485→                animationSpec = infiniteRepeatable(tween(400), RepeatMode.Reverse),
+   486→                label = "scale"
+   487→            )
+   488→            Row(
+   489→                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+   490→                horizontalArrangement = Arrangement.Center
+   491→            ) {
+   492→                Icon(
+   493→                    Icons.Default.Mic,
+   494→                    contentDescription = "Listening",
+   495→                    tint = AppColors.Error,
+   496→                    modifier = Modifier.size(20.dp * scale)
+   497→                )
+   498→                Spacer(modifier = Modifier.width(8.dp))
+   499→                Text("Listening...", color = AppColors.Error, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+   500→            }
+   501→        }
+   502→
+   503→        // Input row
+   504→        Surface(
+   505→            color = AppColors.SurfaceVariant,
+   506→            shape = RoundedCornerShape(28.dp),
+   507→            modifier = Modifier.fillMaxWidth()
+   508→        ) {
+   509→            Row(
+   510→                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+   511→                verticalAlignment = Alignment.CenterVertically
+   512→            ) {
+   513→                // Voice button
+   514→                IconButton(
+   515→                    onClick = onVoiceClick,
+   516→                    modifier = Modifier.size(40.dp)
+   517→                ) {
+   518→                    Icon(
+   519→                        if (isListening) Icons.Default.Mic else Icons.Default.MicNone,
+   520→                        contentDescription = "Voice input",
+   521→                        tint = if (isListening) AppColors.Error else AppColors.TextSecondary,
+   522→                        modifier = Modifier.size(22.dp)
+   523→                    )
+   524→                }
+   525→
+   526→                // Text field
+   527→                OutlinedTextField(
+   528→                    value = input,
+   529→                    onValueChange = onInputChange,
+   530→                    modifier = Modifier.weight(1f),
+   531→                    placeholder = { Text("Ask Android-Use anything...", color = AppColors.TextMuted, fontSize = 15.sp) },
+   532→                    shape = RoundedCornerShape(20.dp),
+   533→                    colors = OutlinedTextFieldDefaults.colors(
+   534→                        focusedTextColor = AppColors.TextPrimary,
+   535→                        unfocusedTextColor = AppColors.TextPrimary,
+   536→                        focusedBorderColor = AppColors.Primary,
+   537→                        unfocusedBorderColor = Color.Transparent,
+   538→                        cursorColor = AppColors.Primary
+   539→                    )
+   540→                )
+   541→
+   542→                // Send / Stop button
+   543→                if (isRunning) {
+   544→                    IconButton(
+   545→                        onClick = onStop,
+   546→                        modifier = Modifier.size(40.dp)
+   547→                    ) {
+   548→                        Icon(
+   549→                            Icons.Default.StopCircle,
+   550→                            contentDescription = "Stop",
+   551→                            tint = AppColors.Error,
+   552→                            modifier = Modifier.size(24.dp)
+   553→                        )
+   554→                    }
+   555→                } else {
+   556→                    IconButton(
+   557→                        onClick = onSend,
+   558→                        enabled = canSend,
+   559→                        modifier = Modifier.size(40.dp)
+   560→                    ) {
+   561→                        Icon(
+   562→                            Icons.AutoMirrored.Filled.Send,
+   563→                            contentDescription = "Send",
+   564→                            tint = if (canSend) AppColors.Primary else AppColors.TextMuted,
+   565→                            modifier = Modifier.size(22.dp)
+   566→                        )
+   567→                    }
+   568→                }
+   569→            }
+   570→        }
+   571→    }
+   572→}
+   573→
+   574→// ===================================================================
+   575→// Empty State
+   576→// ===================================================================
+   577→
+   578→@Composable
+   579→private fun EmptyState() {
+   580→    Box(
+   581→        modifier = Modifier.fillMaxSize().padding(bottom = 80.dp),
+   582→        contentAlignment = Alignment.Center
+   583→    ) {
+   584→        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+   585→            // Logo
+   586→            Box(
+   587→                modifier = Modifier.size(64.dp).background(
+   588→                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
+   589→                        colors = listOf(AppColors.Primary, AppColors.Secondary)
+   590→                    ),
+   591→                    shape = RoundedCornerShape(18.dp)
+   592→                ),
+   593→                contentAlignment = Alignment.Center
+   594→            ) {
+   595→                Icon(
+   596→                    Icons.Default.SmartToy,
+   597→                    contentDescription = null,
+   598→                    tint = Color.White,
+   599→                    modifier = Modifier.size(32.dp)
+   600→                )
+   601→            }
+   602→            Spacer(modifier = Modifier.height(16.dp))
+   603→            Text(
+   604→                "Android-Use",
+   605→                color = AppColors.TextPrimary,
+   606→                fontSize = 24.sp,
+   607→                fontWeight = FontWeight.Bold
+   608→            )
+   609→            Spacer(modifier = Modifier.height(6.dp))
+   610→            Text(
+   611→                "Your AI phone assistant",
+   612→                color = AppColors.TextSecondary,
+   613→                fontSize = 14.sp
+   614→            )
+   615→            Spacer(modifier = Modifier.height(32.dp))
+   616→
+   617→            // Suggestion chips
+   618→            val suggestions = listOf(
+   619→                "Say Hello" to Icons.Default.EmojiEmotions,
+   620→                "Open WhatsApp" to Icons.Default.Chat,
+   621→                "Search YouTube" to Icons.Default.VideoLibrary,
+   622→                "What is 15% of 847?" to Icons.Default.Calculate
+   623→            )
+   624→            suggestions.forEach { (text, icon) ->
+   625→                Surface(
+   626→                    color = AppColors.SurfaceVariant,
+   627→                    shape = RoundedCornerShape(20.dp),
+   628→                    modifier = Modifier
+   629→                        .fillMaxWidth(0.85f)
+   630→                        .padding(vertical = 3.dp)
+   631→                        .clickable(enabled = true) { }
+   632→                ) {
+   633→                    Row(
+   634→                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+   635→                        verticalAlignment = Alignment.CenterVertically
+   636→                    ) {
+   637→                        Icon(icon, contentDescription = null, tint = AppColors.TextMuted, modifier = Modifier.size(18.dp))
+   638→                        Spacer(modifier = Modifier.width(12.dp))
+   639→                        Text(text, color = AppColors.TextSecondary, fontSize = 13.sp)
+   640→                    }
+   641→                }
+   642→            }
+   643→        }
+   644→    }
+   645→}
+   646→
+   647→// ===================================================================
+   648→// Accessibility Banner
+   649→// ===================================================================
+   650→
+   651→@Composable
+   652→private fun AccessibilityBanner(onEnable: () -> Unit) {
+   653→    Row(
+   654→        modifier = Modifier
+   655→            .fillMaxWidth()
+   656→            .background(AppColors.Warning.copy(alpha = 0.1f))
+   657→            .padding(horizontal = 16.dp, vertical = 10.dp),
+   658→        verticalAlignment = Alignment.CenterVertically,
+   659→        horizontalArrangement = Arrangement.SpaceBetween
+   660→    ) {
+   661→        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+   662→            Icon(Icons.Default.Warning, contentDescription = null, tint = AppColors.Warning, modifier = Modifier.size(18.dp))
+   663→            Spacer(modifier = Modifier.width(10.dp))
+   664→            Text("Enable accessibility service", color = AppColors.Warning, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+   665→        }
+   666→        TextButton(onClick = onEnable) {
+   667→            Text("Enable", color = AppColors.Warning, fontWeight = FontWeight.Bold)
+   668→        }
+   669→    }
+   670→}
+   671→
+   672→// ===================================================================
+   673→// Result Banner
+   674→// ===================================================================
+   675→
+   676→@Composable
+   677→private fun ResultBanner(text: String, isSuccess: Boolean) {
+   678→    val color = if (isSuccess) AppColors.Success else AppColors.Error
+   679→    Row(
+   680→        modifier = Modifier
+   681→            .fillMaxWidth()
+   682→            .background(color.copy(alpha = 0.08f))
+   683→            .padding(horizontal = 16.dp, vertical = 8.dp),
+   684→        verticalAlignment = Alignment.CenterVertically
+   685→    ) {
+   686→        Icon(
+   687→            if (isSuccess) Icons.Default.CheckCircle else Icons.Default.ErrorOutline,
+   688→            contentDescription = null, tint = color, modifier = Modifier.size(16.dp)
+   689→        )
+   690→        Spacer(modifier = Modifier.width(8.dp))
+   691→        Text(text, color = color, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+   692→    }
+   693→}
+   694→
+   695→// ===================================================================
+   696→// Helpers
+   697→// ===================================================================
+   698→
+   699→private fun describeAction(toolName: String, arguments: String): String {
+   700→    val text = extractJsonField(arguments, "text")
+   701→    val appName = extractJsonField(arguments, "app_name")
+   702→    val direction = extractJsonField(arguments, "direction")
+   703→    return when {
+   704→        toolName.contains("launch_app") -> if (!appName.isNullOrBlank()) "Opened $appName" else "Opened app"
+   705→        toolName.contains("click") -> "Tapped element"
+   706→        toolName.contains("long_click") -> "Long pressed"
+   707→        toolName.contains("type_text") -> if (!text.isNullOrBlank()) "Typed: ${text.take(40)}" else "Typed text"
+   708→        toolName.contains("clear_text") -> "Cleared text"
+   709→        toolName.contains("scroll") -> "Scrolled ${direction ?: ""}"
+   710→        toolName.contains("swipe") -> {
+   711→            val d = extractJsonField(arguments, "direction") ?: ""
+   712→            when {
+   713→                d.contains("up", ignoreCase = true) -> "Swiped up"
+   714→                d.contains("down", ignoreCase = true) -> "Swiped down"
+   715→                d.contains("left", ignoreCase = true) -> "Swiped left"
+   716→                d.contains("right", ignoreCase = true) -> "Swiped right"
+   717→                else -> "Swiped"
+   718→            }
+   719→        }
+   720→        toolName.contains("back") -> "Went back"
+   721→        toolName.contains("home") -> "Went home"
+   722→        toolName.contains("recents") -> "Opened recents"
+   723→        toolName.contains("press_key") -> "Pressed key"
+   724→        toolName.contains("wait") -> "Waiting..."
+   725→        toolName.contains("screenshot") -> "Took screenshot"
+   726→        toolName.contains("inspect") -> "Read screen"
+   727→        toolName.contains("find") -> "Searching..."
+   728→        toolName.contains("analyze") -> "Analyzing screen"
+   729→        toolName.contains("visual") -> "Looking for element"
+   730→        toolName.contains("finish") -> "Done"
+   731→        toolName.contains("stop") -> "Stopped"
+   732→        else -> toolName.substringAfterLast(".").replace("_", " ")
+   733→    }
+   734→}
+   735→
+   736→private fun getActionIcon(toolName: String): ImageVector = when {
+   737→    toolName.contains("launch") -> Icons.Default.Launch
+   738→    toolName.contains("click") -> Icons.Default.TouchApp
+   739→    toolName.contains("type") -> Icons.Default.Keyboard
+   740→    toolName.contains("scroll") -> Icons.Default.SwipeVertical
+   741→    toolName.contains("swipe") -> Icons.Default.Swipe
+   742→    toolName.contains("back") -> Icons.Default.ArrowBack
+   743→    toolName.contains("home") -> Icons.Default.Home
+   744→    toolName.contains("press_key") -> Icons.Default.KeyboardAlt
+   745→    toolName.contains("wait") -> Icons.Default.Schedule
+   746→    toolName.contains("screenshot") -> Icons.Default.Screenshot
+   747→    toolName.contains("find") -> Icons.Default.Search
+   748→    toolName.contains("analyze") -> Icons.Default.Visibility
+   749→    toolName.contains("finish") -> Icons.Default.CheckCircle
+   750→    else -> Icons.Default.Build
+   751→}
+   752→
+   753→private fun extractJsonField(json: String, field: String): String? {
+   754→    return Regex(""""$field"\s*:\s*"([^"']*)"""", RegexOption.IGNORE_CASE).find(json)?.groupValues?.getOrNull(1)
+   755→}
+   756→

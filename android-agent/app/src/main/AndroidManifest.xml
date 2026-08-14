@@ -35,15 +35,14 @@
         <activity
             android:name=".ui.AssistActivity"
             android:exported="true"
-            android:theme="@style/Theme.AndroidAgent"
-            android:excludeFromRecents="true">
+            android:theme="@style/Theme.AndroidAgent.AssistOverlay"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:launchMode="singleInstance">
             <intent-filter>
                 <action android:name="android.intent.action.ASSIST" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/accessibility_service_config" />
         </activity>
 
         <!-- Accessibility service for device control -->
