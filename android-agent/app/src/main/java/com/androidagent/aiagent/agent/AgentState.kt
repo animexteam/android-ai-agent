@@ -1,5 +1,6 @@
 package com.androidagent.aiagent.agent
 
+import com.androidagent.aiagent.ai.GemmaClient
 import com.androidagent.aiagent.tools.ToolResult
 
 // ============================================================================
@@ -7,35 +8,32 @@ import com.androidagent.aiagent.tools.ToolResult
 // ============================================================================
 
 enum class AgentStatus {
-    /** No task is active. */
     IDLE,
-    /** The agent is waiting for the model to respond. */
     THINKING,
-    /** A tool is being executed on the device. */
     EXECUTING,
-    /** The agent paused to ask the user a question. */
     WAITING_FOR_USER,
-    /** The agent paused because a tool requires safety confirmation. */
     WAITING_FOR_CONFIRMATION,
-    /** The agent is verifying the result of an action. */
     VERIFYING,
-    /** The task completed successfully. */
     COMPLETED,
-    /** The task failed (max steps, unrecoverable error, etc.). */
     FAILED,
-    /** The user cancelled the task. */
     CANCELLED;
 
-    /** True when the agent loop should still be running. */
     val isActive: Boolean
         get() = this in setOf(THINKING, EXECUTING, VERIFYING, WAITING_FOR_USER, WAITING_FOR_CONFIRMATION)
+}
+
+/** How the agent is operating. */
+enum class AgentMode {
+    /** Controlling the device (tap, type, scroll). */
+    AGENT,
+    /** Just chatting — no device control. */
+    CHAT
 }
 
 // ============================================================================
 // UI tree data classes
 // ============================================================================
 
-/** A snapshot of one node in the Android accessibility tree. */
 data class UiNode(
     val nodeId: String,
     val className: String?,
@@ -53,7 +51,6 @@ data class UiNode(
     val depth: Int = 0
 )
 
-/** Axis-aligned rectangle with convenience accessors. */
 data class Rect(
     val left: Int,
     val top: Int,
@@ -68,16 +65,9 @@ data class Rect(
 }
 
 // ============================================================================
-// Observation – a single screen capture (tree + optional screenshot)
+// Observation
 // ============================================================================
 
-/**
- * A full snapshot of the current screen state observed via the
- * accessibility service.
- *
- * @property id Unique identifier for this observation.  Node IDs are
- *   only valid within this specific observation.
- */
 data class AndroidObservation(
     val id: String,
     val packageName: String?,
@@ -89,22 +79,13 @@ data class AndroidObservation(
 )
 
 // ============================================================================
-// Event history – immutable records of everything that happened
+// Events — what the UI displays
 // ============================================================================
 
-/**
- * A single immutable event in the agent's execution timeline.
- *
- * Each subclass records one type of occurrence (tool call, observation,
- * model response, user message, status change, or error).  The
- * [stepNumber] field ties events to the agent's step counter so that
- * the UI can display a chronological timeline.
- */
 sealed class AgentEvent {
     abstract val timestamp: Long
     abstract val stepNumber: Int
 
-    /** A tool was executed and returned a result. */
     data class ToolExecution(
         override val timestamp: Long = System.currentTimeMillis(),
         override val stepNumber: Int,
@@ -113,14 +94,12 @@ sealed class AgentEvent {
         val result: ToolResult
     ) : AgentEvent()
 
-    /** The agent observed the screen (accessibility tree + optional screenshot). */
     data class Observation(
         override val timestamp: Long = System.currentTimeMillis(),
         override val stepNumber: Int,
         val summary: String
     ) : AgentEvent()
 
-    /** The model returned a decision (tool_call, message, finish, …). */
     data class ModelResponse(
         override val timestamp: Long = System.currentTimeMillis(),
         override val stepNumber: Int,
@@ -128,14 +107,12 @@ sealed class AgentEvent {
         val content: String
     ) : AgentEvent()
 
-    /** The user replied to an [ask_user] pause. */
     data class UserMessage(
         override val timestamp: Long = System.currentTimeMillis(),
         override val stepNumber: Int,
         val text: String
     ) : AgentEvent()
 
-    /** The agent's status changed (e.g. THINKING → EXECUTING). */
     data class StatusChange(
         override val timestamp: Long = System.currentTimeMillis(),
         override val stepNumber: Int,
@@ -143,7 +120,6 @@ sealed class AgentEvent {
         val to: AgentStatus
     ) : AgentEvent()
 
-    /** An error occurred during a step. */
     data class Error(
         override val timestamp: Long = System.currentTimeMillis(),
         override val stepNumber: Int,
@@ -152,25 +128,17 @@ sealed class AgentEvent {
 }
 
 // ============================================================================
-// Top-level agent state – the single source of truth for the UI
+// Top-level agent state
 // ============================================================================
 
-/**
- * Holds the full mutable state of the running agent.
- *
- * This is exposed as a `StateFlow<AgentState>` from [AgentRuntime] and
- * observed by the Compose UI.  Every field is a `val` so that the state
- * can only be updated by replacing the entire object via `copy()`,
- * ensuring thread-safe reads from the UI thread.
- */
 data class AgentState(
     val goal: String = "",
     val status: AgentStatus = AgentStatus.IDLE,
     val stepNumber: Int = 0,
-    val maxSteps: Int = 50,
+    val maxSteps: Int = 500,
+    val mode: AgentMode = AgentMode.AGENT,
     val currentPackage: String? = null,
     val lastObservation: AndroidObservation? = null,
-    /** Bounded event history – oldest events are trimmed first. */
     val history: List<AgentEvent> = emptyList(),
     val currentObservationId: String? = null,
     val pendingConfirmation: PendingConfirmation? = null,
@@ -178,25 +146,31 @@ data class AgentState(
     val modelLatencyMs: Long = 0,
     val lastError: String? = null,
     val startTime: Long? = null,
-    val endTime: Long? = null
+    val endTime: Long? = null,
+    /** Multi-turn chat history for LLM context. */
+    val chatHistory: List<GemmaClient.ChatMessage> = emptyList(),
+    /** Total planned steps (for progress display). */
+    val totalPlannedSteps: Int = 0
 ) {
-    /** True when the agent loop is still actively running. */
     val isRunning: Boolean get() = status.isActive
 
-    /** Milliseconds elapsed since the task started, or null if not started. */
     val durationMs: Long? get() = if (startTime != null) {
         (endTime ?: System.currentTimeMillis()) - startTime
     } else null
 
-    companion object {
-        /** Maximum number of history events retained. */
-        const val MAX_HISTORY_SIZE = 200
+    /** Duration formatted as M:SS */
+    val durationFormatted: String get() {
+        val ms = durationMs ?: return "0:00"
+        val totalSec = ms / 1000
+        val min = totalSec / 60
+        val sec = totalSec % 60
+        return "$min:${sec.toString().padStart(2, '0')}"
     }
 
-    /**
-     * Append an event, trimming the oldest events if the history exceeds
-     * [MAX_HISTORY_SIZE].
-     */
+    companion object {
+        const val MAX_HISTORY_SIZE = 500
+    }
+
     fun withEvent(event: AgentEvent): AgentState {
         val updated = history + event
         val trimmed = if (updated.size > MAX_HISTORY_SIZE) {
@@ -208,7 +182,6 @@ data class AgentState(
     }
 }
 
-/** A tool call that is waiting for user safety-confirmation. */
 data class PendingConfirmation(
     val toolName: String,
     val arguments: String,

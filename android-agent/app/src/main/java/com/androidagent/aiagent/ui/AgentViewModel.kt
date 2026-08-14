@@ -17,6 +17,7 @@ import com.androidagent.aiagent.data.AppDatabase
 import com.androidagent.aiagent.data.SecureStorage
 import com.androidagent.aiagent.data.SettingsRepository
 import com.androidagent.aiagent.data.TaskRepository
+import com.androidagent.aiagent.data.UserMemory
 import com.androidagent.aiagent.safety.ConfirmationManager
 import com.androidagent.aiagent.safety.SafetyController
 import com.androidagent.aiagent.service.AgentForegroundService
@@ -40,6 +41,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     private val context = application.applicationContext
     private val secureStorage = SecureStorage(context)
     val settingsRepository: SettingsRepository = SettingsRepository(context, secureStorage)
+    private val userMemory = UserMemory(context)
 
     private val accessibilityObserver = AccessibilityObserver()
     private val gemmaClient = GemmaClient(settingsRepository)
@@ -48,9 +50,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     private val confirmationManager = ConfirmationManager()
     private val safetyController = SafetyController(confirmationManager)
 
-    private val toolHandlers: Map<String, ToolHandler> by lazy {
-        buildToolHandlers()
-    }
+    private val toolHandlers: Map<String, ToolHandler> by lazy { buildToolHandlers() }
 
     private val toolExecutor = ToolExecutor(
         accessibilityObserver = accessibilityObserver,
@@ -61,14 +61,12 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     private val database: AppDatabase = Room.databaseBuilder(
-        context,
-        AppDatabase::class.java,
-        "android_agent_db"
+        context, AppDatabase::class.java, "android_agent_db"
     ).build()
 
     val taskRepository: TaskRepository = TaskRepository(database)
 
-    val agentRuntime: AgentRuntime = AgentRuntime(
+    private val agentRuntime = AgentRuntime(
         gemmaClient = gemmaClient,
         toolRegistry = toolRegistry,
         toolExecutor = toolExecutor,
@@ -132,35 +130,48 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         tools.forEach { toolRegistry.register(it) }
     }
 
-    private fun buildToolHandlers(): Map<String, ToolHandler> {
-        return mapOf(
-            LaunchAppTool.TOOL_NAME to LaunchAppTool(),
-            FindTool.TOOL_NAME to FindTool(),
-            ClickTool.TOOL_NAME to ClickTool(),
-            LongClickTool.TOOL_NAME to LongClickTool(),
-            TypeTextTool.TOOL_NAME to TypeTextTool(),
-            ClearTextTool.TOOL_NAME to ClearTextTool(),
-            ScrollTool.TOOL_NAME to ScrollTool(),
-            SwipeTool.TOOL_NAME to SwipeTool(),
-            PressKeyTool.TOOL_NAME to PressKeyTool(),
-            BackTool.TOOL_NAME to BackTool(),
-            HomeTool.TOOL_NAME to HomeTool(),
-            RecentsTool.TOOL_NAME to RecentsTool(),
-            WaitTool.TOOL_NAME to WaitTool(),
-            ScreenshotTool.TOOL_NAME to ScreenshotTool(),
-            InspectScreenTool.TOOL_NAME to InspectScreenTool(),
-            AnalyzeScreenTool.TOOL_NAME to AnalyzeScreenTool(visionAnalyzer),
-            FindVisualTargetTool.TOOL_NAME to FindVisualTargetTool(visionAnalyzer),
-            AskUserTool.TOOL_NAME to AskUserTool(),
-            ConfirmTool.TOOL_NAME to ConfirmTool(),
-            FinishTool.TOOL_NAME to FinishTool(),
-            StopTool.TOOL_NAME to StopTool()
-        )
-    }
+    private fun buildToolHandlers(): Map<String, ToolHandler> = mapOf(
+        LaunchAppTool.TOOL_NAME to LaunchAppTool(),
+        FindTool.TOOL_NAME to FindTool(),
+        ClickTool.TOOL_NAME to ClickTool(),
+        LongClickTool.TOOL_NAME to LongClickTool(),
+        TypeTextTool.TOOL_NAME to TypeTextTool(),
+        ClearTextTool.TOOL_NAME to ClearTextTool(),
+        ScrollTool.TOOL_NAME to ScrollTool(),
+        SwipeTool.TOOL_NAME to SwipeTool(),
+        PressKeyTool.TOOL_NAME to PressKeyTool(),
+        BackTool.TOOL_NAME to BackTool(),
+        HomeTool.TOOL_NAME to HomeTool(),
+        RecentsTool.TOOL_NAME to RecentsTool(),
+        WaitTool.TOOL_NAME to WaitTool(),
+        ScreenshotTool.TOOL_NAME to ScreenshotTool(),
+        InspectScreenTool.TOOL_NAME to InspectScreenTool(),
+        AnalyzeScreenTool.TOOL_NAME to AnalyzeScreenTool(visionAnalyzer),
+        FindVisualTargetTool.TOOL_NAME to FindVisualTargetTool(visionAnalyzer),
+        AskUserTool.TOOL_NAME to AskUserTool(),
+        ConfirmTool.TOOL_NAME to ConfirmTool(),
+        FinishTool.TOOL_NAME to FinishTool(),
+        StopTool.TOOL_NAME to StopTool()
+    )
 
     fun startTask(goal: String) {
-        AgentForegroundService.start(context, goal)
-        agentRuntime.startTask(goal)
+        viewModelScope.launch {
+            val memoryBlock = userMemory.buildMemoryBlock()
+            AgentForegroundService.start(context, goal)
+            agentRuntime.startTask(goal, memoryBlock)
+        }
+    }
+
+    fun continueChat(message: String) {
+        viewModelScope.launch {
+            val memoryBlock = userMemory.buildMemoryBlock()
+            agentRuntime.continueChat(message, memoryBlock)
+        }
+    }
+
+    fun newChat() {
+        agentRuntime.newChat()
+        AgentForegroundService.stop(context)
     }
 
     fun stopAgent() {
@@ -168,23 +179,18 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         AgentForegroundService.stop(context)
     }
 
-    fun respondToUser(answer: String) {
-        agentRuntime.respondToUser(answer)
-    }
+    fun respondToUser(answer: String) = agentRuntime.respondToUser(answer)
 
-    fun respondToConfirmation(confirmed: Boolean) {
-        agentRuntime.respondToConfirmation(confirmed)
-    }
+    fun respondToConfirmation(confirmed: Boolean) = agentRuntime.respondToConfirmation(confirmed)
 
     fun isAccessibilityServiceEnabled(): Boolean {
         return try { AndroidAgentAccessibilityService.isConnected } catch (_: Exception) { false }
     }
 
     fun openAccessibilitySettings() {
-        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
+        })
     }
 
     override fun onCleared() {

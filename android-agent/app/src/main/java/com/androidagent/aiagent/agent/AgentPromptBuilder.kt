@@ -4,135 +4,105 @@ import com.androidagent.aiagent.accessibility.AccessibilityNodeMapper
 import com.androidagent.aiagent.tools.AgentTool
 
 /**
- * Constructs every prompt that the agent sends to the AI model.
+ * Constructs prompts for the AI agent.
  *
- * Design: System prompt is built once per task (tool catalogue is static).
- * User message is rebuilt every turn with live screen data.
- *
- * Prompt engineering inspired by Minitap mobile-use Cortex architecture,
- * adapted for single-agent on-device execution.
+ * v4.0: Supports user memory injection, dual chat/agent mode,
+ * and builds screen-state messages for multi-turn conversations.
  */
 class AgentPromptBuilder {
 
-    fun buildSystemPrompt(tools: List<AgentTool> = emptyList()): String {
+    fun buildSystemPrompt(tools: List<AgentTool> = emptyList(), memoryBlock: String = ""): String {
         val toolCatalogue = buildToolCatalogue(tools)
+        val memorySection = if (memoryBlock.isNotBlank()) "\n$memoryBlock\n" else ""
         return """
-            You are Android-Use, an AI agent that controls an Android phone on behalf of the user. You see the screen through accessibility services and interact via gestures and node actions.
+            You are Android-Use, an AI assistant that lives on the user's Android phone. You have two capabilities:
+
+            1. **Chat** — Answer questions, have conversations, be helpful. Just respond naturally.
+            2. **Agent** — Control the phone: tap, type, scroll, launch apps, etc.
+
+            **Decide which mode to use based on the user's message:**
+            - If the user asks a question, wants advice, or wants to chat → respond with {"type": "message", "content": "your response"}
+            - If the user wants you to DO something on the phone → use tools to control the device
+            - If the user is having a conversation through you (e.g. "tell my friend X on WhatsApp") → switch to agent mode and control WhatsApp
+
+            You see the phone screen through accessibility services. You can read the UI tree and take screenshots.
 
             ## Your Two Senses
 
-            1. **UI Hierarchy** — A snapshot of all visible UI elements. Each node has: node_id, text, contentDescription, resourceId, className, bounds (x,y,width,height), and flags (isClickable, isEditable, isScrollable, isFocusable).
-            2. **Screenshot** — A visual snapshot of the screen (included when the accessibility tree is insufficient).
+            1. **UI Hierarchy** — Every visible element: node_id, text, contentDescription, resourceId, className, bounds, flags.
+            2. **Screenshot** — Visual context when the accessibility tree is insufficient.
 
-            ## Element Targeting (MANDATORY FORMAT)
+            ## Element Targeting
 
-            When targeting an element, you MUST provide the most specific identifier available:
-            - **resourceId** (most reliable) — e.g. "com.whatsapp:id/send"
-            - **text** — the visible text label on the element
-            - **bounds** — {"x": N, "y": N, "width": N, "height": N}
-            - **node_id** — from the current observation's UI tree (ONLY valid within that observation)
-
-            Always prefer resourceId > text > bounds > node_id.
-
-            ## Fallback Strategy
-
-            If an action fails with NODE_NOT_FOUND:
-            1. The system automatically re-observes and retries once — do NOT manually retry.
-            2. If it still fails, try a DIFFERENT targeting method (e.g. switch from node_id to bounds coordinates).
-            3. If all methods fail, the element may not be visible — try scrolling first.
+            Always provide the most specific identifier: resourceId > text > bounds > node_id.
+            If an action fails, try a different targeting method (e.g. switch from node_id to bounds).
 
             ## Critical Rules
 
-            1. **Observe before acting** — The UI tree is provided each turn. Use it to find correct targets.
-            2. **Never reuse old node_ids** — When the screen changes, ALL previous node_ids become invalid.
-            3. **One logical step at a time** — Do not chain many actions. Observe the result before the next step.
-            4. **Never assume success** — Verify results on screen before claiming completion.
-            5. **Isolate unpredictable actions** — `back`, `launch_app`, `stop_app`, `open_link` must be the ONLY action in that turn. Wait for the screen to settle after these.
-            6. **Never repeat failed actions** — If an action fails, understand WHY before trying again. Try a different approach.
-            7. **Complete goals ONLY on evidence** — Only finish when you have OBSERVED the desired result on screen.
-            8. **Swipe physics** — Swiping RIGHT reveals content from the LEFT. Swiping DOWN reveals content below.
-            9. **Form filling** — Scroll through the entire form before concluding a field is missing.
-            10. **Use Settings app** — For system configurations, launch Settings via `android.launch_app` (app_name: "Settings") and navigate with UI tools.
-            11. **Vision as fallback** — Use vision tools ONLY when accessibility info is insufficient (images, maps, custom views).
-            12. **Loop detection** — If you detect you are repeating actions, try a completely different strategy.
-
+            1. **Never reuse old node_ids** — they become invalid when the screen changes.
+            2. **One step at a time** — act, observe the result, then decide next.
+            3. **Never assume success** — verify on screen before claiming completion.
+            4. **Isolate navigation actions** — back/launch_app/open_link must be the ONLY action in that turn.
+            5. **Never repeat failed actions** — understand WHY, then try something different.
+            6. **Complete goals ONLY on evidence** — only finish when you SEE the result.
+            7. **Don't close apps unnecessarily** — if an app is already open, use it. Don't close and reopen.
+            8. **Handle loops intelligently** — if stuck, try scrolling, going back, or a different approach.
+            9. **For conversations** — read the chat messages on screen, understand context, then type appropriate replies.
+            10. **Swipe physics** — swiping RIGHT reveals LEFT content. Swiping DOWN reveals content below.
+            $memorySection
             $toolCatalogue
 
             ## Response Format
 
-            Return STRICTLY a single JSON object. No markdown, no explanation, no extra text.
+            Return STRICTLY a single JSON object. No markdown.
 
-            To call a tool:
-            {"type": "tool_call", "tool_name": "<exact tool name>", "arguments": {<key>: <value>, ...}}
+            To just respond (chat mode):
+            {"type": "message", "content": "your natural response"}
 
-            To send a status message (does NOT end the turn):
-            {"type": "message", "content": "<your message>"}
+            To control the device (agent mode):
+            {"type": "tool_call", "tool_name": "<tool>", "arguments": {<params>}}
 
-            To ask the user a question (pauses agent):
-            {"type": "ask_user", "question": "<your question>"}
+            To ask the user:
+            {"type": "ask_user", "question": "<question>"}
 
-            To finish the task:
+            To finish:
             {"type": "finish", "success": true|false, "message": "<summary>"}
         """.trimIndent()
     }
 
-    fun buildUserMessage(
-        goal: String,
+    /**
+     * Build just the screen state portion (sent as the latest user message
+     * in the multi-turn conversation). History is managed by the runtime.
+     */
+    fun buildScreenState(
         observation: AndroidObservation?,
-        history: List<AgentEvent>,
-        loopWarning: String? = null,
-        maxHistoryEvents: Int = 8
+        loopWarning: String? = null
     ): String {
         val sb = StringBuilder(8192)
 
-        // Task
-        sb.appendLine("## Task")
-        sb.appendLine(goal)
-        sb.appendLine()
-
-        // Screen state
+        sb.appendLine("## Current Screen")
         if (observation != null) {
-            sb.appendLine("## Screen")
             sb.appendLine("Package: ${observation.packageName ?: "unknown"}")
             if (!observation.windowTitle.isNullOrBlank()) {
                 sb.appendLine("Title: ${observation.windowTitle}")
             }
             sb.appendLine("Observation: ${observation.id}")
             sb.appendLine()
-
             sb.appendLine("### UI Tree")
             sb.appendLine(AccessibilityNodeMapper.serializeCompact(observation.uiTree))
-            sb.appendLine()
         } else {
-            sb.appendLine("## Screen")
-            sb.appendLine("(No observation available)")
-            sb.appendLine()
+            sb.appendLine("(No screen data available)")
         }
 
-        // Compact action history
-        val recentActions = history
-            .filterIsInstance<AgentEvent.ToolExecution>()
-            .takeLast(maxHistoryEvents)
-        if (recentActions.isNotEmpty()) {
-            sb.appendLine("### Action History")
-            for (event in recentActions) {
-                val status = if (event.result.success) "OK" else "FAIL"
-                val detail = event.result.error?.let { ": ${it.message}" } ?: ""
-                sb.appendLine("- ${event.toolName} -> $status$detail")
-            }
-            sb.appendLine()
-        }
-
-        // Loop warning
         if (loopWarning != null) {
-            sb.appendLine("### WARNING: Loop Detected")
-            sb.appendLine(loopWarning)
-            sb.appendLine("You MUST choose a DIFFERENT action immediately.")
             sb.appendLine()
+            sb.appendLine("### LOOP DETECTED")
+            sb.appendLine(loopWarning)
+            sb.appendLine("You MUST try a completely different approach NOW.")
         }
 
-        sb.append("Decide your next action. Return a single JSON object.")
-
+        sb.appendLine()
+        sb.append("Decide your next action.")
         return sb.toString()
     }
 
@@ -148,15 +118,8 @@ class AgentPromptBuilder {
             if (dot >= 0) tool.name.substring(0, dot) else "other"
         }
 
-        val sectionTitles = mapOf(
-            "android" to "### Device Control",
-            "vision"  to "### Vision (fallback only)",
-            "agent"   to "### Agent Control",
-            "other"   to "### Other"
-        )
-
         for ((group, groupTools) in grouped) {
-            sb.appendLine(sectionTitles[group] ?: "### $group")
+            sb.appendLine("### ${group.replaceFirstChar { it.uppercase() }}")
             for (tool in groupTools) {
                 sb.appendLine("- `${tool.name}` — ${tool.description}")
             }
@@ -170,32 +133,32 @@ class AgentPromptBuilder {
         private val DEFAULT_TOOL_CATALOGUE = """
             ## Available Tools
 
-            ### Device Control
-            - `android.click` — Tap a UI element by node_id or x,y coordinates.
-            - `android.long_click` — Long-press a UI element by node_id or x,y coordinates.
-            - `android.type_text` — Type text into a field (multiple fallback strategies).
-            - `android.clear_text` — Clear text from a field.
-            - `android.scroll` — Scroll a container or screen up/down.
-            - `android.swipe` — Swipe gesture in any direction.
-            - `android.launch_app` — Launch an app by package name or app_name.
-            - `android.back` — Press system back button.
-            - `android.home` — Press home button.
-            - `android.recents` — Open recent apps.
-            - `android.press_key` — Press a system key (ENTER, BACK, TAB, SPACE).
-            - `android.wait` — Wait for a specified time in milliseconds.
-            - `android.screenshot` — Take a screenshot (returns base64 JPEG).
-            - `android.inspect_screen` — Capture the full accessibility UI tree.
-            - `android.find` — Search the UI tree for nodes by text, description, or resource ID.
+            ### Android
+            - `android.click` — Tap by node_id or x,y.
+            - `android.long_click` — Long-press by node_id or x,y.
+            - `android.type_text` — Type text (multiple strategies).
+            - `android.clear_text` — Clear text field.
+            - `android.scroll` — Scroll up/down.
+            - `android.swipe` — Swipe in any direction.
+            - `android.launch_app` — Launch app by name or package.
+            - `android.back` — System back.
+            - `android.home` — Home button.
+            - `android.recents` — Recent apps.
+            - `android.press_key` — Press ENTER, BACK, TAB, SPACE.
+            - `android.wait` — Wait (ms).
+            - `android.screenshot` — Take screenshot.
+            - `android.inspect_screen` — Full UI tree.
+            - `android.find` — Search UI tree.
 
             ### Vision
-            - `vision.analyze_screen` — Describe visible UI elements via screenshot.
-            - `vision.find_visual_target` — Find a visual element on screen by description.
+            - `vision.analyze_screen` — Describe screen visually.
+            - `vision.find_visual_target` — Find element by description.
 
-            ### Agent Control
-            - `agent.ask_user` — Ask the user a question (pauses agent).
-            - `agent.confirm` — Request user confirmation for a sensitive action.
-            - `agent.finish` — Signal task completion.
-            - `agent.stop` — Stop the agent immediately.
+            ### Agent
+            - `agent.ask_user` — Ask user (pauses).
+            - `agent.confirm` — Request confirmation.
+            - `agent.finish` — Complete task.
+            - `agent.stop` — Stop immediately.
         """.trimIndent()
     }
 }

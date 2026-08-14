@@ -26,7 +26,7 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
           mkdir -p release-assets
-          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v3.1.0.apk
+          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v4.0.0.apk
           cd release-assets && sha256sum *.apk > SHA256SUMS.txt && ls -lh
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -39,29 +39,31 @@ jobs:
         if: success()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.1.0
-          name: Android-Use v3.1.0
+          tag_name: v4.0.0
+          name: Android-Use v4.0.0
           token: ${{ secrets.PAT_TOKEN }}
           body: |
-            # Android-Use v3.1.0
+            # Android-Use v4.0.0 — Manus-inspired Rewrite
             ## What's New
-            - **Professional system prompt** — inspired by Minitap mobile-use Cortex architecture
-            - **Clean consumer UI** — no internal messages (observation, model response) shown to users
-            - **User-friendly action cards** — "Opened WhatsApp" instead of "android.launch_app"
-            - **Faster agent loop** — reduced model retries, post-action settle delay, vision optimization
-            - **Background execution** — foreground service keeps agent alive like Spotify
-            - **Pulsing status indicator** — animated working state
-            - **Empty state** — helpful placeholder when no tasks run yet
+            - **Multi-turn conversation** — Full chat history sent to LLM for context continuity
+            - **User memory** — Agent remembers facts about you across sessions
+            - **Chat + Agent dual mode** — Auto-detects when to respond vs control device
+            - **Continue chat** — Send follow-up messages without losing context
+            - **New chat button** — Fresh start, memory preserved
+            - **Manus-style UI** — "Android-Use is using mobile..." status pill with timer
+            - **500 step limit** — Long tasks supported (WhatsApp conversations, etc.)
+            - **No app close loops** — Agent instructed not to close/reopen apps unnecessarily
+            - **Better loop recovery** — Different strategy instead of just warning
+            - **Example prompts** — Empty state shows usage examples
             
             ## Installation
-            1. Download Android-Use-v3.1.0.apk
+            1. Download Android-Use-v4.0.0.apk
             2. Settings > Security > Enable install from browser/source
             3. Install the APK
             4. Open app > Enable Accessibility > Enter your API details
             
             ## Compatibility
             - Android 9+ (minSdk 28), optimized for Android 15 (targetSdk 35)
-            - Works on all Android devices with Accessibility services
           files: android-agent/release-assets/*
           draft: false
           prerelease: false
