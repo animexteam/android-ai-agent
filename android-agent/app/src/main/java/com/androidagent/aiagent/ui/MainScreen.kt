@@ -524,28 +524,19 @@ private fun BottomInputBar(
                 }
 
                 // Text field
-                BasicTextField(
+                OutlinedTextField(
                     value = input,
                     onValueChange = onInputChange,
-                    modifier = Modifier.weight(1f).padding(vertical = 4.dp),
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        color = AppColors.TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Normal
-                    ),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.Primary),
-                    decorationBox = { innerTextField ->
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            if (input.isEmpty()) {
-                                Text(
-                                    "Ask Android-Use anything...",
-                                    color = AppColors.TextMuted,
-                                    fontSize = 15.sp
-                                )
-                            }
-                            innerTextField()
-                        }
-                    }
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Ask Android-Use anything...", color = AppColors.TextMuted, fontSize = 15.sp) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = AppColors.TextPrimary,
+                        unfocusedTextColor = AppColors.TextPrimary,
+                        focusedBorderColor = AppColors.Primary,
+                        unfocusedBorderColor = Color.Transparent,
+                        cursorColor = AppColors.Primary
+                    )
                 )
 
                 // Send / Stop button
@@ -625,7 +616,7 @@ private fun EmptyState() {
 
             // Suggestion chips
             val suggestions = listOf(
-                "Say Hello" to Icons.Default.WavingHand,
+                "Say Hello" to Icons.Default.EmojiEmotions,
                 "Open WhatsApp" to Icons.Default.Chat,
                 "Search YouTube" to Icons.Default.VideoLibrary,
                 "What is 15% of 847?" to Icons.Default.Calculate

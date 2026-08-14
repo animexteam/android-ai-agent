@@ -196,7 +196,8 @@ fun SettingsScreen(
                 subtitle = "Long-press home → Default Digital Assistant → Android-Use",
                 onClick = {
                     try {
-                        context.startActivity(Intent(Settings.ACTION_ASSIST)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                        val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+                        context.startActivity(intent)
                     } catch (_: Exception) {}
                 },
                 icon = Icons.Default.Assistant,

@@ -1,14 +1,18 @@
 package com.androidagent.aiagent.ui
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,7 +30,7 @@ class MainActivity : ComponentActivity() {
 
                 // Handle assist query from default assistant
                 val assistQuery = intent.getStringExtra("assist_query")
-                androidx.compose.runtime.LaunchedEffect(assistQuery) {
+                LaunchedEffect(assistQuery) {
                     if (!assistQuery.isNullOrBlank()) {
                         viewModel.startTask(assistQuery)
                     }
@@ -75,12 +79,7 @@ private fun AgentNavHost(
                 settingsRepository = viewModel.settingsRepository,
                 onBack = { navController.popBackStack() },
                 onClearMemory = {
-                    androidx.lifecycle.lifecycleScope.launch {
-                        // Clear memory handled through a simple toast
-                        android.widget.Toast.makeText(
-                            this@MainActivity, "Memory cleared", android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    Toast.makeText(this@MainActivity, "Memory cleared", Toast.LENGTH_SHORT).show()
                 }
             )
         }

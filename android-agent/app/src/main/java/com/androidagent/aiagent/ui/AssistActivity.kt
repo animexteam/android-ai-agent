@@ -12,15 +12,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-/**
- * Activity that handles the ASSIST intent so users can set
- * Android-Use as their default digital assistant.
- *
- * Triggered by long-pressing home button or swiping up from
- * the bottom corner on most Android devices.
- */
 class AssistActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,10 +24,7 @@ class AssistActivity : ComponentActivity() {
             AndroidAgentTheme {
                 AssistScreen(
                     onClose = { finish() },
-                    onOpenMain = {
-                        startActivity(Intent(this@AssistActivity, MainActivity::class.java))
-                        finish()
-                    }
+                    context = this@AssistActivity
                 )
             }
         }
@@ -42,9 +35,10 @@ class AssistActivity : ComponentActivity() {
 @Composable
 private fun AssistScreen(
     onClose: () -> Unit,
-    onOpenMain: () -> Unit
+    context: ComponentActivity
 ) {
     var input by remember { mutableStateOf("") }
+    val ctx = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -72,7 +66,7 @@ private fun AssistScreen(
                 "How can I help?",
                 color = AppColors.TextPrimary,
                 fontSize = 24.sp,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(24.dp))
             OutlinedTextField(
@@ -92,11 +86,11 @@ private fun AssistScreen(
             Button(
                 onClick = {
                     if (input.isNotBlank()) {
-                        val intent = Intent(this@AssistActivity, MainActivity::class.java).apply {
+                        val intent = Intent(ctx, MainActivity::class.java).apply {
                             putExtra("assist_query", input)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
-                        startActivity(intent)
+                        ctx.startActivity(intent)
                         onClose()
                     }
                 },

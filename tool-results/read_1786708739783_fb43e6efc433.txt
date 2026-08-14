@@ -1,0 +1,699 @@
+     1→package com.androidagent.aiagent.ui
+     2→
+     3→import androidx.compose.animation.AnimatedVisibility
+     4→import androidx.compose.foundation.background
+     5→import androidx.compose.foundation.clickable
+     6→import androidx.compose.foundation.layout.Arrangement
+     7→import androidx.compose.foundation.layout.Box
+     8→import androidx.compose.foundation.layout.Column
+     9→import androidx.compose.foundation.layout.Row
+    10→import androidx.compose.foundation.layout.Spacer
+    11→import androidx.compose.foundation.layout.fillMaxWidth
+    12→import androidx.compose.foundation.layout.height
+    13→import androidx.compose.foundation.layout.heightIn
+    14→import androidx.compose.foundation.layout.padding
+    15→import androidx.compose.foundation.layout.size
+    16→import androidx.compose.foundation.layout.width
+    17→import androidx.compose.foundation.rememberScrollState
+    18→import androidx.compose.foundation.verticalScroll
+    19→import androidx.compose.foundation.shape.CircleShape
+    20→import androidx.compose.foundation.shape.RoundedCornerShape
+    21→import androidx.compose.material.icons.Icons
+    22→import androidx.compose.material.icons.automirrored.filled.ArrowRight
+    23→import androidx.compose.material.icons.filled.CheckCircle
+    24→import androidx.compose.material.icons.filled.Close
+    25→import androidx.compose.material.icons.filled.Error
+    26→import androidx.compose.material.icons.filled.ExpandLess
+    27→import androidx.compose.material.icons.filled.ExpandMore
+    28→import androidx.compose.material.icons.filled.KeyboardArrowDown
+    29→import androidx.compose.material.icons.filled.PlayArrow
+    30→import androidx.compose.material.icons.filled.SettingsAccessibility
+    31→import androidx.compose.material.icons.filled.Timer
+    32→import androidx.compose.material3.AlertDialog
+    33→import androidx.compose.material3.Badge
+    34→import androidx.compose.material3.Button
+    35→import androidx.compose.material3.ButtonDefaults
+    36→import androidx.compose.material3.Card
+    37→import androidx.compose.material3.CardDefaults
+    38→import androidx.compose.material3.ExperimentalMaterial3Api
+    39→import androidx.compose.material3.Icon
+    40→import androidx.compose.material3.IconButton
+    41→import androidx.compose.material3.MaterialTheme
+    42→import androidx.compose.material3.OutlinedButton
+    43→import androidx.compose.material3.OutlinedTextField
+    44→import androidx.compose.material3.OutlinedTextFieldDefaults
+    45→import androidx.compose.material3.Text
+    46→import androidx.compose.material3.TextButton
+    47→import androidx.compose.runtime.Composable
+    48→import androidx.compose.runtime.getValue
+    49→import androidx.compose.runtime.mutableStateOf
+    50→import androidx.compose.runtime.remember
+    51→import androidx.compose.runtime.setValue
+    52→import androidx.compose.ui.Alignment
+    53→import androidx.compose.ui.Modifier
+    54→import androidx.compose.ui.draw.clip
+    55→import androidx.compose.ui.graphics.Color
+    56→import androidx.compose.ui.text.font.FontFamily
+    57→import androidx.compose.ui.text.font.FontWeight
+    58→import androidx.compose.ui.text.style.TextOverflow
+    59→import androidx.compose.ui.unit.dp
+    60→import androidx.compose.ui.unit.sp
+    61→import com.androidagent.aiagent.agent.AgentEvent
+    62→import com.androidagent.aiagent.agent.AgentStatus
+    63→import com.androidagent.aiagent.agent.PendingConfirmation
+    64→
+    65→@Composable
+    66→fun AgentStatusBar(
+    67→    status: AgentStatus,
+    68→    stepNumber: Int,
+    69→    maxSteps: Int,
+    70→    modelLatencyMs: Long
+    71→) {
+    72→    val statusColor = when (status) {
+    73→        AgentStatus.IDLE -> AppColors.Secondary
+    74→        AgentStatus.THINKING -> AppColors.Primary
+    75→        AgentStatus.EXECUTING -> AppColors.Warning
+    76→        AgentStatus.WAITING_FOR_USER -> AppColors.Primary
+    77→        AgentStatus.WAITING_FOR_CONFIRMATION -> AppColors.Warning
+    78→        AgentStatus.VERIFYING -> AppColors.Primary
+    79→        AgentStatus.COMPLETED -> AppColors.Success
+    80→        AgentStatus.FAILED -> AppColors.Error
+    81→        AgentStatus.CANCELLED -> AppColors.Secondary
+    82→    }
+    83→
+    84→    val statusLabel = when (status) {
+    85→        AgentStatus.IDLE -> "Idle"
+    86→        AgentStatus.THINKING -> "Thinking..."
+    87→        AgentStatus.EXECUTING -> "Executing..."
+    88→        AgentStatus.WAITING_FOR_USER -> "Waiting for Input"
+    89→        AgentStatus.WAITING_FOR_CONFIRMATION -> "Needs Confirmation"
+    90→        AgentStatus.VERIFYING -> "Verifying..."
+    91→        AgentStatus.COMPLETED -> "Completed"
+    92→        AgentStatus.FAILED -> "Failed"
+    93→        AgentStatus.CANCELLED -> "Cancelled"
+    94→    }
+    95→
+    96→    Card(
+    97→        modifier = Modifier
+    98→            .fillMaxWidth()
+    99→            .padding(horizontal = 16.dp, vertical = 4.dp),
+   100→        colors = CardDefaults.cardColors(
+   101→            containerColor = AppColors.SurfaceVariant
+   102→        ),
+   103→        shape = RoundedCornerShape(12.dp)
+   104→    ) {
+   105→        Row(
+   106→            modifier = Modifier
+   107→                .fillMaxWidth()
+   108→                .padding(horizontal = 16.dp, vertical = 10.dp),
+   109→            verticalAlignment = Alignment.CenterVertically,
+   110→            horizontalArrangement = Arrangement.spacedBy(16.dp)
+   111→        ) {
+   112→            Row(
+   113→                verticalAlignment = Alignment.CenterVertically,
+   114→                horizontalArrangement = Arrangement.spacedBy(8.dp)
+   115→            ) {
+   116→                Box(
+   117→                    modifier = Modifier
+   118→                        .size(8.dp)
+   119→                        .clip(CircleShape)
+   120→                        .background(statusColor)
+   121→                )
+   122→                Text(
+   123→                    text = statusLabel,
+   124→                    style = MaterialTheme.typography.labelLarge,
+   125→                    color = statusColor,
+   126→                    fontWeight = FontWeight.SemiBold
+   127→                )
+   128→            }
+   129→
+   130→            Spacer(modifier = Modifier.weight(1f))
+   131→
+   132→            Row(
+   133→                verticalAlignment = Alignment.CenterVertically,
+   134→                horizontalArrangement = Arrangement.spacedBy(4.dp)
+   135→            ) {
+   136→                Icon(
+   137→                    imageVector = Icons.Default.PlayArrow,
+   138→                    contentDescription = "Steps",
+   139→                    modifier = Modifier.size(14.dp),
+   140→                    tint = AppColors.TextSecondary
+   141→                )
+   142→                Text(
+   143→                    text = "$stepNumber/$maxSteps",
+   144→                    style = MaterialTheme.typography.labelMedium,
+   145→                    color = AppColors.TextSecondary
+   146→                )
+   147→            }
+   148→
+   149→            Spacer(modifier = Modifier.width(8.dp))
+   150→
+   151→            Row(
+   152→                verticalAlignment = Alignment.CenterVertically,
+   153→                horizontalArrangement = Arrangement.spacedBy(4.dp)
+   154→            ) {
+   155→                Icon(
+   156→                    imageVector = Icons.Default.Timer,
+   157→                    contentDescription = "Latency",
+   158→                    modifier = Modifier.size(14.dp),
+   159→                    tint = AppColors.TextSecondary
+   160→                )
+   161→                Text(
+   162→                    text = "${modelLatencyMs}ms",
+   163→                    style = MaterialTheme.typography.labelMedium,
+   164→                    color = AppColors.TextSecondary
+   165→                )
+   166→            }
+   167→        }
+   168→    }
+   169→}
+   170→
+   171→@OptIn(ExperimentalMaterial3Api::class)
+   172→@Composable
+   173→fun EventCard(
+   174→    event: AgentEvent,
+   175→    expanded: Boolean,
+   176→    onToggle: () -> Unit
+   177→) {
+   178→    val (icon, iconColor, title) = when (event) {
+   179→        is AgentEvent.ToolExecution -> {
+   180→            val isSuccess = event.result.success
+   181→            Triple(
+   182→                if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Error,
+   183→                if (isSuccess) AppColors.Success else AppColors.Error,
+   184→                "Tool: ${event.toolName}"
+   185→            )
+   186→        }
+   187→        is AgentEvent.Observation -> Triple(
+   188→            Icons.Default.KeyboardArrowDown,
+   189→            AppColors.Primary,
+   190→            "Observation"
+   191→        )
+   192→        is AgentEvent.ModelResponse -> Triple(
+   193→            Icons.AutoMirrored.Filled.ArrowRight,
+   194→            AppColors.Primary,
+   195→            "Model: ${event.decisionType}"
+   196→        )
+   197→        is AgentEvent.UserMessage -> Triple(
+   198→            Icons.Default.KeyboardArrowDown,
+   199→            AppColors.Primary,
+   200→            "User: ${event.text.take(50)}"
+   201→        )
+   202→        is AgentEvent.StatusChange -> Triple(
+   203→            Icons.Default.KeyboardArrowDown,
+   204→            AppColors.Secondary,
+   205→            "${event.from} → ${event.to}"
+   206→        )
+   207→        is AgentEvent.Error -> Triple(
+   208→            Icons.Default.Error,
+   209→            AppColors.Error,
+   210→            event.message.take(80)
+   211→        )
+   212→    }
+   213→
+   214→    Card(
+   215→        modifier = Modifier
+   216→            .fillMaxWidth()
+   217→            .padding(horizontal = 16.dp, vertical = 2.dp)
+   218→            .clickable { onToggle() },
+   219→        colors = CardDefaults.cardColors(
+   220→            containerColor = AppColors.Surface
+   221→        ),
+   222→        shape = RoundedCornerShape(12.dp)
+   223→    ) {
+   224→        Column(
+   225→            modifier = Modifier.padding(12.dp)
+   226→        ) {
+   227→            Row(
+   228→                modifier = Modifier.fillMaxWidth(),
+   229→                verticalAlignment = Alignment.CenterVertically
+   230→            ) {
+   231→                Icon(
+   232→                    imageVector = icon,
+   233→                    contentDescription = null,
+   234→                    tint = iconColor,
+   235→                    modifier = Modifier.size(18.dp)
+   236→                )
+   237→                Spacer(modifier = Modifier.width(8.dp))
+   238→                Text(
+   239→                    text = title,
+   240→                    style = MaterialTheme.typography.bodyMedium,
+   241→                    color = AppColors.TextPrimary,
+   242→                    maxLines = 1,
+   243→                    overflow = TextOverflow.Ellipsis,
+   244→                    modifier = Modifier.weight(1f)
+   245→                )
+   246→                Text(
+   247→                    text = "Step ${event.stepNumber}",
+   248→                    style = MaterialTheme.typography.labelSmall,
+   249→                    color = AppColors.TextMuted
+   250→                )
+   251→                Spacer(modifier = Modifier.width(4.dp))
+   252→                Icon(
+   253→                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+   254→                    contentDescription = if (expanded) "Collapse" else "Expand",
+   255→                    tint = AppColors.TextSecondary,
+   256→                    modifier = Modifier.size(18.dp)
+   257→                )
+   258→            }
+   259→
+   260→            AnimatedVisibility(visible = expanded) {
+   261→                Column(
+   262→                    modifier = Modifier.padding(top = 8.dp)
+   263→                ) {
+   264→                    when (event) {
+   265→                        is AgentEvent.ToolExecution -> ToolExecutionDetail(event)
+   266→                        is AgentEvent.Observation -> {
+   267→                            Text(
+   268→                                text = event.summary,
+   269→                                style = MaterialTheme.typography.bodySmall,
+   270→                                color = AppColors.TextSecondary,
+   271→                                fontFamily = FontFamily.Monospace
+   272→                            )
+   273→                        }
+   274→                        is AgentEvent.ModelResponse -> {
+   275→                            Text(
+   276→                                text = event.content,
+   277→                                style = MaterialTheme.typography.bodySmall,
+   278→                                color = AppColors.TextSecondary
+   279→                            )
+   280→                        }
+   281→                        is AgentEvent.UserMessage -> {
+   282→                            Text(
+   283→                                text = event.text,
+   284→                                style = MaterialTheme.typography.bodySmall,
+   285→                                color = AppColors.TextSecondary
+   286→                            )
+   287→                        }
+   288→                        is AgentEvent.StatusChange -> {
+   289→                            Text(
+   290→                                text = "${event.from} → ${event.to}",
+   291→                                style = MaterialTheme.typography.bodySmall,
+   292→                                color = AppColors.TextSecondary
+   293→                            )
+   294→                        }
+   295→                        is AgentEvent.Error -> {
+   296→                            Text(
+   297→                                text = event.message,
+   298→                                style = MaterialTheme.typography.bodySmall,
+   299→                                color = AppColors.Error
+   300→                            )
+   301→                        }
+   302→                    }
+   303→                }
+   304→            }
+   305→        }
+   306→    }
+   307→}
+   308→
+   309→@Composable
+   310→fun ToolExecutionDetail(event: AgentEvent.ToolExecution) {
+   311→    val isSuccess = event.result.success
+   312→
+   313→    Column(
+   314→        verticalArrangement = Arrangement.spacedBy(6.dp)
+   315→    ) {
+   316→        Row(
+   317→            verticalAlignment = Alignment.CenterVertically,
+   318→            horizontalArrangement = Arrangement.spacedBy(8.dp)
+   319→        ) {
+   320→            Text(
+   321→                text = "Tool:",
+   322→                style = MaterialTheme.typography.labelSmall,
+   323→                color = AppColors.TextMuted,
+   324→                fontWeight = FontWeight.Bold
+   325→            )
+   326→            Text(
+   327→                text = event.toolName,
+   328→                style = MaterialTheme.typography.labelSmall,
+   329→                color = AppColors.Primary,
+   330→                fontWeight = FontWeight.Medium
+   331→            )
+   332→        }
+   333→
+   334→        Row(
+   335→            verticalAlignment = Alignment.CenterVertically,
+   336→            horizontalArrangement = Arrangement.spacedBy(8.dp)
+   337→        ) {
+   338→            Text(
+   339→                text = "Arguments:",
+   340→                style = MaterialTheme.typography.labelSmall,
+   341→                color = AppColors.TextMuted,
+   342→                fontWeight = FontWeight.Bold
+   343→            )
+   344→            Text(
+   345→                text = event.arguments,
+   346→                style = MaterialTheme.typography.labelSmall,
+   347→                color = AppColors.TextSecondary,
+   348→                fontFamily = FontFamily.Monospace
+   349→            )
+   350→        }
+   351→
+   352→        Row(
+   353→            verticalAlignment = Alignment.CenterVertically,
+   354→            horizontalArrangement = Arrangement.spacedBy(8.dp)
+   355→        ) {
+   356→            Text(
+   357→                text = "Status:",
+   358→                style = MaterialTheme.typography.labelSmall,
+   359→                color = AppColors.TextMuted,
+   360→                fontWeight = FontWeight.Bold
+   361→            )
+   362→            Badge(
+   363→                containerColor = if (isSuccess) AppColors.Success else AppColors.Error,
+   364→                contentColor = Color.White
+   365→            ) {
+   366→                Text(
+   367→                    text = if (isSuccess) "Success" else "Failed",
+   368→                    style = MaterialTheme.typography.labelSmall
+   369→                )
+   370→            }
+   371→        }
+   372→
+   373→        Column(
+   374→            verticalArrangement = Arrangement.spacedBy(4.dp)
+   375→        ) {
+   376→            Text(
+   377→                text = "Result:",
+   378→                style = MaterialTheme.typography.labelSmall,
+   379→                color = AppColors.TextMuted,
+   380→                fontWeight = FontWeight.Bold
+   381→            )
+   382→            Card(
+   383→                modifier = Modifier
+   384→                    .fillMaxWidth()
+   385→                    .heightIn(max = 200.dp),
+   386→                colors = CardDefaults.cardColors(
+   387→                    containerColor = AppColors.DarkBackground
+   388→                ),
+   389→                shape = RoundedCornerShape(8.dp)
+   390→            ) {
+   391→                Column(
+   392→                    modifier = Modifier
+   393→                        .verticalScroll(rememberScrollState())
+   394→                        .padding(12.dp)
+   395→                ) {
+   396→                    Text(
+   397→                        text = event.result.toString(),
+   398→                        style = MaterialTheme.typography.bodySmall,
+   399→                        color = AppColors.TextSecondary,
+   400→                        fontFamily = FontFamily.Monospace,
+   401→                        fontSize = 12.sp
+   402→                    )
+   403→                }
+   404→            }
+   405→        }
+   406→    }
+   407→}
+   408→
+   409→@Composable
+   410→fun ConfirmationDialog(
+   411→    confirmation: PendingConfirmation,
+   412→    onConfirm: () -> Unit,
+   413→    onDeny: () -> Unit
+   414→) {
+   415→    AlertDialog(
+   416→        onDismissRequest = onDeny,
+   417→        title = {
+   418→            Text(
+   419→                text = "Confirm Action",
+   420→                color = AppColors.TextPrimary,
+   421→                fontWeight = FontWeight.Bold
+   422→            )
+   423→        },
+   424→        text = {
+   425→            Column(
+   426→                verticalArrangement = Arrangement.spacedBy(12.dp)
+   427→            ) {
+   428→                Text(
+   429→                    text = "The agent wants to perform the following action:",
+   430→                    style = MaterialTheme.typography.bodyMedium,
+   431→                    color = AppColors.TextSecondary
+   432→                )
+   433→                Card(
+   434→                    colors = CardDefaults.cardColors(
+   435→                        containerColor = AppColors.SurfaceVariant
+   436→                    ),
+   437→                    shape = RoundedCornerShape(8.dp)
+   438→                ) {
+   439→                    Column(
+   440→                        modifier = Modifier.padding(12.dp),
+   441→                        verticalArrangement = Arrangement.spacedBy(8.dp)
+   442→                    ) {
+   443→                        Row {
+   444→                            Text(
+   445→                                text = "Tool: ",
+   446→                                fontWeight = FontWeight.Bold,
+   447→                                color = AppColors.TextMuted,
+   448→                                style = MaterialTheme.typography.bodyMedium
+   449→                            )
+   450→                            Text(
+   451→                                text = confirmation.toolName,
+   452→                                color = AppColors.Primary,
+   453→                                style = MaterialTheme.typography.bodyMedium,
+   454→                                fontWeight = FontWeight.SemiBold
+   455→                            )
+   456→                        }
+   457→                        if (confirmation.arguments.isNotBlank()) {
+   458→                            Row {
+   459→                                Text(
+   460→                                    text = "Args: ",
+   461→                                    fontWeight = FontWeight.Bold,
+   462→                                    color = AppColors.TextMuted,
+   463→                                    style = MaterialTheme.typography.bodyMedium
+   464→                                )
+   465→                                Text(
+   466→                                    text = confirmation.arguments,
+   467→                                    color = AppColors.TextSecondary,
+   468→                                    style = MaterialTheme.typography.bodyMedium,
+   469→                                    fontFamily = FontFamily.Monospace,
+   470→                                    maxLines = 4,
+   471→                                    overflow = TextOverflow.Ellipsis
+   472→                                )
+   473→                            }
+   474→                        }
+   475→                        if (confirmation.reason.isNotBlank()) {
+   476→                            Row {
+   477→                                Text(
+   478→                                    text = "Reason: ",
+   479→                                    fontWeight = FontWeight.Bold,
+   480→                                    color = AppColors.TextMuted,
+   481→                                    style = MaterialTheme.typography.bodyMedium
+   482→                                )
+   483→                                Text(
+   484→                                    text = confirmation.reason,
+   485→                                    color = AppColors.TextSecondary,
+   486→                                    style = MaterialTheme.typography.bodyMedium
+   487→                                )
+   488→                            }
+   489→                        }
+   490→                    }
+   491→                }
+   492→                Text(
+   493→                    text = "Step ${confirmation.stepNumber}",
+   494→                    style = MaterialTheme.typography.labelSmall,
+   495→                    color = AppColors.TextMuted
+   496→                )
+   497→            }
+   498→        },
+   499→        confirmButton = {
+   500→            Button(
+   501→                onClick = onConfirm,
+   502→                colors = ButtonDefaults.buttonColors(
+   503→                    containerColor = AppColors.Success
+   504→                )
+   505→            ) {
+   506→                Text("Confirm")
+   507→            }
+   508→        },
+   509→        dismissButton = {
+   510→            OutlinedButton(
+   511→                onClick = onDeny,
+   512→                colors = ButtonDefaults.outlinedButtonColors(
+   513→                    contentColor = AppColors.Error
+   514→                )
+   515→            ) {
+   516→                Text("Deny")
+   517→            }
+   518→        },
+   519→        containerColor = AppColors.Surface,
+   520→        shape = RoundedCornerShape(16.dp)
+   521→    )
+   522→}
+   523→
+   524→@Composable
+   525→fun UserQuestionDialog(
+   526→    question: String,
+   527→    onAnswer: (String) -> Unit,
+   528→    onDismiss: () -> Unit
+   529→) {
+   530→    var answerText by remember { mutableStateOf("") }
+   531→
+   532→    AlertDialog(
+   533→        onDismissRequest = onDismiss,
+   534→        title = {
+   535→            Text(
+   536→                text = "Agent Question",
+   537→                color = AppColors.TextPrimary,
+   538→                fontWeight = FontWeight.Bold
+   539→            )
+   540→        },
+   541→        text = {
+   542→            Column(
+   543→                verticalArrangement = Arrangement.spacedBy(12.dp)
+   544→            ) {
+   545→                Text(
+   546→                    text = question,
+   547→                    style = MaterialTheme.typography.bodyMedium,
+   548→                    color = AppColors.TextSecondary
+   549→                )
+   550→                OutlinedTextField(
+   551→                    value = answerText,
+   552→                    onValueChange = { answerText = it },
+   553→                    label = { Text("Your answer") },
+   554→                    placeholder = { Text("Type your answer...") },
+   555→                    singleLine = false,
+   556→                    maxLines = 4,
+   557→                    modifier = Modifier.fillMaxWidth(),
+   558→                    colors = OutlinedTextFieldDefaults.colors(
+   559→                        focusedTextColor = AppColors.TextPrimary,
+   560→                        unfocusedTextColor = AppColors.TextPrimary,
+   561→                        focusedBorderColor = AppColors.Primary,
+   562→                        unfocusedBorderColor = AppColors.TextMuted,
+   563→                        focusedLabelColor = AppColors.Primary,
+   564→                        cursorColor = AppColors.Primary
+   565→                    )
+   566→                )
+   567→            }
+   568→        },
+   569→        confirmButton = {
+   570→            Button(
+   571→                onClick = {
+   572→                    if (answerText.isNotBlank()) {
+   573→                        onAnswer(answerText)
+   574→                    }
+   575→                },
+   576→                enabled = answerText.isNotBlank(),
+   577→                colors = ButtonDefaults.buttonColors(
+   578→                    containerColor = AppColors.Primary
+   579→                )
+   580→            ) {
+   581→                Text("Submit")
+   582→            }
+   583→        },
+   584→        dismissButton = {
+   585→            TextButton(onClick = onDismiss) {
+   586→                Text("Cancel", color = AppColors.TextSecondary)
+   587→            }
+   588→        },
+   589→        containerColor = AppColors.Surface,
+   590→        shape = RoundedCornerShape(16.dp)
+   591→    )
+   592→}
+   593→
+   594→@Composable
+   595→fun AccessibilityStatusCard(
+   596→    isEnabled: Boolean,
+   597→    onEnable: () -> Unit
+   598→) {
+   599→    if (isEnabled) return
+   600→
+   601→    Card(
+   602→        modifier = Modifier
+   603→            .fillMaxWidth()
+   604→            .padding(horizontal = 16.dp, vertical = 8.dp),
+   605→        colors = CardDefaults.cardColors(
+   606→            containerColor = AppColors.Error.copy(alpha = 0.1f)
+   607→        ),
+   608→        shape = RoundedCornerShape(12.dp)
+   609→    ) {
+   610→        Row(
+   611→            modifier = Modifier
+   612→                .fillMaxWidth()
+   613→                .padding(16.dp),
+   614→            verticalAlignment = Alignment.CenterVertically,
+   615→            horizontalArrangement = Arrangement.spacedBy(12.dp)
+   616→        ) {
+   617→            Icon(
+   618→                imageVector = Icons.Default.SettingsAccessibility,
+   619→                contentDescription = "Accessibility",
+   620→                tint = AppColors.Warning,
+   621→                modifier = Modifier.size(24.dp)
+   622→            )
+   623→            Column(
+   624→                modifier = Modifier.weight(1f)
+   625→            ) {
+   626→                Text(
+   627→                    text = "Accessibility Service Required",
+   628→                    style = MaterialTheme.typography.titleSmall,
+   629→                    color = AppColors.TextPrimary,
+   630→                    fontWeight = FontWeight.SemiBold
+   631→                )
+   632→                Text(
+   633→                    text = "The agent needs accessibility permissions to interact with apps on your device.",
+   634→                    style = MaterialTheme.typography.bodySmall,
+   635→                    color = AppColors.TextSecondary
+   636→                )
+   637→            }
+   638→            Button(
+   639→                onClick = onEnable,
+   640→                colors = ButtonDefaults.buttonColors(
+   641→                    containerColor = AppColors.Warning
+   642→                )
+   643→            ) {
+   644→                Text("Enable", color = Color.Black)
+   645→            }
+   646→        }
+   647→    }
+   648→}
+   649→
+   650→@Composable
+   651→fun ErrorBanner(
+   652→    message: String,
+   653→    onDismiss: () -> Unit
+   654→) {
+   655→    Card(
+   656→        modifier = Modifier
+   657→            .fillMaxWidth()
+   658→            .padding(horizontal = 16.dp, vertical = 4.dp),
+   659→        colors = CardDefaults.cardColors(
+   660→            containerColor = AppColors.Error.copy(alpha = 0.15f)
+   661→        ),
+   662→        shape = RoundedCornerShape(12.dp)
+   663→    ) {
+   664→        Row(
+   665→            modifier = Modifier
+   666→                .fillMaxWidth()
+   667→                .padding(horizontal = 12.dp, vertical = 8.dp),
+   668→            verticalAlignment = Alignment.CenterVertically
+   669→        ) {
+   670→            Icon(
+   671→                imageVector = Icons.Default.Error,
+   672→                contentDescription = "Error",
+   673→                tint = AppColors.Error,
+   674→                modifier = Modifier.size(20.dp)
+   675→            )
+   676→            Spacer(modifier = Modifier.width(8.dp))
+   677→            Text(
+   678→                text = message,
+   679→                style = MaterialTheme.typography.bodySmall,
+   680→                color = AppColors.Error,
+   681→                modifier = Modifier.weight(1f),
+   682→                maxLines = 2,
+   683→                overflow = TextOverflow.Ellipsis
+   684→            )
+   685→            IconButton(
+   686→                onClick = onDismiss,
+   687→                modifier = Modifier.size(24.dp)
+   688→            ) {
+   689→                Icon(
+   690→                    imageVector = Icons.Default.Close,
+   691→                    contentDescription = "Dismiss",
+   692→                    tint = AppColors.Error,
+   693→                    modifier = Modifier.size(16.dp)
+   694→                )
+   695→            }
+   696→        }
+   697→    }
+   698→}
+   699→
