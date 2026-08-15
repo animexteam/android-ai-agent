@@ -16,7 +16,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.CancellationException
+import kotlinx.coroutines.CancellationException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 

@@ -31,7 +31,7 @@ class DismissNotificationTool : ToolHandler {
                 var dismissed = false
                 for (sbNotif in sbNotifs) {
                     if (sbNotif.key == key) {
-                        sbNotif.notification?.let { nm.cancel(sbNotif.id, sbNotif.notification.tag ?: "") }
+                        nm?.cancel(sbNotif.notification?.tag, sbNotif.id)
                         dismissed = true
                         break
                     }

@@ -27,9 +27,10 @@ class ReadFileTool : ToolHandler {
         return try {
             withContext(Dispatchers.IO) {
                 val file = if (path.startsWith("/")) java.io.File(path) else java.io.File(service.filesDir, path)
-                if (!file.exists())
-                    return ToolResult(success = false, toolName = TOOL_NAME,
+                if (!file.exists()) {
+                    ToolResult(success = false, toolName = TOOL_NAME,
                         error = ToolError(code = "FILE_NOT_FOUND", message = "File not found: $path"))
+                } else {
                 val text = file.readText().take(maxChars)
                 ToolResult(
                     success = true, toolName = TOOL_NAME,
@@ -39,6 +40,7 @@ class ReadFileTool : ToolHandler {
                     },
                     observationRequired = false
                 )
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to read file", e)

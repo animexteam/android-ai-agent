@@ -25,9 +25,10 @@ class ListFilesTool : ToolHandler {
         return try {
             withContext(Dispatchers.IO) {
                 val dir = java.io.File(path)
-                if (!dir.exists() || !dir.isDirectory)
-                    return ToolResult(success = false, toolName = TOOL_NAME,
+                if (!dir.exists() || !dir.isDirectory) {
+                    ToolResult(success = false, toolName = TOOL_NAME,
                         error = ToolError(code = "DIR_NOT_FOUND", message = "Directory not found: $path"))
+                } else {
                 val items = buildJsonArray {
                     val files = (dir.listFiles() ?: emptyArray()).sortedBy { it.name.lowercase() }.take(100)
                     for (f in files) {
@@ -47,6 +48,7 @@ class ListFilesTool : ToolHandler {
                     },
                     observationRequired = false
                 )
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to list files", e)

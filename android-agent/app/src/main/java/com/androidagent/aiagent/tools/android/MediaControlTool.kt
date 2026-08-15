@@ -33,8 +33,10 @@ class MediaControlTool : ToolHandler {
                     "next" -> KeyEvent.KEYCODE_MEDIA_NEXT
                     "previous", "prev" -> KeyEvent.KEYCODE_MEDIA_PREVIOUS
                     "stop" -> KeyEvent.KEYCODE_MEDIA_STOP
-                    else -> return ToolResult(success = false, toolName = TOOL_NAME,
+                    else -> {
+                        ToolResult(success = false, toolName = TOOL_NAME,
                         error = ToolError(code = "INVALID_ACTION", message = "Unknown action: $action"))
+                    }
                 }
                 val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, keycode)
                 val upEvent = KeyEvent(KeyEvent.ACTION_UP, keycode)
@@ -61,7 +63,7 @@ class MediaControlTool : ToolHandler {
                 put("properties", buildJsonObject {
                     put("action", buildJsonObject {
                         put("type", "string")
-                        put("enum", buildJsonArray { add("play"); add("pause"); add("next"); add("previous"); add("stop") })
+                        put("enum", buildJsonArray { add(JsonPrimitive("play")); add(JsonPrimitive("pause")); add(JsonPrimitive("next")); add(JsonPrimitive("previous")); add(JsonPrimitive("stop")) })
                         put("description", "Media action to perform")
                     })
                 })

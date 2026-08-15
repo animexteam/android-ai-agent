@@ -34,7 +34,7 @@ class GetNetworkInfoTool : ToolHandler {
                 val downstreamMbps = caps?.getLinkDownstreamBandwidthKbps()?.div(1000) ?: 0
                 val wifiManager = service.applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
                 val wifiInfo = wifiManager?.connectionInfo
-                val ssid = try { wifiInfo?.ssid?.removeSurrounding(String(charArrayOf(34))) } catch (_: Exception) { null }
+                val ssid = try { wifiInfo?.ssid?.removeSurrounding("\"") } catch (_: Exception) { null }
                 val ip = try { java.net.InetAddress.getByAddress(
                     java.math.BigInteger.valueOf(wifiInfo?.ipAddress?.toLong() ?: 0).toByteArray()
                 ).hostAddress } catch (_: Exception) { null }

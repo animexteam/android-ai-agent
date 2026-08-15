@@ -26,16 +26,18 @@ class DeleteFileTool : ToolHandler {
         return try {
             withContext(Dispatchers.IO) {
                 val file = java.io.File(path)
-                if (!file.exists())
-                    return ToolResult(success = false, toolName = TOOL_NAME,
+                if (!file.exists()) {
+                    ToolResult(success = false, toolName = TOOL_NAME,
                         error = ToolError(code = "FILE_NOT_FOUND", message = "File not found: $path"))
-                val deleted = file.deleteRecursively()
-                ToolResult(
-                    success = deleted, toolName = TOOL_NAME,
-                    result = if (deleted) buildJsonObject { put("path", path); put("action", "deleted") } else null,
-                    error = if (!deleted) ToolError(code = "DELETE_FAILED", message = "Could not delete: $path") else null,
-                    observationRequired = false
-                )
+                } else {
+                    val deleted = file.deleteRecursively()
+                    ToolResult(
+                        success = deleted, toolName = TOOL_NAME,
+                        result = if (deleted) buildJsonObject { put("path", path); put("action", "deleted") } else null,
+                        error = if (!deleted) ToolError(code = "DELETE_FAILED", message = "Could not delete: $path") else null,
+                        observationRequired = false
+                    )
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to delete file", e)

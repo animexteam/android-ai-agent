@@ -33,8 +33,8 @@ class GetBatteryInfoTool : ToolHandler {
                     else -> "unknown"
                 }
                 val batteryIntent = service.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-                val temperature = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0)?.div(10.0) ?: 0.0
-                val voltage = batteryIntent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0)?.div(1000.0) ?: 0.0
+                val temperature = (batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10.0 ?: 0.0
+                val voltage = (batteryIntent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0) / 1000.0 ?: 0.0
                 val health = when (batteryIntent?.getIntExtra(BatteryManager.EXTRA_HEALTH, BatteryManager.BATTERY_HEALTH_UNKNOWN)) {
                     BatteryManager.BATTERY_HEALTH_GOOD -> "good"
                     BatteryManager.BATTERY_HEALTH_OVERHEAT -> "overheat"
