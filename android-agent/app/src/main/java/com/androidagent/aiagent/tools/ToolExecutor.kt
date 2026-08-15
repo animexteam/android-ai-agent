@@ -119,7 +119,46 @@ class ToolExecutor(
             "android.visual_find"   to "vision.find_visual_target",
             // Agent
             "agent.ask"             to "agent.ask_user",
-            "agent.done"            to "agent.finish"
+            "agent.done"            to "agent.finish",
+            // New gestures
+            "android.double_tap"    to "android.double_click",
+            "android.double_click_tap" to "android.double_click",
+            "android.pinch"         to "android.pinch_zoom",
+            "android.zoom"          to "android.pinch_zoom",
+            "android.zoom_in"       to "android.pinch_zoom",
+            "android.zoom_out"      to "android.pinch_zoom",
+            "android.throw"         to "android.fling",
+            "android.throw_up"      to "android.fling",
+            "android.throw_down"    to "android.fling",
+            // System
+            "android.notifications"  to "android.open_notifications",
+            "android.notification_shade" to "android.open_notifications",
+            "android.quick_settings" to "android.open_quick_settings",
+            "android.quick_panel"   to "android.open_quick_settings",
+            "android.power"          to "android.power_menu",
+            "android.shutdown"       to "android.power_menu",
+            "android.lock"           to "android.lock_screen",
+            "android.split"          to "android.split_screen",
+            "android.volume_up"      to "android.volume",
+            "android.volume_down"    to "android.volume",
+            "android.mute"           to "android.volume",
+            "android.unmute"         to "android.volume",
+            // Text ops
+            "android.select"         to "android.select_all",
+            "android.copy"           to "android.copy_text",
+            "android.paste"          to "android.paste_text",
+            "android.clipboard"      to "android.set_clipboard",
+            "android.set_clip"       to "android.set_clipboard",
+            // Intents
+            "android.open_browser"  to "android.open_url",
+            "android.browse"         to "android.open_url",
+            "android.call"           to "android.make_call",
+            "android.dial"           to "android.make_call",
+            "android.sms"            to "android.send_sms",
+            "android.text_message"   to "android.send_sms",
+            "android.send_message"  to "android.send_sms",
+            "android.send"           to "android.share",
+            "android.share_text"     to "android.share"
         )
     }
 

@@ -5,8 +5,7 @@ import com.androidagent.aiagent.tools.AgentTool
 
 /**
  * Constructs prompts for the AI agent.
- *
- * v4.2: Improved number accuracy, better anti-loop, stronger chat/agent mode separation.
+ * v4.3: Complete tool catalogue with 38 tools.
  */
 class AgentPromptBuilder {
 
@@ -17,135 +16,84 @@ class AgentPromptBuilder {
             You are Android-Use, an AI assistant that lives on the user's Android phone. You have two modes:
 
             ## Mode 1: CHAT
-            When the user is just talking to you (greetings, questions, advice, casual conversation, math, jokes):
-            → Respond with: {"type": "message", "content": "your friendly response"}
-            → Do NOT use any tools. Do NOT observe the screen. Just respond naturally.
-            → Examples: "Hello", "What's 15% of 847?", "Tell me a joke", "How's the weather?"
+            When the user is just talking (greetings, questions, advice, jokes):
+            → Respond with: {"type": "message", "content": "your response"}
+            → Do NOT use tools.
 
             ## Mode 2: AGENT
-            When the user wants you to DO something on the phone (open apps, send messages, search, automate):
+            When the user wants you to DO something on the phone:
             → Use tools to control the device.
-            → You see the phone screen through accessibility services.
 
-            ## CRITICAL TEXT ACCURACY RULES
-            When using android.type_text, the 'text' field MUST contain EXACTLY the characters the user specified:
+            ## CRITICAL TEXT ACCURACY
+            When using android.type_text, the 'text' field MUST be EXACTLY what the user specified:
             - If user says "type 786687", the text field must be EXACTLY "786687"
-            - If user says "send Hello to Rahul", the text field must be EXACTLY "Hello"
-            - NEVER add extra characters, NEVER remove characters, NEVER reorder
-            - Copy the text character-by-character. Double-check every digit.
-            - This is the #1 accuracy requirement.
+            - NEVER add/remove/reorder characters.
 
-            ## CRITICAL ANTI-LOOP RULES
-            1. NEVER close an app and immediately reopen it. If an app is open, USE it.
-            2. NEVER repeat the same action more than 2 times. If something fails, TRY A DIFFERENT APPROACH.
-            3. NEVER assume what the screen shows — READ the UI tree carefully before acting.
-            4. If an element is not found, scroll to find it, or try a different targeting method.
-            5. Do NOT get stuck in probe loops — if you've tried clicking/scrolling 3 times without progress, STOP and reassess.
+            ## ANTI-LOOP RULES
+            1. NEVER close an app and immediately reopen it.
+            2. NEVER repeat the same action 3+ times. Try a DIFFERENT approach.
+            3. NEVER assume — READ the UI tree before acting.
+            4. If element not found, scroll or try different targeting.
 
-            ## MEMORY RULES
-            - User facts (name, preferences, contacts) are provided for context ONLY.
-            - Do NOT assume the user wants to repeat past actions.
-            - Each task starts fresh — treat every instruction as new.
+            ## ELEMENT TARGETING (priority order)
+            1. resourceId (most reliable)
+            2. text match
+            3. contentDescription
+            4. bounds (x,y)
+            5. node_id (last resort)
 
-            ## ELEMENT TARGETING
-            1. Use resourceId first (most reliable)
-            2. Then text match
-            3. Then contentDescription
-            4. Then bounds (x,y coordinates)
-            5. node_id as last resort (changes when screen updates)
-            If one method fails, try another.
-
-            ## SWIPE DIRECTION RULES
-            - Swipe RIGHT → reveals LEFT content (like opening a drawer)
-            - Swipe LEFT → reveals RIGHT content (like going to next page)
+            ## SWIPE DIRECTION
+            - Swipe RIGHT → reveals LEFT content
+            - Swipe LEFT → reveals RIGHT content
             - Swipe UP → reveals content BELOW
-            - Swipe DOWN → reveals content ABOVE (like pull-to-refresh)
+            - Swipe DOWN → reveals content ABOVE
 
-            ## TOOL USAGE
-            - One tool call per turn. Act, then observe the result.
-            - After navigation actions (back, launch_app), wait for the screen to load.
-            - For conversations (WhatsApp, Telegram): read existing messages, understand context, then type an appropriate reply.
-            - Only use agent.finish when you have EVIDENCE the task is complete.
+            ## APP LAUNCHING
+            - Use android.launch_app with 'app_name' (e.g. "YouTube", "WhatsApp") or 'package' (e.g. "com.whatsapp")
+            - Common app names are auto-resolved. If name fails, try 'package'.
+
+            ## TOOL RULES
+            - One tool call per turn.
+            - After navigation (back/launch), wait for screen load.
+            - Only use agent.finish when task is EVIDENTLY complete.
             $memorySection
             $toolCatalogue
 
             ## RESPONSE FORMAT
-
-            Return STRICTLY a single JSON object. No markdown, no extra text.
-
-            Chat response:
-            {"type": "message", "content": "your response"}
-
-            Control device:
-            {"type": "tool_call", "tool_name": "<tool>", "arguments": {<params>}}
-
-            Ask user:
-            {"type": "ask_user", "question": "<question>"}
-
-            Finish task:
-            {"type": "finish", "success": true|false, "message": "<summary>"}
+            Return STRICTLY a single JSON object. No markdown.
+            Chat: {"type": "message", "content": "..."}
+            Tool: {"type": "tool_call", "tool_name": "<tool>", "arguments": {<params>}}
+            Ask: {"type": "ask_user", "question": "..."}
+            Finish: {"type": "finish", "success": true|false, "message": "..."}
         """.trimIndent()
     }
 
-    fun buildScreenState(
-        observation: AndroidObservation?,
-        loopWarning: String? = null
-    ): String {
+    fun buildScreenState(observation: AndroidObservation?, loopWarning: String? = null): String {
         val sb = StringBuilder(8192)
-
         sb.appendLine("## Current Screen")
         if (observation != null) {
-            sb.appendLine("Package: ")
-            sb.appendLine(observation.packageName ?: "unknown")
-            if (!observation.windowTitle.isNullOrBlank()) {
-                sb.append("Title: ")
-                sb.appendLine(observation.windowTitle)
-            }
-            sb.append("Observation: ")
-            sb.appendLine(observation.id)
-            sb.appendLine()
-            sb.appendLine("### UI Tree")
-            sb.appendLine(AccessibilityNodeMapper.serializeCompact(observation.uiTree))
-        } else {
-            sb.appendLine("(No screen data available)")
-        }
-
+            sb.appendLine("Package: ").appendLine(observation.packageName ?: "unknown")
+            if (!observation.windowTitle.isNullOrBlank()) { sb.append("Title: ").appendLine(observation.windowTitle) }
+            sb.append("Observation: ").appendLine(observation.id).appendLine()
+            sb.appendLine("### UI Tree").appendLine(AccessibilityNodeMapper.serializeCompact(observation.uiTree))
+        } else { sb.appendLine("(No screen data)") }
         if (loopWarning != null) {
-            sb.appendLine()
-            sb.appendLine("### LOOP DETECTED - YOU MUST CHANGE YOUR APPROACH")
-            sb.appendLine(loopWarning)
-            sb.appendLine("Do NOT repeat the same action. Try something completely different.")
+            sb.appendLine().appendLine("### LOOP DETECTED").appendLine(loopWarning).appendLine("Try something completely different.")
         }
-
-        sb.appendLine()
-        sb.append("Decide your next action.")
+        sb.appendLine().append("Decide your next action.")
         return sb.toString()
     }
 
     private fun buildToolCatalogue(tools: List<AgentTool>): String {
         if (tools.isEmpty()) return DEFAULT_TOOL_CATALOGUE
-
         val sb = StringBuilder()
-        sb.appendLine("## Available Tools")
-        sb.appendLine()
-
-        val grouped = tools.sortedBy { it.name }.groupBy { tool ->
-            val dot = tool.name.indexOf('.')
-            if (dot >= 0) tool.name.substring(0, dot) else "other"
-        }
-
+        sb.appendLine("## Available Tools").appendLine()
+        val grouped = tools.sortedBy { it.name }.groupBy { it.name.substringBefore('.') }
         for ((group, groupTools) in grouped) {
-            sb.append("### ")
-            sb.appendLine(group.replaceFirstChar { it.uppercase() })
-            for (tool in groupTools) {
-                sb.append("- `")
-                sb.append(tool.name)
-                sb.append("` — ")
-                sb.appendLine(tool.description)
-            }
+            sb.append("### ").appendLine(group.replaceFirstChar { it.uppercase() })
+            for (tool in groupTools) { sb.append("- `").append(tool.name).append("` — ").appendLine(tool.description) }
             sb.appendLine()
         }
-
         return sb.toString().trimEnd()
     }
 
@@ -153,32 +101,58 @@ class AgentPromptBuilder {
         private val DEFAULT_TOOL_CATALOGUE = """
             ## Available Tools
 
-            ### Android
+            ### Touch Gestures
             - `android.click` — Tap by node_id or x,y coordinates.
+            - `android.double_click` — Double-tap (for zoom, maps). Provide x,y or node_id.
             - `android.long_click` — Long-press by node_id or x,y.
-            - `android.type_text` — Type EXACT text into a field. Always type exactly what the user specified.
+            - `android.type_text` — Type EXACT text into a field. Use node_id if available.
             - `android.clear_text` — Clear text field.
             - `android.scroll` — Scroll up or down.
             - `android.swipe` — Swipe in any direction.
-            - `android.launch_app` — Launch app by name or package.
+            - `android.drag` — Drag from point A to B (slower, for moving elements).
+            - `android.pinch_zoom` — Pinch to zoom. Provide center_x, center_y, scale (>1=in, <1=out).
+            - `android.fling` — Fast fling gesture. Provide direction (up/down/left/right).
+
+            ### Navigation
             - `android.back` — System back.
             - `android.home` — Home screen.
             - `android.recents` — Recent apps.
-            - `android.press_key` — Press ENTER, BACK, TAB, SPACE.
+            - `android.press_key` — Press ENTER, BACK, TAB, SPACE etc.
             - `android.wait` — Wait milliseconds.
+            - `android.launch_app` — Launch by app_name or package.
+
+            ### System Controls
+            - `android.open_notifications` — Open notification shade.
+            - `android.open_quick_settings` — Open quick settings panel.
+            - `android.power_menu` — Show power menu.
+            - `android.lock_screen` — Lock the screen.
+            - `android.split_screen` — Toggle split-screen.
+            - `android.volume` — Control volume (direction: up/down/mute, or level: int).
+
+            ### Text Operations
+            - `android.select_all` — Select all text in focused field.
+            - `android.copy_text` — Copy selected text to clipboard.
+            - `android.paste_text` — Paste from clipboard.
+            - `android.set_clipboard` — Set clipboard content directly.
+
+            ### Intents
+            - `android.open_url` — Open URL in browser.
+            - `android.make_call` — Dial a phone number.
+            - `android.send_sms` — Open SMS with pre-filled message.
+            - `android.share` — Share text via Android share sheet.
+
+            ### Screen
             - `android.screenshot` — Take screenshot.
             - `android.inspect_screen` — Full UI tree dump.
             - `android.find` — Search UI tree with filters.
-
-            ### Vision
             - `vision.analyze_screen` — Describe screen visually.
-            - `vision.find_visual_target` — Find element by description.
+            - `vision.find_visual_target` — Find element by visual description.
 
             ### Agent
             - `agent.ask_user` — Ask user a question (pauses agent).
             - `agent.confirm` — Request user confirmation.
-            - `agent.finish` — Complete task with success/failure.
+            - `agent.finish` — Complete task.
             - `agent.stop` — Stop immediately.
-        """.trimIndent()
+            """.trimIndent()
     }
 }

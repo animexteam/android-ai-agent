@@ -105,7 +105,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
                                 else -> "Working..."
                             }
                             if (OverlayService.canDrawOverlays(context)) {
-                                val intent = android.content.Intent(context, OverlayService::class.java).apply {
+                                val intent = Intent(context, OverlayService::class.java).apply {
                                     action = OverlayService.ACTION_SHOW_STATUS
                                     putExtra(OverlayService.EXTRA_STATUS_TEXT, statusText)
                                 }
@@ -122,23 +122,48 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun registerAllTools() {
         val tools = listOf(
+            // Touch gestures
             LaunchAppTool.definition(),
             FindTool.definition(),
             ClickTool.definition(),
+            DoubleClickTool.definition(),
             LongClickTool.definition(),
             TypeTextTool.definition(),
             ClearTextTool.definition(),
             ScrollTool.definition(),
             SwipeTool.definition(),
-            PressKeyTool.definition(),
+            DragTool.definition(),
+            PinchZoomTool.definition(),
+            FlingTool.definition(),
+            // Navigation
             BackTool.definition(),
             HomeTool.definition(),
             RecentsTool.definition(),
+            PressKeyTool.definition(),
             WaitTool.definition(),
+            // System controls
+            OpenNotificationsTool.definition(),
+            OpenQuickSettingsTool.definition(),
+            PowerMenuTool.definition(),
+            LockScreenTool.definition(),
+            SplitScreenTool.definition(),
+            VolumeControlTool.definition(),
+            // Text operations
+            SelectAllTool.definition(),
+            CopyTextTool.definition(),
+            PasteTextTool.definition(),
+            SetClipboardTool.definition(),
+            // Intents
+            OpenUrlTool.definition(),
+            MakeCallTool.definition(),
+            SendSmsTool.definition(),
+            ShareContentTool.definition(),
+            // Screen
             ScreenshotTool.definition(),
             InspectScreenTool.definition(),
             AnalyzeScreenTool.definition(),
             FindVisualTargetTool.definition(),
+            // Agent
             AskUserTool.definition(),
             ConfirmTool.definition(),
             FinishTool.definition(),
@@ -148,23 +173,48 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun buildToolHandlers(): Map<String, ToolHandler> = mapOf(
+        // Touch gestures
         LaunchAppTool.TOOL_NAME to LaunchAppTool(),
         FindTool.TOOL_NAME to FindTool(),
         ClickTool.TOOL_NAME to ClickTool(),
+        DoubleClickTool.TOOL_NAME to DoubleClickTool(),
         LongClickTool.TOOL_NAME to LongClickTool(),
         TypeTextTool.TOOL_NAME to TypeTextTool(),
         ClearTextTool.TOOL_NAME to ClearTextTool(),
         ScrollTool.TOOL_NAME to ScrollTool(),
         SwipeTool.TOOL_NAME to SwipeTool(),
-        PressKeyTool.TOOL_NAME to PressKeyTool(),
+        DragTool.TOOL_NAME to DragTool(),
+        PinchZoomTool.TOOL_NAME to PinchZoomTool(),
+        FlingTool.TOOL_NAME to FlingTool(),
+        // Navigation
         BackTool.TOOL_NAME to BackTool(),
         HomeTool.TOOL_NAME to HomeTool(),
         RecentsTool.TOOL_NAME to RecentsTool(),
+        PressKeyTool.TOOL_NAME to PressKeyTool(),
         WaitTool.TOOL_NAME to WaitTool(),
+        // System controls
+        OpenNotificationsTool.TOOL_NAME to OpenNotificationsTool(),
+        OpenQuickSettingsTool.TOOL_NAME to OpenQuickSettingsTool(),
+        PowerMenuTool.TOOL_NAME to PowerMenuTool(),
+        LockScreenTool.TOOL_NAME to LockScreenTool(),
+        SplitScreenTool.TOOL_NAME to SplitScreenTool(),
+        VolumeControlTool.TOOL_NAME to VolumeControlTool(),
+        // Text operations
+        SelectAllTool.TOOL_NAME to SelectAllTool(),
+        CopyTextTool.TOOL_NAME to CopyTextTool(),
+        PasteTextTool.TOOL_NAME to PasteTextTool(),
+        SetClipboardTool.TOOL_NAME to SetClipboardTool(),
+        // Intents
+        OpenUrlTool.TOOL_NAME to OpenUrlTool(),
+        MakeCallTool.TOOL_NAME to MakeCallTool(),
+        SendSmsTool.TOOL_NAME to SendSmsTool(),
+        ShareContentTool.TOOL_NAME to ShareContentTool(),
+        // Screen
         ScreenshotTool.TOOL_NAME to ScreenshotTool(),
         InspectScreenTool.TOOL_NAME to InspectScreenTool(),
         AnalyzeScreenTool.TOOL_NAME to AnalyzeScreenTool(visionAnalyzer),
         FindVisualTargetTool.TOOL_NAME to FindVisualTargetTool(visionAnalyzer),
+        // Agent
         AskUserTool.TOOL_NAME to AskUserTool(),
         ConfirmTool.TOOL_NAME to ConfirmTool(),
         FinishTool.TOOL_NAME to FinishTool(),
@@ -199,23 +249,15 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun respondToUser(answer: String) = agentRuntime.respondToUser(answer)
-
     fun respondToConfirmation(confirmed: Boolean) = agentRuntime.respondToConfirmation(confirmed)
 
     fun isAccessibilityServiceEnabled(): Boolean {
         return try { AndroidAgentAccessibilityService.isConnected } catch (_: Exception) { false }
     }
-
     fun openAccessibilitySettings() {
-        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        })
+        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
     }
-
-    fun isOverlayPermissionGranted(): Boolean {
-        return OverlayService.canDrawOverlays(context)
-    }
-
+    fun isOverlayPermissionGranted(): Boolean = OverlayService.canDrawOverlays(context)
     fun openOverlaySettings() {
         context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

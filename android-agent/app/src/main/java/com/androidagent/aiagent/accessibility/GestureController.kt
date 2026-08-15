@@ -10,211 +10,108 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 
-/**
- * Singleton object that provides high-level gesture operations (tap, swipe, long-press)
- * built on top of [AccessibilityService.dispatchGesture] and [GestureDescription.Builder].
- *
- * All methods are thread-safe and block until the gesture completes or times out.
- */
 object GestureController {
 
     private const val TAG = "GestureController"
     private const val DEFAULT_TAP_DURATION = 100L
     private const val DEFAULT_SWIPE_DURATION = 300L
     private const val DEFAULT_LONG_PRESS_DURATION = 500L
+    private const val DEFAULT_DOUBLE_TAP_GAP = 120L
     private const val GESTURE_TIMEOUT_MS = 5000L
 
-    /**
-     * Perform a tap gesture at the given coordinates.
-     *
-     * The tap is implemented as a very short stroke from (x, y) to (x+1, y+1)
-     * to ensure the gesture is recognized by the system.
-     *
-     * @param service The accessibility service instance used to dispatch the gesture.
-     * @param x The X coordinate of the tap target.
-     * @param y The Y coordinate of the tap target.
-     * @return true if the gesture was dispatched and completed successfully.
-     */
     fun performTap(service: AccessibilityService, x: Float, y: Float): Boolean {
         if (!isServiceValid(service)) return false
-
-        val path = Path().apply {
-            moveTo(x, y)
-            lineTo(x + 1f, y + 1f)
-        }
-
-        val stroke = GestureDescription.StrokeDescription(
-            path,
-            0L,
-            DEFAULT_TAP_DURATION
-        )
-
-        val gesture = GestureDescription.Builder()
-            .addStroke(stroke)
-            .build()
-
+        val path = Path().apply { moveTo(x, y); lineTo(x + 1f, y + 1f) }
+        val stroke = GestureDescription.StrokeDescription(path, 0L, DEFAULT_TAP_DURATION)
+        val gesture = GestureDescription.Builder().addStroke(stroke).build()
         return dispatchGestureAndWait(service, gesture)
     }
 
-    /**
-     * Perform a swipe gesture from one point to another.
-     *
-     * @param service The accessibility service instance used to dispatch the gesture.
-     * @param startX The starting X coordinate.
-     * @param startY The starting Y coordinate.
-     * @param endX The ending X coordinate.
-     * @param endY The ending Y coordinate.
-     * @param durationMs The duration of the swipe in milliseconds.
-     * @return true if the gesture was dispatched and completed successfully.
-     */
-    fun performSwipe(
-        service: AccessibilityService,
-        startX: Float,
-        startY: Float,
-        endX: Float,
-        endY: Float,
-        durationMs: Long = DEFAULT_SWIPE_DURATION
-    ): Boolean {
+    fun performDoubleTap(service: AccessibilityService, x: Float, y: Float): Boolean {
         if (!isServiceValid(service)) return false
-
-        val path = Path().apply {
-            moveTo(startX, startY)
-            lineTo(endX, endY)
-        }
-
-        val stroke = GestureDescription.StrokeDescription(
-            path,
-            0L,
-            durationMs
-        )
-
-        val gesture = GestureDescription.Builder()
-            .addStroke(stroke)
-            .build()
-
+        val path1 = Path().apply { moveTo(x, y); lineTo(x + 1f, y + 1f) }
+        val path2 = Path().apply { moveTo(x, y); lineTo(x + 1f, y + 1f) }
+        val stroke1 = GestureDescription.StrokeDescription(path1, 0L, DEFAULT_TAP_DURATION)
+        val stroke2 = GestureDescription.StrokeDescription(path2, DEFAULT_TAP_DURATION + DEFAULT_DOUBLE_TAP_GAP, DEFAULT_TAP_DURATION)
+        val gesture = GestureDescription.Builder().addStroke(stroke1).addStroke(stroke2).build()
         return dispatchGestureAndWait(service, gesture)
     }
 
-    /**
-     * Perform a long-press gesture at the given coordinates.
-     *
-     * The long-press is implemented as a stroke that holds at the target
-     * position for the specified duration.
-     *
-     * @param service The accessibility service instance used to dispatch the gesture.
-     * @param x The X coordinate of the long-press target.
-     * @param y The Y coordinate of the long-press target.
-     * @param durationMs How long to hold the press, in milliseconds.
-     * @return true if the gesture was dispatched and completed successfully.
-     */
-    fun performLongPress(
-        service: AccessibilityService,
-        x: Float,
-        y: Float,
-        durationMs: Long = DEFAULT_LONG_PRESS_DURATION
-    ): Boolean {
+    fun performSwipe(service: AccessibilityService, startX: Float, startY: Float, endX: Float, endY: Float, durationMs: Long = DEFAULT_SWIPE_DURATION): Boolean {
         if (!isServiceValid(service)) return false
-
-        val path = Path().apply {
-            moveTo(x, y)
-            lineTo(x + 1f, y + 1f)
-        }
-
-        val stroke = GestureDescription.StrokeDescription(
-            path,
-            0L,
-            durationMs
-        )
-
-        val gesture = GestureDescription.Builder()
-            .addStroke(stroke)
-            .build()
-
+        val path = Path().apply { moveTo(startX, startY); lineTo(endX, endY) }
+        val stroke = GestureDescription.StrokeDescription(path, 0L, durationMs)
+        val gesture = GestureDescription.Builder().addStroke(stroke).build()
         return dispatchGestureAndWait(service, gesture)
     }
 
-    // --- Convenience methods that use the singleton service instance ---
-
-    fun performTap(x: Float, y: Float): Boolean {
-        val service = AndroidAgentAccessibilityService.instance ?: return false
-        return performTap(service, x, y)
+    fun performFling(service: AccessibilityService, startX: Float, startY: Float, endX: Float, endY: Float): Boolean {
+        return performSwipe(service, startX, startY, endX, endY, 80L)
     }
 
-    fun performSwipe(
-        startX: Float,
-        startY: Float,
-        endX: Float,
-        endY: Float,
-        durationMs: Long = DEFAULT_SWIPE_DURATION
-    ): Boolean {
-        val service = AndroidAgentAccessibilityService.instance ?: return false
+    fun performLongPress(service: AccessibilityService, x: Float, y: Float, durationMs: Long = DEFAULT_LONG_PRESS_DURATION): Boolean {
+        if (!isServiceValid(service)) return false
+        val path = Path().apply { moveTo(x, y); lineTo(x + 1f, y + 1f) }
+        val stroke = GestureDescription.StrokeDescription(path, 0L, durationMs)
+        val gesture = GestureDescription.Builder().addStroke(stroke).build()
+        return dispatchGestureAndWait(service, gesture)
+    }
+
+    fun performDrag(service: AccessibilityService, startX: Float, startY: Float, endX: Float, endY: Float, durationMs: Long = 500L): Boolean {
         return performSwipe(service, startX, startY, endX, endY, durationMs)
     }
 
-    fun performLongPress(
-        x: Float,
-        y: Float,
-        durationMs: Long = DEFAULT_LONG_PRESS_DURATION
-    ): Boolean {
-        val service = AndroidAgentAccessibilityService.instance ?: return false
-        return performLongPress(service, x, y, durationMs)
+    fun performPinchZoom(service: AccessibilityService, cx: Float, cy: Float, scaleFactor: Float, durationMs: Long = 400L): Boolean {
+        if (!isServiceValid(service)) return false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            Log.w(TAG, "Pinch zoom requires API 30+")
+            return false
+        }
+        val halfSpread = 100f * scaleFactor
+        // Finger 1: starts far, ends close
+        val path1 = Path().apply {
+            moveTo(cx - halfSpread, cy - halfSpread)
+            lineTo(cx - halfSpread * 0.3f, cy - halfSpread * 0.3f)
+        }
+        // Finger 2: starts far, ends close
+        val path2 = Path().apply {
+            moveTo(cx + halfSpread, cy + halfSpread)
+            lineTo(cx + halfSpread * 0.3f, cy + halfSpread * 0.3f)
+        }
+        val s1 = GestureDescription.StrokeDescription(path1, 0L, durationMs)
+        val s2 = GestureDescription.StrokeDescription(path2, 0L, durationMs)
+        val gesture = GestureDescription.Builder().addStroke(s1).addStroke(s2).build()
+        return dispatchGestureAndWait(service, gesture)
     }
 
-    // ---------------------------------------------------------------------------
-    // Internal helpers
-    // ---------------------------------------------------------------------------
+    // --- Convenience (singleton instance) ---
+    fun performTap(x: Float, y: Float): Boolean = AndroidAgentAccessibilityService.instance?.let { performTap(it, x, y) } ?: false
+    fun performSwipe(startX: Float, startY: Float, endX: Float, endY: Float, durationMs: Long = DEFAULT_SWIPE_DURATION): Boolean =
+        AndroidAgentAccessibilityService.instance?.let { performSwipe(it, startX, startY, endX, endY, durationMs) } ?: false
+    fun performLongPress(x: Float, y: Float, durationMs: Long = DEFAULT_LONG_PRESS_DURATION): Boolean =
+        AndroidAgentAccessibilityService.instance?.let { performLongPress(it, x, y, durationMs) } ?: false
+    fun performDoubleTap(x: Float, y: Float): Boolean = AndroidAgentAccessibilityService.instance?.let { performDoubleTap(it, x, y) } ?: false
+    fun performFling(startX: Float, startY: Float, endX: Float, endY: Float): Boolean =
+        AndroidAgentAccessibilityService.instance?.let { performFling(it, startX, startY, endX, endY) } ?: false
+    fun performDrag(startX: Float, startY: Float, endX: Float, endY: Float, durationMs: Long = 500L): Boolean =
+        AndroidAgentAccessibilityService.instance?.let { performDrag(it, startX, startY, endX, endY, durationMs) } ?: false
 
-    /**
-     * Dispatch a gesture and block until the result callback fires or times out.
-     */
-    private fun dispatchGestureAndWait(
-        service: AccessibilityService,
-        gesture: GestureDescription
-    ): Boolean {
+    private fun dispatchGestureAndWait(service: AccessibilityService, gesture: GestureDescription): Boolean {
         val latch = CountDownLatch(1)
         val result = booleanArrayOf(false)
-
         return try {
             val callback = object : GestureResultCallback() {
-                override fun onCompleted(gestureDescription: GestureDescription) {
-                    result[0] = true
-                    latch.countDown()
-                }
-
-                override fun onCancelled(gestureDescription: GestureDescription) {
-                    Log.w(TAG, "Gesture was cancelled by the system")
-                    result[0] = false
-                    latch.countDown()
-                }
+                override fun onCompleted(gestureDescription: GestureDescription) { result[0] = true; latch.countDown() }
+                override fun onCancelled(gestureDescription: GestureDescription) { Log.w(TAG, "Gesture cancelled"); latch.countDown() }
             }
-
             service.dispatchGesture(gesture, callback, null)
-
             val completed = latch.await(GESTURE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-            if (!completed) {
-                Log.w(TAG, "Gesture dispatch timed out after ${GESTURE_TIMEOUT_MS}ms")
-                false
-            } else {
-                result[0]
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to dispatch gesture", e)
-            false
-        }
+            if (!completed) { Log.w(TAG, "Gesture timed out"); false } else result[0]
+        } catch (e: Exception) { Log.e(TAG, "Gesture failed", e); false }
     }
 
-    /**
-     * Check if the accessibility service is valid and connected.
-     */
     private fun isServiceValid(service: AccessibilityService?): Boolean {
-        if (service == null) {
-            Log.w(TAG, "Cannot perform gesture: service is null")
-            return false
-        }
-        if (!AndroidAgentAccessibilityService.isConnected) {
-            Log.w(TAG, "Cannot perform gesture: accessibility service is not connected")
-            return false
-        }
+        if (service == null || !AndroidAgentAccessibilityService.isConnected) return false
         return true
     }
 }
