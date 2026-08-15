@@ -130,8 +130,8 @@ class ClearTextTool : ToolHandler {
                 val focused = rootNode?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
                 if (focused != null) {
                     // Select all text via accessibility
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        focused.performAction(AccessibilityNodeInfo.ACTION_SELECT_ALL)
+                    if (android.os.Build.VERSION.SDK_INT >= 33) {
+                        focused.performAction(0x00000200) // ACTION_SELECT_ALL = 512
                         kotlinx.coroutines.delay(50)
                     }
                     focused.performAction(AccessibilityNodeInfo.ACTION_CUT)

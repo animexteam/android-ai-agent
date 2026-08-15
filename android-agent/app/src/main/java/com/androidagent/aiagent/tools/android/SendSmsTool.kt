@@ -39,6 +39,6 @@ class SendSmsTool : ToolHandler {
             inputSchema = buildJsonObject { put("type", "object"); put("properties", buildJsonObject {
                 put("number", buildJsonObject { put("type", "string"); put("description", "Phone number") })
                 put("message", buildJsonObject { put("type", "string"); put("description", "SMS body text") })
-            })}, riskLevel = RiskLevel.SENSITIVE, requiresConfirmation = true)
+            })}, riskLevel = RiskLevel.CONFIRM, requiresConfirmation = true)
     }
 }

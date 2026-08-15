@@ -53,7 +53,22 @@ class PressKeyTool : ToolHandler {
                 )
             }
 
-            service.dispatchKeyEvent(keyCode)
+            val success = if (keyCode == KeyEvent.KEYCODE_BACK) {
+                service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+            } else {
+                try {
+                    val proc = Runtime.getRuntime().exec(arrayOf("sh", "-c", "input keyevent $keyCode"))
+                    proc.waitFor() == 0
+                } catch (e: Exception) { false }
+            }
+
+            if (!success) {
+                return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(code = "PRESS_KEY_FAILED", message = "Failed to press key: $upperKeyName")
+                )
+            }
 
             ToolResult(
                 success = true,

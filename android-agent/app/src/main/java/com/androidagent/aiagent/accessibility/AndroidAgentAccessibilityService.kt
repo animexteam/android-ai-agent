@@ -50,9 +50,10 @@ class AndroidAgentAccessibilityService : AccessibilityService() {
     fun performScroll(node: AccessibilityNodeInfo, direction: Int): Boolean = try {
         node.performAction(if (direction >= 0) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
     } catch (e: Exception) { false }
+    @Suppress("DEPRECATION")
     fun performSelectAll(node: AccessibilityNodeInfo): Boolean = try {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            node.performAction(AccessibilityNodeInfo.ACTION_SELECT_ALL)
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            node.performAction(0x00000200) // ACTION_SELECT_ALL = 512, added in API 33
         } else false
     } catch (e: Exception) { false }
     fun performCopy(node: AccessibilityNodeInfo): Boolean = try { node.performAction(AccessibilityNodeInfo.ACTION_COPY) } catch (e: Exception) { false }
@@ -63,7 +64,7 @@ class AndroidAgentAccessibilityService : AccessibilityService() {
     fun pressBack(): Boolean = try { performGlobalAction(GLOBAL_ACTION_BACK) } catch (e: Exception) { false }
     fun pressHome(): Boolean = try { performGlobalAction(GLOBAL_ACTION_HOME) } catch (e: Exception) { false }
     fun pressRecents(): Boolean = try { performGlobalAction(GLOBAL_ACTION_RECENTS) } catch (e: Exception) { false }
-    fun openNotifications(): Boolean = try { performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATION_SHADE) } catch (_: Exception) { false }
+    fun openNotifications(): Boolean = try { performGlobalAction(0x00000040) } catch (_: Exception) { false } // GLOBAL_ACTION_NOTIFICATION_SHADE = 64
     fun openQuickSettings(): Boolean = try { performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS) } catch (e: Exception) { false }
     fun showPowerMenu(): Boolean = try { performGlobalAction(GLOBAL_ACTION_POWER_DIALOG) } catch (e: Exception) { false }
     fun toggleSplitScreen(): Boolean = try { performGlobalAction(GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN) } catch (e: Exception) { false }
