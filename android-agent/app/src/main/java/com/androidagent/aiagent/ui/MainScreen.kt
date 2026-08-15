@@ -16,6 +16,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -266,7 +267,7 @@ private fun RunningStatusBar(state: com.androidagent.aiagent.agent.AgentState) {
         else -> Triple("Working...", Icons.Default.Autorenew, AppColors.Secondary)
     }
     val pulse = rememberInfiniteTransition(label = "p").animateFloat(
-        0.3f, 1f, infiniteRepeatable(tween(800, LinearEasing), RepeatMode.Reverse), "a"
+        0.3f, 1f, infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Reverse), "a"
     )
     Row(
         modifier = Modifier.fillMaxWidth().background(color.copy(alpha = 0.06f)).padding(horizontal = 14.dp, vertical = 6.dp),
@@ -384,16 +385,16 @@ private fun BottomInputBar(
                     value = input, onValueChange = onInputChange, modifier = Modifier.weight(1f),
                     textStyle = TextStyle(color = AppColors.TextPrimary, fontSize = 15.sp, lineHeight = 20.sp),
                     cursorBrush = SolidColor(AppColors.TextPrimary),
-                    decorationBox = { inner ->
+                    decorationBox = { innerTextField ->
                         Box(Modifier.padding(vertical = 10.dp)) {
                             if (input.isEmpty()) Text("Ask Android-Use anything...", color = AppColors.TextMuted, fontSize = 15.sp)
-                            inner()
+                            innerTextField()
                         }
                     }
                 )
                 Box(
                     modifier = Modifier.size(38.dp).clip(CircleShape).background(
-                        when { isRunning -> AppColors.Error; canSend -> AppColors.TextPrimary; else -> AppColors.SurfaceHover }
+                        if (isRunning) AppColors.Error else if (canSend) AppColors.TextPrimary else AppColors.SurfaceHover
                     ).clickable(enabled = canSend || isRunning) {
                         if (isRunning) onStop() else onSend()
                     }, contentAlignment = Alignment.Center

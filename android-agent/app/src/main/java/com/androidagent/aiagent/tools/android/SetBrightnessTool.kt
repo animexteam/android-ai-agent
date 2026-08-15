@@ -9,6 +9,8 @@ import com.androidagent.aiagent.tools.ToolError
 import com.androidagent.aiagent.tools.ToolHandler
 import com.androidagent.aiagent.tools.ToolResult
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -65,7 +67,7 @@ class SetBrightnessTool : ToolHandler {
                         put("description", "Brightness level 0-255")
                     })
                 })
-                put("required", buildJsonArray { add("brightness") })
+                put("required", buildJsonArray { add(JsonPrimitive("brightness")) })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false
