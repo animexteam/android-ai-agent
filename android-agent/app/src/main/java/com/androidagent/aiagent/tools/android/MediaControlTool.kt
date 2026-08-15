@@ -27,23 +27,22 @@ class MediaControlTool : ToolHandler {
                 error = ToolError(code = "INVALID_INPUT", message = "'action' is required: play, pause, next, previous, stop"))
         return try {
             withContext(Dispatchers.IO) {
-                val keycode = when (action.lowercase()) {
+                val keycode: Int = when (action.lowercase()) {
                     "play", "play_pause" -> KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
                     "pause" -> KeyEvent.KEYCODE_MEDIA_PAUSE
                     "next" -> KeyEvent.KEYCODE_MEDIA_NEXT
                     "previous", "prev" -> KeyEvent.KEYCODE_MEDIA_PREVIOUS
                     "stop" -> KeyEvent.KEYCODE_MEDIA_STOP
-                    else -> {
-                        ToolResult(success = false, toolName = TOOL_NAME,
+                    else -> return@withContext ToolResult(success = false, toolName = TOOL_NAME,
                         error = ToolError(code = "INVALID_ACTION", message = "Unknown action: $action"))
-                    }
                 }
                 val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, keycode)
                 val upEvent = KeyEvent(KeyEvent.ACTION_UP, keycode)
                 service.sendBroadcast(Intent(Intent.ACTION_MEDIA_BUTTON).apply { putExtra(Intent.EXTRA_KEY_EVENT, downEvent) })
                 kotlinx.coroutines.delay(50)
                 service.sendBroadcast(Intent(Intent.ACTION_MEDIA_BUTTON).apply { putExtra(Intent.EXTRA_KEY_EVENT, upEvent) })
-                ToolResult(success = true, toolName = TOOL_NAME,
+                ToolResult(
+                    success = true, toolName = TOOL_NAME,
                     result = buildJsonObject { put("action", action.lowercase()); put("status", "sent") },
                     observationRequired = false
                 )
@@ -72,12 +71,11 @@ class MediaControlTool : ToolHandler {
             riskLevel = RiskLevel.SAFE, requiresConfirmation = false
         )
     }
-        private fun noService() = ToolResult(
+    private fun noService() = ToolResult(
         success = false,
         toolName = TOOL_NAME,
         error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service is not connected")
     )
-
     private fun errorResult(e: Exception) = ToolResult(
         success = false, toolName = TOOL_NAME,
         error = ToolError(code = "MEDIA_CONTROL_FAILED", message = e.message ?: "Unknown error")
