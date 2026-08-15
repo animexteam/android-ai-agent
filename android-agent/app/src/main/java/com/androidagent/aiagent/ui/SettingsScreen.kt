@@ -247,7 +247,7 @@ fun SettingsScreen(
             // Temperature
             SettingsSliderRow(
                 label = "Temperature",
-                displayValue = "%.1f"format(temperature),
+                displayValue = "%.1f".format(temperature),
                 sliderValue = temperature,
                 onValueChange = { temperature = it; scope.launch { settingsRepository.setTemperature(it) } },
                 valueRange = 0f..1f

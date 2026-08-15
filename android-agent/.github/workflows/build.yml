@@ -1,4 +1,4 @@
-name: Build & Release Android APK
+name: Build & Release Android-Use APK
 
 on:
   push:
@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-agent
 
     steps:
       - uses: actions/checkout@v4
@@ -23,13 +26,13 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
 
       - name: Generate Gradle Wrapper
+        working-directory: android-agent
         run: |
-          GRADLE_VERSION=8.11.1
-          mkdir -p gradle/wrapper
-          curl -sL https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
-          curl -sL https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradlew -o gradlew
+          gradle wrapper --gradle-version 8.11.1
           chmod +x gradlew
 
       - name: Generate Release Keystore
@@ -39,26 +42,22 @@ jobs:
             -alias taskflow \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass taskflow2025 -keypass taskflow2025 \
-            -dname "CN=TaskFlow, OU=Dev, O=TaskFlow, L=Unknown, ST=Unknown, C=US"
+            -dname "CN=AndroidUse, OU=Dev, O=AndroidUse, L=Unknown, ST=Unknown, C=US"
 
       - name: Build Release APK
-        env:
-          KEYSTORE_PATH: release.keystore
-          KEYSTORE_PASSWORD: taskflow2025
-          KEY_ALIAS: taskflow
-          KEY_PASSWORD: taskflow2025
         run: ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
 
       - name: Verify APK
         run: |
           APK=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
+          echo "APK_PATH=$APK" >> $GITHUB_ENV
           echo "APK: $APK"
           ls -lh "$APK"
 
       - name: Prepare release assets
         run: |
           mkdir -p release-assets
-          cp app/build/outputs/apk/release/*.apk release-assets/TaskFlow-v2.0.0.apk
+          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v4.4.0.apk
           cd release-assets
           sha256sum *.apk > SHA256SUMS.txt
           ls -lh
@@ -67,50 +66,45 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: taskflow-apk
-          path: release-assets/*
+          name: android-use-apk
+          path: android-agent/release-assets/*
           if-no-files-found: warn
 
       - name: Delete old release
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          gh release delete v2.0.0 --yes 2>/dev/null || true
-          git tag -d v2.0.0 2>/dev/null || true
-          git push origin :refs/tags/v2.0.0 2>/dev/null || true
+          gh release delete v4.4.0 --yes 2>/dev/null || true
+          git tag -d v4.4.0 2>/dev/null || true
+          git push origin :refs/tags/v4.4.0 2>/dev/null || true
 
       - name: Create GitHub Release
         if: success()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.0
-          name: TaskFlow v2.0.0
+          tag_name: v4.4.0
+          name: Android-Use v4.4.0
           token: ${{ secrets.PAT_TOKEN }}
           body: |
-            # TaskFlow v2.0.0 — Complete Rewrite
+            # Android-Use v4.4.0
 
-            A modern Android task automation agent with beautiful UI and intelligent tool execution.
+            AI-powered Android automation agent with 44 tools, provider settings, monochrome UI.
 
-            ## What's New in v2.0.0
-            - **Complete UI Redesign**: Ultra-minimalist monochrome design with collapsible step cards, smooth animations, colored status indicators
-            - **Auto Node Recovery**: Agent automatically re-observes screen when UI changes and retries failed actions
-            - **Smart Tool Resolution**: Fuzzy matching + 30+ aliases handle AI model tool name mistakes
-            - **Background Execution**: Foreground service keeps agent running when you switch apps
-            - **Complete Tool Catalog**: All 21 tools listed in prompt with exact names — no more wrong tool calls
-            - **Device Awareness**: Prompt includes Android/ColorOS context for better decisions
+            ## What's New
+            - **Settings: Cloud Model Provider dropdown** — Ollama, OpenAI, Groq, OpenRouter, Together AI, DeepInfra, Fireworks, Cerebras, Custom
+            - **6 New Tools** (44 total): GetAppList, ForceStopApp, OpenAppInfo, ToggleWifi, ToggleBluetooth, SetBrightness, ScreenshotSave
+            - **TBH-style dark monochrome UI** — polished settings, provider auto-fill
 
-            ## Installation (OPPO/ColorOS)
-            1. **Settings** > **Password & security** > **Install unknown apps** > Enable your browser
-            2. **Google Play Store** > Profile > **Play Protect** > Gear icon > **Turn OFF** scanning
-            3. Download `TaskFlow-v2.0.0.apk` and install
-            4. Re-enable Play Protect after install
-            5. Open app > Enable **Screen Control Service** in Settings
-            6. Enter your API key and model name
+            ## Install
+            1. Download `Android-Use-v4.4.0.apk`
+            2. Enable "Install unknown apps" for your browser
+            3. Install the APK
+            4. Open app > Settings > Configure provider, API key, model
+            5. Enable Accessibility Service
 
             ## Compatibility
-            - Android 9+ (minSdk 28), fully compatible with Android 15 (targetSdk 35)
-            - Tested on OPPO A3 Pro 5G (ColorOS 15.0)
-          files: release-assets/*
+            - Android 9+ (minSdk 28), targetSdk 35
+          files: android-agent/release-assets/*
           draft: false
           prerelease: false
 
@@ -119,5 +113,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-failure-logs
-          path: app/build/
+          path: android-agent/app/build/
           if-no-files-found: ignore
