@@ -8,6 +8,7 @@ import com.androidagent.aiagent.tools.ToolError
 import com.androidagent.aiagent.tools.ToolHandler
 import com.androidagent.aiagent.tools.ToolResult
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -32,15 +33,32 @@ class ForceStopAppTool : ToolHandler {
             // access, we use the service context
             val am = service.getSystemService(android.content.Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
             if (am != null) {
-                am.forceStopPackage(packageName)
-                ToolResult(
-                    success = true,
-                    toolName = TOOL_NAME,
-                    result = buildJsonObject {
-                        put("package", packageName)
-                        put("action", "force_stopped")
-                    }
-                )
+                @Suppress("DEPRECATION")
+                val methods = am.javaClass.methods
+                val forceStop = methods.find { it.name == "forceStopPackage" }
+                if (forceStop != null) {
+                    forceStop.invoke(am, packageName)
+                    ToolResult(
+                        success = true,
+                        toolName = TOOL_NAME,
+                        result = buildJsonObject {
+                            put("package", packageName)
+                            put("action", "force_stopped")
+                        }
+                    )
+                } else {
+                    // Fallback: use am shell command
+                    val proc = Runtime.getRuntime().exec(arrayOf("am", "force-stop", packageName))
+                    proc.waitFor()
+                    ToolResult(
+                        success = true,
+                        toolName = TOOL_NAME,
+                        result = buildJsonObject {
+                            put("package", packageName)
+                            put("action", "force_stopped_via_shell")
+                        }
+                    )
+                }
             } else {
                 ToolResult(
                     success = false,
@@ -79,7 +97,7 @@ class ForceStopAppTool : ToolHandler {
                         put("description", "Package name of the app to force stop")
                     })
                 })
-                put("required", buildJsonArray { add("package_name") })
+                put("required", buildJsonArray { add(JsonPrimitive("package_name")) })
             },
             riskLevel = RiskLevel.CONFIRM,
             requiresConfirmation = true

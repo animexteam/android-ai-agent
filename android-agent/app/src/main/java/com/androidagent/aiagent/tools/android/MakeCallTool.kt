@@ -34,6 +34,6 @@ class MakeCallTool : ToolHandler {
             description = "Make a phone call. Provide 'number' (string). Requires CALL_PHONE permission.",
             inputSchema = buildJsonObject { put("type", "object"); put("properties", buildJsonObject {
                 put("number", buildJsonObject { put("type", "string"); put("description", "Phone number to call") })
-            })}, riskLevel = RiskLevel.SENSITIVE, requiresConfirmation = true)
+            })}, riskLevel = RiskLevel.CONFIRM, requiresConfirmation = true)
     }
 }

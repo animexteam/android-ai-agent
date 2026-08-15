@@ -11,6 +11,7 @@ import com.androidagent.aiagent.tools.ToolError
 import com.androidagent.aiagent.tools.ToolHandler
 import com.androidagent.aiagent.tools.ToolResult
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -74,7 +75,7 @@ class OpenAppInfoTool : ToolHandler {
                         put("description", "Package name of the app")
                     })
                 })
-                put("required", buildJsonArray { add("package_name") })
+                put("required", buildJsonArray { add(JsonPrimitive("package_name")) })
             },
             riskLevel = RiskLevel.SAFE,
             requiresConfirmation = false
