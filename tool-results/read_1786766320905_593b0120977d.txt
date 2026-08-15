@@ -1,0 +1,502 @@
+     1→     1→<!doctype html>
+     2→     2→<html lang="en" data-theme="dark">
+     3→     3→<head>
+     4→     4→<meta charset="utf-8">
+     5→     5→<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+     6→     6→<meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+     7→     7→<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+     8→     8→<meta name="description" content="TBH Helper Ai — an autonomous AI assistant for managing your TeleBotHost Telegram bots in plain language.">
+     9→     9→<title>TBH Helper Ai</title>
+    10→    10→<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Cpath d='M9 9h14M16 9v14' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+    11→    11→<link rel="preconnect" href="https://fonts.googleapis.com">
+    12→    12→<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    13→    13→<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    14→    14→<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    15→    15→<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    16→    16→<style>
+    17→    17→/* ============================================================================
+    18→    18→   TBH HELPER AI — ULTRA-MINIMALIST MONOCHROME DESIGN SYSTEM
+    19→    19→   ============================================================================ */
+    20→    20→:root{
+    21→    21→  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    22→    22→  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+    23→    23→  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:24px; --r-full:999px;
+    24→    24→  --ease:cubic-bezier(.4,0,.2,1); --ease-out:cubic-bezier(.16,1,.3,1); --spring:cubic-bezier(.34,1.4,.64,1);
+    25→    25→  --t-fast:.13s; --t:.22s; --t-slow:.4s;
+    26→    26→  --nav:0px; /* runtime sidebar width for mobile-safe layout */
+    27→    27→}
+    28→    28→/* ---- DARK (monochrome) ---- */
+    29→    29→[data-theme="dark"]{
+    30→    30→  --bg:#0a0a0a; --bg-2:#0f0f0f;
+    31→    31→  --surface:#141414; --surface-2:#101010; --surface-3:#1c1c1c;
+    32→    32→  --elevated:#161616; --line:#242424; --line-2:#333333;
+    33→    33→  --text:#f2f2f2; --text-2:#a0a0a0; --text-3:#6a6a6a; --text-inv:#0a0a0a;
+    34→    34→  --accent:#f2f2f2; --accent-soft:#1c1c1c;
+    35→    35→  --success:#e8e8e8; --warn:#c9c9c9; --danger:#ff6b6b; --danger-bg:#2a1414;
+    36→    36→  --success-bg:#1c1c1c; --warn-bg:#1c1c1c;
+    37→    37→  --user-bubble:#1a1a1a; --scrim:rgba(0,0,0,.7);
+    38→    38→  --shimmer:linear-gradient(90deg,#141414 0%,#202020 50%,#141414 100%);
+    39→    39→  --sh-1:0 1px 2px rgba(0,0,0,.4); --sh-2:0 4px 20px rgba(0,0,0,.5); --sh-3:0 16px 50px rgba(0,0,0,.6);
+    40→    40→  --ring:0 0 0 1px var(--line-2);
+    41→    41→}
+    42→    42→/* ---- LIGHT (monochrome, clean like demo) ---- */
+    43→    43→[data-theme="light"]{
+    44→    44→  --bg:#ffffff; --bg-2:#fafafa;
+    45→    45→  --surface:#ffffff; --surface-2:#f7f7f7; --surface-3:#f0f0f0;
+    46→    46→  --elevated:#ffffff; --line:#eaeaea; --line-2:#dcdcdc;
+    47→    47→  --text:#0d0d0d; --text-2:#6b6b6b; --text-3:#9a9a9a; --text-inv:#ffffff;
+    48→    48→  --accent:#0d0d0d; --accent-soft:#f2f2f2;
+    49→    49→  --success:#0d0d0d; --warn:#6b6b6b; --danger:#e5484d; --danger-bg:#fdecec;
+    50→    50→  --success-bg:#f2f2f2; --warn-bg:#f2f2f2;
+    51→    51→  --user-bubble:#f4f4f4; --scrim:rgba(15,15,15,.28);
+    52→    52→  --shimmer:linear-gradient(90deg,#f2f2f2 0%,#e6e6e6 50%,#f2f2f2 100%);
+    53→    53→  --sh-1:0 1px 2px rgba(0,0,0,.05); --sh-2:0 6px 24px rgba(0,0,0,.07); --sh-3:0 18px 50px rgba(0,0,0,.1);
+    54→    54→  --ring:0 0 0 1px var(--line-2);
+    55→    55→}
+    56→    56→*{box-sizing:border-box}
+    57→    57→*:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+    58→    58→html,body{height:100%;margin:0}
+    59→    59→body{font-family:var(--font);background:var(--bg);color:var(--text);
+    60→    60→  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow:hidden;
+    61→    61→  font-size:15px;line-height:1.55;transition:background var(--t),color var(--t)}
+    62→    62→.mono{font-family:var(--mono)}
+    63→    63→button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+    64→    64→a{color:var(--text);text-decoration:none;border-bottom:1px solid var(--line-2)}a:hover{border-color:var(--text)}
+    65→    65→input,textarea,select{font-family:inherit}
+    66→    66→::-webkit-scrollbar{width:10px;height:10px}
+    67→    67→::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:var(--r-full);border:3px solid transparent;background-clip:padding-box}
+    68→    68→::-webkit-scrollbar-thumb:hover{background:var(--text-3);background-clip:padding-box}
+    69→    69→::-webkit-scrollbar-track{background:transparent}
+    70→    70→@media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+    71→    71→
+    72→    72→/* icons */
+    73→    73→.ic{width:18px;height:18px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;display:inline-block;vertical-align:middle}
+    74→    74→.ic.sm{width:15px;height:15px}.ic.lg{width:22px;height:22px}
+    75→    75→
+    76→    76→/* ============================ APP SHELL ============================ */
+    77→    77→#app{display:grid;grid-template-columns:64px 1fr;height:100dvh;transition:grid-template-columns var(--t) var(--ease)}
+    78→    78→#app.expanded{grid-template-columns:248px 1fr}
+    79→    79→#app.collapsed{grid-template-columns:0 1fr}
+    80→    80→
+    81→    81→/* ---------- Sidebar (minimalist icon rail like demo) ---------- */
+    82→    82→#nav{background:var(--surface-2);border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+    83→    83→.nav-top{padding:12px 12px 4px;display:flex;flex-direction:column;gap:6px}
+    84→    84→.rail-btn{width:40px;height:40px;border-radius:var(--r-md);display:grid;place-items:center;color:var(--text-2);
+    85→    85→  border:1px solid transparent;transition:background var(--t-fast),color var(--t-fast),transform var(--t-fast)}
+    86→    86→.rail-btn:hover{background:var(--surface-3);color:var(--text)}
+    87→    87→.rail-btn:active{transform:scale(.93)}
+    88→    88→.rail-btn.brand-btn{color:var(--text);background:var(--surface-3);border-color:var(--line)}
+    89→    89→#app.expanded .rail-btn{display:flex;align-items:center;width:100%;justify-content:flex-start;gap:12px;padding:0 12px;font-size:14px;font-weight:500}
+    90→    90→#app.expanded .rail-btn .rbl{display:inline}
+    91→    91→.rail-btn .rbl{display:none;white-space:nowrap}
+    92→    92→.nav-sec{padding:14px 16px 6px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);opacity:0;transition:opacity var(--t)}
+    93→    93→#app.expanded .nav-sec{opacity:1}
+    94→    94→.nav-list{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 10px 12px;opacity:0;pointer-events:none;transition:opacity var(--t)}
+    95→    95→#app.expanded .nav-list{opacity:1;pointer-events:auto}
+    96→    96→.chat-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);font-size:13.5px;color:var(--text-2);
+    97→    97→  cursor:pointer;transition:background var(--t-fast);position:relative;margin-bottom:1px}
+    98→    98→.chat-item:hover{background:var(--surface-3)}
+    99→    99→.chat-item.active{background:var(--surface-3);color:var(--text);font-weight:500}
+   100→   100→.chat-item .ci-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   101→   101→.chat-item .ci-del{opacity:0;color:var(--text-3);padding:3px;border-radius:6px;transition:opacity var(--t-fast),color var(--t-fast),background var(--t-fast)}
+   102→   102→.chat-item:hover .ci-del,.chat-item:focus-within .ci-del{opacity:1}
+   103→   103→.chat-item .ci-del:hover{color:var(--danger);background:var(--danger-bg)}
+   104→   104→.nav-foot{border-top:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+   105→   105→
+   106→   106→/* ---------- Main ---------- */
+   107→   107→#main{display:flex;flex-direction:column;min-width:0;position:relative;height:100dvh;overflow:hidden}
+   108→   108→.topbar{height:58px;flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:0 14px;position:relative;z-index:20}
+   109→   109→.icon-btn{width:38px;height:38px;border-radius:var(--r-md);display:grid;place-items:center;color:var(--text-2);transition:background var(--t-fast),color var(--t-fast),transform var(--t-fast);position:relative}
+   110→   110→.icon-btn:hover{background:var(--surface-3);color:var(--text)}
+   111→   111→.icon-btn:active{transform:scale(.9)}
+   112→   112→.spacer{flex:1}
+   113→   113→/* centered model selector pill (like demo) */
+   114→   114→.model-select{position:absolute;left:calc(50% + var(--nav)/2);top:11px;transform:translateX(-50%);height:36px;padding:0 14px;border-radius:var(--r-full);
+   115→   115→  display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;color:var(--text);
+   116→   116→  border:1px solid var(--line);background:var(--surface);transition:border-color var(--t-fast),box-shadow var(--t-fast);max-width:56vw}
+   117→   117→.model-select:hover{border-color:var(--line-2);box-shadow:var(--sh-1)}
+   118→   118→.model-select:active{transform:translateX(-50%) scale(.97)}
+   119→   119→.model-select .ms-name{font-family:var(--mono);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   120→   120→.model-select .ms-chev{color:var(--text-3);transition:transform var(--t-fast)}
+   121→   121→.model-select[aria-expanded="true"] .ms-chev{transform:rotate(180deg)}
+   122→   122→.model-select .live{width:6px;height:6px;border-radius:50%;background:var(--text-3);flex:0 0 auto}
+   123→   123→.model-select.on .live{background:var(--success);animation:livepulse 2.4s var(--ease) infinite}
+   124→   124→@keyframes livepulse{0%,100%{opacity:.35}50%{opacity:1}}
+   125→   125→/* model picker dropdown (models only — NOT full settings) */
+   126→   126→.model-menu{position:absolute;left:calc(50% + var(--nav)/2);top:52px;transform:translateX(-50%) translateY(-10px) scale(.97);
+   127→   127→  transform-origin:top center;width:300px;max-width:90vw;background:var(--elevated);border:1px solid var(--line-2);
+   128→   128→  border-radius:var(--r-lg);box-shadow:var(--sh-3);padding:6px;z-index:30;opacity:0;pointer-events:none;
+   129→   129→  transition:opacity var(--t) var(--ease-out),transform var(--t) var(--spring);max-height:min(70vh,440px);overflow-y:auto}
+   130→   130→.model-menu.open{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0) scale(1)}
+   131→   131→.mm-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--r-md);cursor:pointer;transition:background var(--t-fast);text-align:left;width:100%}
+   132→   132→.mm-item:hover{background:var(--surface-3)}
+   133→   133→.mm-item.sel{background:var(--surface-3)}
+   134→   134→.mm-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--text-3)}
+   135→   135→.mm-dot.ready{background:var(--success)}
+   136→   136→.mm-dot.busy{background:var(--warn)}
+   137→   137→.mm-tx{flex:1;min-width:0}
+   138→   138→.mm-tx b{display:block;font-size:13px;font-weight:600;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   139→   139→.mm-tx span{font-size:11px;color:var(--text-3);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   140→   140→.mm-check{color:var(--text);opacity:0;flex:0 0 auto}
+   141→   141→.mm-item.sel .mm-check{opacity:1}
+   142→   142→.mm-sep{height:1px;background:var(--line);margin:5px 8px}
+   143→   143→.mm-hd{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);padding:6px 11px 3px}
+   144→   144→
+   145→   145→/* ============================ MESSAGES ============================ */
+   146→   146→#scroll{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth;overscroll-behavior:contain;min-height:0}
+   147→   147→.thread{max-width:760px;margin:0 auto;padding:20px 24px 8px;display:flex;flex-direction:column;gap:24px}
+   148→   148→.turn{display:flex;gap:13px;animation:msg-in .4s var(--ease-out) both}
+   149→   149→@keyframes msg-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+   150→   150→.avatar{width:30px;height:30px;border-radius:var(--r-sm);flex:0 0 auto;display:grid;place-items:center;font-weight:600;font-size:12px;border:1px solid var(--line)}
+   151→   151→.avatar.user{background:var(--user-bubble);color:var(--text-2)}
+   152→   152→.avatar.ai{background:var(--text);color:var(--text-inv);border-color:var(--text)}
+   153→   153→.avatar.ai svg{width:17px;height:17px;stroke:var(--text-inv);fill:none;stroke-width:2.4}
+   154→   154→.turn-body{flex:1;min-width:0}
+   155→   155→.turn-who{font-size:12.5px;font-weight:600;color:var(--text-2);margin-bottom:5px;display:flex;align-items:center;gap:8px}
+   156→   156→.turn-who .tag{font-size:10px;font-weight:500;font-family:var(--mono);color:var(--text-3);background:var(--surface-3);border:1px solid var(--line);padding:1px 7px;border-radius:var(--r-full)}
+   157→   157→.turn-who .tag.waiting{color:var(--text-2);animation:tagpulse 1.6s var(--ease) infinite}
+   158→   158→@keyframes tagpulse{0%,100%{opacity:.55}50%{opacity:1}}
+   159→   159→.limit-note{display:flex;gap:11px;align-items:flex-start;padding:13px 15px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--line-2)}
+   160→   160→.limit-note svg{margin-top:2px;color:var(--warn);flex:0 0 auto}
+   161→   161→.limit-note b{display:block;font-size:14px;margin-bottom:3px}
+   162→   162→.limit-note span{font-size:13px;color:var(--text-2);line-height:1.55}
+   163→   163→.edit-box{margin-top:2px}
+   164→   164→.edit-ta{width:100%;background:var(--surface-2);border:1px solid var(--line-2);color:var(--text);border-radius:var(--r-md);
+   165→   165→  padding:11px 13px;font-size:15px;line-height:1.5;resize:none;outline:none;min-height:44px;font-family:inherit}
+   166→   166→.edit-ta:focus{border-color:var(--text-3)}
+   167→   167→.edit-row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+   168→   168→.edit-row .btn{padding:8px 14px;font-size:13px}
+   169→   169→.prose{font-size:15px;line-height:1.7;color:var(--text);word-wrap:break-word;overflow-wrap:anywhere}
+   170→   170→.prose>*:first-child{margin-top:0}.prose>*:last-child{margin-bottom:0}
+   171→   171→.prose p{margin:.6em 0}
+   172→   172→.prose ul,.prose ol{margin:.6em 0;padding-left:1.4em}.prose li{margin:.2em 0}
+   173→   173→.prose h1,.prose h2,.prose h3{margin:.9em 0 .4em;line-height:1.3;font-weight:700}
+   174→   174→.prose h1{font-size:1.4em}.prose h2{font-size:1.22em}.prose h3{font-size:1.08em}
+   175→   175→.prose code{font-family:var(--mono);font-size:.86em;background:var(--surface-3);border:1px solid var(--line);padding:1.5px 6px;border-radius:6px}
+   176→   176→.prose pre{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;overflow:auto;margin:.8em 0;position:relative}
+   177→   177→.prose pre code{background:none;border:none;padding:0;font-size:12.8px;line-height:1.6}
+   178→   178→.prose blockquote{border-left:3px solid var(--line-2);margin:.6em 0;padding:.1em 1em;color:var(--text-2)}
+   179→   179→.prose .table-wrap{overflow-x:auto;margin:.6em 0;border:1px solid var(--line);border-radius:var(--r-sm);-webkit-overflow-scrolling:touch}
+   180→   180→.prose table{border-collapse:collapse;font-size:13.5px;width:100%;min-width:max-content}
+   181→   181→.prose .table-wrap table{margin:0}
+   182→   182→.prose th,.prose td{border:1px solid var(--line);padding:7px 11px;text-align:left;white-space:nowrap}
+   183→   183→.prose th{background:var(--surface-2);font-weight:600}
+   184→   184→.prose hr{border:none;border-top:1px solid var(--line);margin:1em 0}
+   185→   185→.copy-code{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:6px;background:var(--surface-3);
+   186→   186→  border:1px solid var(--line);color:var(--text-2);display:grid;place-items:center;opacity:0;transition:opacity var(--t-fast),color var(--t-fast),border-color var(--t-fast)}
+   187→   187→.prose pre:hover .copy-code{opacity:1}
+   188→   188→.copy-code:hover{color:var(--text);border-color:var(--line-2)}
+   189→   189→
+   190→   190→/* message actions */
+   191→   191→.msg-actions{display:flex;gap:2px;margin-top:9px;opacity:0;transform:translateY(-3px);transition:opacity var(--t),transform var(--t)}
+   192→   192→.turn:hover .msg-actions,.turn:focus-within .msg-actions{opacity:1;transform:none}
+   193→   193→.act-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-3);padding:5px 9px;border-radius:6px;transition:color var(--t-fast),background var(--t-fast)}
+   194→   194→.act-btn:hover{color:var(--text);background:var(--surface-3)}
+   195→   195→.act-btn.copied{color:var(--success)}
+   196→   196→
+   197→   197→/* reasoning */
+   198→   198→.reason{margin:2px 0 8px;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);background:var(--surface-2)}
+   199→   199→.reason summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-2);font-weight:500}
+   200→   200→.reason summary::-webkit-details-marker{display:none}
+   201→   201→.reason summary .chev{margin-left:auto;transition:transform var(--t)}
+   202→   202→.reason[open] summary .chev{transform:rotate(90deg)}
+   203→   203→.reason .r-body{padding:0 13px 12px;font-size:12.8px;color:var(--text-2);white-space:pre-wrap;line-height:1.6;font-family:var(--mono)}
+   204→   204→.reason.live summary .brain{animation:think 1.4s var(--ease) infinite}
+   205→   205→@keyframes think{0%,100%{opacity:.4}50%{opacity:1}}
+   206→   206→
+   207→   207→/* tool card */
+   208→   208→.tool-card{margin:8px 0;border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface);overflow:hidden;transition:border-color var(--t)}
+   209→   209→.tool-card summary{list-style:none;cursor:pointer;padding:11px 14px;display:flex;align-items:center;gap:10px;font-size:13.5px}
+   210→   210→.tool-card summary::-webkit-details-marker{display:none}
+   211→   211→.tc-ic{width:30px;height:30px;border-radius:var(--r-sm);background:var(--surface-3);display:grid;place-items:center;color:var(--text);flex:0 0 auto}
+   212→   212→.tc-name{font-family:var(--mono);font-weight:500;font-size:13px}
+   213→   213→.tc-sub{font-size:11.5px;color:var(--text-3)}
+   214→   214→.tc-status{margin-left:auto;font-size:11px;font-weight:500;padding:3px 10px;border-radius:var(--r-full);display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line)}
+   215→   215→.tc-status.run{background:var(--surface-3);color:var(--text-2)}
+   216→   216→.tc-status.ok{background:var(--success-bg);color:var(--text)}
+   217→   217→.tc-status.err{background:var(--danger-bg);color:var(--danger)}
+   218→   218→.tc-status .spin{width:11px;height:11px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+   219→   219→@keyframes spin{to{transform:rotate(360deg)}}
+   220→   220→.tc-body{border-top:1px solid var(--line);padding:12px 14px;display:grid;gap:8px}
+   221→   221→.tc-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3)}
+   222→   222→.tc-body pre{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;margin:3px 0 0;font-family:var(--mono);
+   223→   223→  font-size:12px;line-height:1.55;overflow:auto;max-height:280px}
+   224→   224→.cursor-blink{display:inline-block;width:7px;height:15px;background:var(--text);border-radius:1px;vertical-align:-3px;margin-left:1px;animation:blink 1.05s steps(2) infinite}
+   225→   225→@keyframes blink{50%{opacity:0}}
+   226→   226→
+   227→   227→/* skeleton */
+   228→   228→.skel{border-radius:6px;background:var(--shimmer);background-size:200% 100%;animation:shimmer 1.3s linear infinite}
+   229→   229→@keyframes shimmer{to{background-position:-200% 0}}
+   230→   230→
+   231→   231→/* ============================ CENTERED HOME (welcome + composer, like demo) ============================ */
+   232→   232→#stage{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;position:relative}
+   233→   233→/* Home: center the scroll content; composer stays in normal flow below it */
+   234→   234→#stage.home #scroll{display:flex;flex-direction:column;justify-content:center}
+   235→   235→#stage.home .thread{flex:0 0 auto}
+   236→   236→
+   237→   237→#welcome{max-width:640px;margin:0 auto;padding:8px 24px 22px;text-align:center;animation:msg-in .5s var(--ease-out) both;width:100%}
+   238→   238→.hero-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:6px}
+   239→   239→.hero-mark{width:52px;height:52px;flex:0 0 auto;display:grid;place-items:center;color:var(--text)}
+   240→   240→.hero-mark svg{width:52px;height:52px;overflow:visible}
+   241→   241→.hl-draw{stroke-dasharray:1;stroke-dashoffset:1;animation:hl-draw 1.1s var(--ease-out) forwards}
+   242→   242→.hl-d1{animation-delay:.05s}.hl-d2{animation-delay:.45s}
+   243→   243→@keyframes hl-draw{to{stroke-dashoffset:0}}
+   244→   244→.hl-pulse{opacity:0;transform-origin:24px 37px;animation:hl-pulse 2.6s var(--ease) 1.2s infinite}
+   245→   245→@keyframes hl-pulse{0%{opacity:0;transform:scale(.4)}15%{opacity:1;transform:scale(1)}40%{opacity:.5;transform:scale(1.9)}60%,100%{opacity:0;transform:scale(2.4)}}
+   246→   246→#welcome h1{font-size:30px;font-weight:600;letter-spacing:-.6px;margin:0;line-height:1.1;color:var(--text)}
+   247→   247→#welcome .lead{font-size:14.5px;color:var(--text-2);margin:14px auto 0;max-width:460px}
+   248→   248→.suggest{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;text-align:left;margin-top:26px;max-width:560px;margin-left:auto;margin-right:auto}
+   249→   249→.sg{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:13px 14px;display:flex;gap:11px;align-items:flex-start;
+   250→   250→  transition:border-color var(--t) var(--ease),transform var(--t) var(--ease),box-shadow var(--t) var(--ease);cursor:pointer}
+   251→   251→.sg:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--sh-2)}
+   252→   252→.sg:active{transform:translateY(0) scale(.99)}
+   253→   253→.sg-ic{width:34px;height:34px;border-radius:var(--r-sm);background:var(--surface-3);display:grid;place-items:center;color:var(--text);flex:0 0 auto}
+   254→   254→.sg-txt b{display:block;font-size:13.5px;font-weight:600;margin-bottom:2px}
+   255→   255→.sg-txt span{font-size:12px;color:var(--text-2)}
+   256→   256→
+   257→   257→/* ============================ COMPOSER ============================ */
+   258→   258→#composer{flex:0 0 auto;padding:12px 24px calc(18px + env(safe-area-inset-bottom));z-index:10;position:relative;background:var(--bg)}
+   259→   259→.compose-inner{max-width:760px;margin:0 auto;width:100%;position:relative}
+   260→   260→.compose-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);padding:14px 16px 10px;
+   261→   261→  transition:border-color var(--t),box-shadow var(--t);box-shadow:var(--sh-1)}
+   262→   262→.compose-box:focus-within{border-color:var(--line-2);box-shadow:var(--ring),var(--sh-2)}
+   263→   263→#input{width:100%;background:none;border:none;outline:none;resize:none;color:var(--text);font-size:16px;line-height:1.5;
+   264→   264→  max-height:200px;min-height:24px;padding:0;display:block}
+   265→   265→#input::placeholder{color:var(--text-3)}
+   266→   266→.compose-actions{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+   267→   267→.chip{height:32px;padding:0 12px;border-radius:var(--r-full);display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;
+   268→   268→  color:var(--text-2);border:1px solid var(--line);background:transparent;transition:color var(--t-fast),background var(--t-fast),border-color var(--t-fast),transform var(--t-fast)}
+   269→   269→.chip:hover{color:var(--text);border-color:var(--line-2)}
+   270→   270→.chip:active{transform:scale(.96)}
+   271→   271→.chip.on{color:var(--text);background:var(--accent-soft);border-color:var(--line-2)}
+   272→   272→.chip .ic{width:15px;height:15px}
+   273→   273→.chip.on .ic{color:var(--text)}
+   274→   274→.compose-actions .spacer{flex:1;min-width:0}
+   275→   275→.attach-btn{width:36px;height:36px;border-radius:var(--r-full);display:grid;place-items:center;color:var(--text-3);transition:color var(--t-fast),background var(--t-fast);flex:0 0 auto}
+   276→   276→.attach-btn:hover{color:var(--text);background:var(--surface-3)}
+   277→   277→.send-btn{width:36px;height:36px;border-radius:var(--r-full);background:var(--text);color:var(--text-inv);display:grid;place-items:center;
+   278→   278→  flex:0 0 auto;transition:filter var(--t),transform var(--t) var(--spring)}
+   279→   279→.send-btn:hover{filter:brightness(.92);transform:scale(1.06)}
+   280→   280→[data-theme="light"] .send-btn:hover{filter:brightness(1.3)}
+   281→   281→.send-btn:active{transform:scale(.9)}
+   282→   282→.send-btn:disabled{opacity:.35;cursor:default;transform:none;filter:none}
+   283→   283→.send-btn.stop{background:var(--danger);color:#fff}
+   284→   284→/* per-chat context + cost status bar (under composer) */
+   285→   285→.ctx-bar{display:flex;align-items:center;gap:10px;margin-top:11px;font-size:11.5px;color:var(--text-3);flex-wrap:wrap}
+   286→   286→.ctx-track{flex:0 0 auto;width:150px;max-width:38vw;height:8px;border-radius:var(--r-full);overflow:hidden;
+   287→   287→  background:var(--surface-3);border:1px solid var(--line)}
+   288→   288→.ctx-track>i{display:block;height:100%;width:0;border-radius:var(--r-full);transition:width .5s var(--ease-out);
+   289→   289→  background:repeating-linear-gradient(45deg,var(--text-2),var(--text-2) 5px,transparent 5px,transparent 10px);background-color:var(--text-3)}
+   290→   290→.ctx-track.warn>i{background:repeating-linear-gradient(45deg,var(--warn),var(--warn) 5px,transparent 5px,transparent 10px);background-color:var(--warn)}
+   291→   291→.ctx-track.hot>i{background:repeating-linear-gradient(45deg,var(--danger),var(--danger) 5px,transparent 5px,transparent 10px);background-color:var(--danger)}
+   292→   292→.ctx-tok{font-weight:600;color:var(--text);font-family:var(--mono);font-size:11px}
+   293→   293→.ctx-left{color:var(--text-3)}
+   294→   294→.ctx-cost{margin-left:auto;color:var(--text-2)}
+   295→   295→.ctx-cost b{color:var(--text);font-weight:600}
+   296→   296→.compose-foot{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px;font-size:11px;color:var(--text-3)}
+   297→   297→.kbd{font-family:var(--mono);font-size:10px;background:var(--surface-3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--text-2)}
+   298→   298→
+   299→   299→/* scroll-to-bottom fab */
+   300→   300→.fab-scroll{position:absolute;left:50%;top:-48px;transform:translateX(-50%) translateY(8px);width:34px;height:34px;border-radius:50%;
+   301→   301→  background:var(--surface);border:1px solid var(--line-2);box-shadow:var(--sh-2);display:grid;place-items:center;color:var(--text-2);
+   302→   302→  opacity:0;pointer-events:none;transition:opacity var(--t),transform var(--t),color var(--t);z-index:15}
+   303→   303→.fab-scroll.show{opacity:1;pointer-events:auto;transform:translateX(-50%)}
+   304→   304→.fab-scroll:hover{color:var(--text)}
+   305→   305→#stage.home .fab-scroll{display:none}
+   306→   306→
+   307→   307→/* ============================ RIGHT PANEL (models/limits) ============================ */
+   308→   308→#panel{position:fixed;top:0;right:0;bottom:0;width:340px;max-width:88vw;background:var(--surface-2);border-left:1px solid var(--line);
+   309→   309→  z-index:40;display:flex;flex-direction:column;transform:translateX(100%);transition:transform var(--t) var(--ease);box-shadow:var(--sh-3)}
+   310→   310→#panel.open{transform:none}
+   311→   311→.panel-head{padding:16px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);flex:0 0 auto}
+   312→   312→.panel-head h3{font-size:15px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px}
+   313→   313→.tier-chip{font-size:10.5px;font-weight:500;color:var(--text-2);background:var(--surface);border:1px solid var(--line);padding:3px 9px;border-radius:var(--r-full)}
+   314→   314→.panel-scroll{flex:1;overflow-y:auto;padding:14px}
+   315→   315→.panel-note{font-size:12px;color:var(--text-3);line-height:1.5;margin:0 0 14px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm)}
+   316→   316→.mcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:13px 14px;margin-bottom:10px;transition:border-color var(--t),box-shadow var(--t),opacity var(--t)}
+   317→   317→.mcard.active{border-color:var(--line-2);box-shadow:var(--ring)}
+   318→   318→.mcard.cool{opacity:.55}
+   319→   319→.mc-top{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+   320→   320→.mc-name{font-family:var(--mono);font-size:12.5px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   321→   321→.mc-badge{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:var(--r-full);border:1px solid var(--line)}
+   322→   322→.mc-badge.ready{background:var(--surface-3);color:var(--text-2)}
+   323→   323→.mc-badge.limit{background:var(--danger-bg);color:var(--danger)}
+   324→   324→.mc-badge.cool{background:var(--surface-3);color:var(--warn)}
+   325→   325→.mc-badge.active{background:var(--text);color:var(--text-inv);border-color:var(--text)}
+   326→   326→.meter{margin-bottom:9px}
+   327→   327→.meter:last-child{margin-bottom:0}
+   328→   328→.meter-top{display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-3);margin-bottom:4px}
+   329→   329→.meter-top b{color:var(--text-2);font-weight:500}
+   330→   330→.meter-bar{height:5px;background:var(--surface-3);border-radius:var(--r-full);overflow:hidden}
+   331→   331→.meter-bar>i{display:block;height:100%;border-radius:var(--r-full);transition:width .5s var(--ease-out);width:0;background:var(--text-2)}
+   332→   332→.meter-bar.hot>i{background:var(--danger)}
+   333→   333→.log-sec{border-top:1px solid var(--line);padding:12px 14px;flex:0 0 auto;max-height:170px;display:flex;flex-direction:column}
+   334→   334→.log-sec h4{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);margin:0 0 8px}
+   335→   335→.log-body{overflow-y:auto;font-family:var(--mono);font-size:11px;color:var(--text-2);line-height:1.7}
+   336→   336→.log-body .lt{color:var(--text-3)}
+   337→   337→
+   338→   338→/* ============================ MODAL (all settings live here) ============================ */
+   339→   339→.overlay{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;
+   340→   340→  padding:20px;z-index:60;opacity:0;pointer-events:none;transition:opacity var(--t)}
+   341→   341→.overlay.show{opacity:1;pointer-events:auto}
+   342→   342→.modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);width:100%;max-width:560px;max-height:90dvh;
+   343→   343→  overflow-y:auto;box-shadow:var(--sh-3);transform:translateY(14px) scale(.98);transition:transform var(--t) var(--spring)}
+   344→   344→.overlay.show .modal{transform:none}
+   345→   345→.modal-head{padding:22px 24px 6px;position:sticky;top:0;background:var(--surface);z-index:2}
+   346→   346→.modal-head h2{font-size:18px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:9px}
+   347→   347→.modal-head p{font-size:13px;color:var(--text-2);margin:0}
+   348→   348→.modal-head .x{position:absolute;top:18px;right:18px}
+   349→   349→.modal-body{padding:16px 24px 24px}
+   350→   350→.field{margin-bottom:18px}
+   351→   351→.field>label{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
+   352→   352→.field>label .opt{color:var(--text-3);font-weight:400;font-size:12px}
+   353→   353→.input-wrap{position:relative}
+   354→   354→.field input,.field textarea,.field select{width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+   355→   355→  border-radius:var(--r-md);padding:11px 13px;font-size:15px;transition:border-color var(--t);outline:none}
+   356→   356→.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--line-2)}
+   357→   357→.field input[type=password]{padding-right:44px}
+   358→   358→.field textarea{resize:vertical;min-height:78px;font-family:var(--mono);font-size:12.5px;line-height:1.6}
+   359→   359→.field .hint{font-size:11.5px;color:var(--text-3);margin-top:6px;line-height:1.5}
+   360→   360→.field .hint a{font-weight:500}
+   361→   361→.field .ok-tag,.field .err-tag{display:none;font-size:11.5px;margin-top:6px;align-items:center;gap:6px}
+   362→   362→.field .ok-tag{color:var(--success)}.field .err-tag{color:var(--danger)}
+   363→   363→.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:6px;display:grid;place-items:center;color:var(--text-3)}
+   364→   364→.eye:hover{color:var(--text)}
+   365→   365→.sec-title{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--text-3);margin:22px 0 10px;padding-top:16px;border-top:1px solid var(--line)}
+   366→   366→.toggle-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:10px}
+   367→   367→.toggle-row .tr-txt{flex:1}.toggle-row .tr-txt b{font-size:13.5px;font-weight:600;display:block}
+   368→   368→.toggle-row .tr-txt span{font-size:11.5px;color:var(--text-3)}
+   369→   369→.switch{width:42px;height:24px;border-radius:var(--r-full);background:var(--line-2);position:relative;flex:0 0 auto;transition:background var(--t);cursor:pointer}
+   370→   370→.switch.on{background:var(--text)}
+   371→   371→.switch>i{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--surface);transition:left var(--t) var(--spring);box-shadow:var(--sh-1)}
+   372→   372→.switch.on>i{left:20px}
+   373→   373→.seg{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);padding:4px}
+   374→   374→.seg button{flex:1;padding:8px;border-radius:var(--r-sm);font-size:13px;font-weight:500;color:var(--text-2);transition:background var(--t-fast),color var(--t-fast);display:flex;align-items:center;justify-content:center;gap:7px}
+   375→   375→.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--sh-1)}
+   376→   376→.modal-foot{display:flex;gap:10px;align-items:center;padding:16px 24px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--surface);flex-wrap:wrap}
+   377→   377→.btn{padding:11px 18px;border-radius:var(--r-md);font-size:14px;font-weight:600;transition:filter var(--t-fast),background var(--t-fast),border-color var(--t-fast),color var(--t-fast),transform var(--t-fast);border:1px solid var(--line);display:inline-flex;align-items:center;gap:7px}
+   378→   378→.btn:active{transform:scale(.97)}
+   379→   379→.btn.primary{background:var(--text);color:var(--text-inv);border-color:var(--text)}
+   380→   380→.btn.primary:hover{filter:brightness(.92)}
+   381→   381→[data-theme="light"] .btn.primary:hover{filter:none;background:#000}
+   382→   382→.btn.ghost{background:transparent;color:var(--text-2)}
+   383→   383→.btn.ghost:hover{color:var(--text);border-color:var(--line-2)}
+   384→   384→.btn.danger{color:var(--danger);border-color:transparent;background:transparent}
+   385→   385→.btn.danger:hover{background:var(--danger-bg)}
+   386→   386→
+   387→   387→/* ============================ TOAST ============================ */
+   388→   388→#toasts{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+   389→   389→.toast{background:var(--elevated);border:1px solid var(--line-2);border-radius:var(--r-md);padding:11px 16px;font-size:13.5px;font-weight:500;
+   390→   390→  box-shadow:var(--sh-3);display:flex;align-items:center;gap:10px;animation:toast-in .3s var(--spring);max-width:90vw}
+   391→   391→.toast.out{animation:toast-out .25s var(--ease) forwards}
+   392→   392→.toast .ti{width:18px;height:18px;flex:0 0 auto;color:var(--text-2)}
+   393→   393→.toast.err .ti{color:var(--danger)}
+   394→   394→@keyframes toast-in{from{opacity:0;transform:translateY(16px) scale(.95)}to{opacity:1;transform:none}}
+   395→   395→@keyframes toast-out{to{opacity:0;transform:translateY(10px) scale(.96)}}
+   396→   396→
+   397→   397→/* scrim for mobile drawers */
+   398→   398→#scrim{position:fixed;inset:0;background:var(--scrim);z-index:35;opacity:0;pointer-events:none;transition:opacity var(--t)}
+   399→   399→#scrim.show{opacity:1;pointer-events:auto}
+   400→   400→
+   401→   401→/* ============================ RESPONSIVE ============================ */
+   402→   402→@media(min-width:861px){ .mobile-only{display:none!important} }
+   403→   403→/* ---- MOBILE: sidebar becomes overlay drawer; main full width; composer ALWAYS visible ---- */
+   404→   404→@media(max-width:860px){
+   405→   405→  #app{grid-template-columns:1fr!important}
+   406→   406→  #nav{position:fixed;top:0;bottom:0;left:0;width:270px;max-width:82vw;z-index:45;transform:translateX(-100%);
+   407→   407→    transition:transform var(--t) var(--ease);box-shadow:var(--sh-3);grid-template-columns:none}
+   408→   408→  #nav.open{transform:none}
+   409→   409→  #nav .rail-btn{display:flex;align-items:center;width:100%;justify-content:flex-start;gap:12px;padding:0 12px;font-size:14px;font-weight:500;height:44px}
+   410→   410→  #nav .rail-btn .rbl{display:inline}
+   411→   411→  #nav .nav-sec{opacity:1}
+   412→   412→  #nav .nav-list{opacity:1;pointer-events:auto}
+   413→   413→  .desktop-only{display:none!important}
+   414→   414→  .model-select{left:50%!important}
+   415→   415→  .thread{padding:18px 14px 8px}
+   416→   416→  #composer{padding:10px 12px calc(14px + env(safe-area-inset-bottom))}
+   417→   417→  .compose-box{padding:12px 14px 8px;border-radius:20px}
+   418→   418→  .model-select{max-width:52vw;font-size:12px}
+   419→   419→  #welcome{padding:8px 16px 18px}
+   420→   420→  #welcome h1{font-size:22px}
+   421→   421→  .hero-row{gap:12px}
+   422→   422→  .hero-mark,.hero-mark svg{width:40px;height:40px}
+   423→   423→  .suggest{grid-template-columns:1fr;max-width:100%;margin-top:20px}
+   424→   424→  .compose-foot{display:none}
+   425→   425→  #panel{width:min(340px,92vw)}
+   426→   426→}
+   427→   427→@media(max-width:420px){
+   428→   428→  .model-select .ms-name{max-width:96px}
+   429→   429→  .topbar{padding:0 8px;gap:4px}
+   430→   430→  #welcome .lead{font-size:13.5px}
+   431→   431→}
+   432→   432→</style>
+   433→   433→</head>
+   434→   434→<body>
+   435→   435→<!-- SVG icon sprite -->
+   436→   436→<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+   437→   437→<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+   438→   438→<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+   439→   439→<symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/></symbol>
+   440→   440→<symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></symbol>
+   441→   441→<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+   442→   442→<symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+   443→   443→<symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/></symbol>
+   444→   444→<symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1A1.7 1.7 0 009 19.4a1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></symbol>
+   445→   445→<symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M12 3a9 9 0 019 9M3 12a9 9 0 019-9M12 15l4-4"/></symbol>
+   446→   446→<symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.6L19 10.5l-5.1 1.9L12 18l-1.9-5.6L5 10.5l5.1-1.9L12 3z"/></symbol>
+   447→   447→<symbol id="i-thinking" viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z"/></symbol>
+   448→   448→<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></symbol>
+   449→   449→<symbol id="i-attach" viewBox="0 0 24 24"><path d="M21 11.5l-8.9 8.9a5 5 0 01-7.1-7.1l9-9a3.3 3.3 0 014.7 4.7l-9 9a1.7 1.7 0 01-2.4-2.4l8.3-8.3"/></symbol>
+   450→   450→<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+   451→   451→<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></symbol>
+   452→   452→<symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></symbol>
+   453→   453→<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+   454→   454→<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0114.9-3.4L21 8M20.5 15a9 9 0 01-14.9 3.4L3 16"/></symbol>
+   455→   455→<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></symbol>
+   456→   456→<symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 01-11.8 7.8L3 21l1.7-6.2A8.5 8.5 0 1121 11.5z"/></symbol>
+   457→   457→<symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+   458→   458→<symbol id="i-chev-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+   459→   459→<symbol id="i-brain" viewBox="0 0 24 24"><path d="M9.5 2a3 3 0 00-3 3 3 3 0 00-2 5.2A3 3 0 004 15a3 3 0 003 3 3 3 0 006 0V5a3 3 0 00-3.5-3z"/><path d="M14.5 2A3 3 0 0118 5a3 3 0 012 5.2A3 3 0 0120 15a3 3 0 01-3 3"/></symbol>
+   460→   460→<symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 01-5.4 5.4l-6 6a2 2 0 002.8 2.8l6-6a4 4 0 015.4-5.4l-2.6 2.6-2-2 2.6-2.6z"/></symbol>
+   461→   461→<symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.8 12.2L21 2M17 6l3 3M15 8l2 2"/></symbol>
+   462→   462→<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+   463→   463→<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+   464→   464→<symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M9.9 4.2A10.9 10.9 0 0112 4c6.5 0 10 7 10 7a13.2 13.2 0 01-1.7 2.7M6.6 6.6A13.3 13.3 0 002 11s3.5 7 10 7a10.9 10.9 0 004.1-.8M3 3l18 18"/></symbol>
+   465→   465→<symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
+   466→   466→<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+   467→   467→<symbol id="i-robot" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="2"/><path d="M12 8V4M9 4h6"/><circle cx="9" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1" fill="currentColor" stroke="none"/></symbol>
+   468→   468→<symbol id="i-broadcast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 010 8.4M7.8 16.2a6 6 0 010-8.4M19 5a10 10 0 010 14M5 19A10 10 0 015 5"/></symbol>
+   469→   469→<symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M8 21v-6h8v6"/></symbol>
+   470→   470→<symbol id="i-puzzle" viewBox="0 0 24 24"><path d="M4 7h3a2 2 0 002-2 2 2 0 114 0 2 2 0 002 2h3v3a2 2 0 002 2 2 2 0 110 4 2 2 0 00-2 2v3h-3a2 2 0 01-2-2 2 2 0 10-4 0 2 2 0 01-2 2H4v-4a2 2 0 00-2-2 2 2 0 110-4 2 2 0 002-2V7z"/></symbol>
+   471→   471→<symbol id="i-command" viewBox="0 0 24 24"><path d="M9 3a3 3 0 110 6H3M15 3a3 3 0 100 6h6M9 15a3 3 0 100 6h.01M15 15a3 3 0 110 6H9V9h6"/></symbol>
+   472→   472→</defs></svg>
+   473→   473→
+   474→   474→<div id="app">
+   475→   475→  <!-- ========================= SIDEBAR ========================= -->
+   476→   476→  <nav id="nav" aria-label="Chats">
+   477→   477→    <div class="nav-top">
+   478→   478→      <button class="rail-btn brand-btn" id="btnSidebar" aria-label="Toggle sidebar"><svg class="ic"><use href="#i-sidebar"/></svg><span class="rbl">Collapse</span></button>
+   479→   479→      <button class="rail-btn" id="btnNew" aria-label="New chat"><svg class="ic"><use href="#i-edit"/></svg><span class="rbl">New chat</span></button>
+   480→   480→      <button class="rail-btn" id="btnSearch" aria-label="Search chats"><svg class="ic"><use href="#i-search"/></svg><span class="rbl">Search</span></button>
+   481→   481→    </div>
+   482→   482→    <div class="nav-sec">Recent</div>
+   483→   483→    <div class="nav-list" id="chatList"></div>
+   484→   484→    <div class="nav-foot">
+   485→   485→      <button class="rail-btn" id="btnSettingsSide" aria-label="Settings"><svg class="ic"><use href="#i-settings"/></svg><span class="rbl">Settings</span></button>
+   486→   486→    </div>
+   487→   487→  </nav>
+   488→   488→
+   489→   489→  <!-- ========================= MAIN ========================= -->
+   490→   490→  <div id="main">
+   491→   491→    <div class="topbar">
+   492→   492→      <button class="icon-btn mobile-only" id="btnNav" aria-label="Menu"><svg class="ic"><use href="#i-menu"/></svg></button>
+   493→   493→      <button class="model-select on" id="btnModel" aria-label="Choose model" aria-haspopup="listbox" aria-expanded="false">
+   494→   494→        <span class="live"></span>
+   495→   495→        <span class="ms-name" id="modelName">Auto</span>
+   496→   496→        <svg class="ic sm ms-chev"><use href="#i-chev-down"/></svg>
+   497→   497→      </button>
+   498→   498→      <div class="model-menu" id="modelMenu" role="listbox" aria-label="Models"></div>
+   499→   499→      <div class="spacer"></div>
+   500→   500→      <button class="icon-btn" id="btnPanel" aria-label="Model limits"><svg class="ic"><use href="#i-gauge"/></svg></button>
+
+[showing lines 1-500 of 1812; use offset=501 with limit to continue reading]

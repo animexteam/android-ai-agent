@@ -1,0 +1,791 @@
+     1→     1→package com.androidagent.aiagent.ui
+     2→     2→
+     3→     3→import android.content.ActivityNotFoundException
+     4→     4→import android.content.Intent
+     5→     5→import android.os.Bundle
+     6→     6→import android.speech.RecognitionListener
+     7→     7→import android.speech.RecognizerIntent
+     8→     8→import android.speech.SpeechRecognizer
+     9→     9→import androidx.compose.animation.animateColorAsState
+    10→    10→import androidx.compose.animation.core.LinearEasing
+    11→    11→import androidx.compose.animation.core.RepeatMode
+    12→    12→import androidx.compose.animation.core.animateFloat
+    13→    13→import androidx.compose.animation.core.infiniteRepeatable
+    14→    14→import androidx.compose.animation.core.rememberInfiniteTransition
+    15→    15→import androidx.compose.animation.core.tween
+    16→    16→import androidx.compose.foundation.background
+    17→    17→import androidx.compose.foundation.clickable
+    18→    18→import androidx.compose.foundation.layout.*
+    19→    19→import androidx.compose.foundation.lazy.LazyColumn
+    20→    20→import androidx.compose.foundation.lazy.items
+    21→    21→import androidx.compose.foundation.lazy.rememberLazyListState
+    22→    22→import androidx.compose.foundation.shape.CircleShape
+    23→    23→import androidx.compose.foundation.shape.RoundedCornerShape
+    24→    24→import androidx.compose.material.icons.Icons
+    25→    25→import androidx.compose.material.icons.automirrored.filled.Send
+    26→    26→import androidx.compose.material.icons.filled.*
+    27→    27→import androidx.compose.material3.*
+    28→    28→import androidx.compose.runtime.*
+    29→    29→import androidx.compose.ui.Alignment
+    30→    30→import androidx.compose.ui.Modifier
+    31→    31→import androidx.compose.ui.draw.alpha
+    32→    32→import androidx.compose.ui.draw.clip
+    33→    33→import androidx.compose.ui.graphics.Color
+    34→    34→import androidx.compose.ui.graphics.vector.ImageVector
+    35→    35→import androidx.compose.ui.platform.LocalConfiguration
+    36→    36→import androidx.compose.ui.platform.LocalContext
+    37→    37→import androidx.compose.ui.text.font.FontWeight
+    38→    38→import androidx.compose.ui.unit.dp
+    39→    39→import androidx.compose.ui.unit.sp
+    40→    40→import com.androidagent.aiagent.agent.AgentEvent
+    41→    41→import com.androidagent.aiagent.agent.AgentStatus
+    42→    42→
+    43→    43→@OptIn(ExperimentalMaterial3Api::class)
+    44→    44→@Composable
+    45→    45→fun MainScreen(
+    46→    46→    viewModel: AgentViewModel,
+    47→    47→    onNavigateToSettings: () -> Unit,
+    48→    48→    onNavigateToDebug: () -> Unit,
+    49→    49→    onNavigateToHistory: () -> Unit
+    50→    50→) {
+    51→    51→    val state by viewModel.stateFlow.collectAsState()
+    52→    52→    val isAccessibilityEnabled by remember {
+    53→    53→        mutableStateOf(viewModel.isAccessibilityServiceEnabled())
+    54→    54→    }
+    55→    55→    var taskInput by remember { mutableStateOf("") }
+    56→    56→    val listState = rememberLazyListState()
+    57→    57→    val isRunning = state.status.isActive
+    58→    58→    val context = LocalContext.current
+    59→    59→
+    60→    60→    // Voice input state
+    61→    61→    var isListening by remember { mutableStateOf(false) }
+    62→    62→    var voiceText by remember { mutableStateOf("") }
+    63→    63→
+    64→    64→    // Build display items: chat messages + tool actions
+    65→    65→    val displayItems = remember(state.history) {
+    66→    66→        state.history.mapNotNull { event ->
+    67→    67→            when (event) {
+    68→    68→                is AgentEvent.UserMessage -> DisplayItem.UserMessage(event.text, event.timestamp)
+    69→    69→                is AgentEvent.AgentMessage -> DisplayItem.AgentMessage(event.text, event.timestamp)
+    70→    70→                is AgentEvent.ToolExecution -> DisplayItem.ToolAction(
+    71→    71→                    name = event.toolName,
+    72→    72→                    args = event.arguments,
+    73→    73→                    success = event.result.success,
+    74→    74→                    error = event.result.error?.message
+    75→    75→                )
+    76→    76→                is AgentEvent.Error -> DisplayItem.ErrorItem(event.message)
+    77→    77→                else -> null
+    78→    78→            }
+    79→    79→        }
+    80→    80→    }
+    81→    81→
+    82→    82→    LaunchedEffect(displayItems.size) {
+    83→    83→        if (displayItems.isNotEmpty()) {
+    84→    84→            listState.animateScrollToItem(displayItems.size - 1)
+    85→    85→        }
+    86→    86→    }
+    87→    87→
+    88→    88→    // Voice recognizer
+    89→    89→    val speechRecognizer = remember {
+    90→    90→        try {
+    91→    91→            SpeechRecognizer.createSpeechRecognizer(context)
+    92→    92→        } catch (e: Exception) { null }
+    93→    93→    }
+    94→    94→
+    95→    95→    DisposableEffect(Unit) {
+    96→    96→        onDispose {
+    97→    97→            speechRecognizer?.destroy()
+    98→    98→        }
+    99→    99→    }
+   100→   100→
+   101→   101→    fun startVoiceInput() {
+   102→   102→        if (speechRecognizer == null) return
+   103→   103→        isListening = true
+   104→   104→        voiceText = ""
+   105→   105→        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+   106→   106→            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+   107→   107→            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-IN")
+   108→   108→            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to Android-Use...")
+   109→   109→        }
+   110→   110→        try {
+   111→   111→            speechRecognizer.setRecognitionListener(object : RecognitionListener {
+   112→   112→                override fun onReadyForSpeech(params: Bundle?) {}
+   113→   113→                override fun onBeginningOfSpeech() {}
+   114→   114→                override fun onRmsChanged(rmsdB: Float) {}
+   115→   115→                override fun onBufferReceived(buffer: ByteArray?) {}
+   116→   116→                override fun onEndOfSpeech() {
+   117→   117→                    isListening = false
+   118→   118→                }
+   119→   119→                override fun onError(error: Int) {
+   120→   120→                    isListening = false
+   121→   121→                }
+   122→   122→                override fun onResults(results: Bundle?) {
+   123→   123→                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+   124→   124→                    val text = matches?.firstOrNull() ?: ""
+   125→   125→                    if (text.isNotBlank()) {
+   126→   126→                        taskInput = text
+   127→   127→                    }
+   128→   128→                    isListening = false
+   129→   129→                }
+   130→   130→                override fun onPartialResults(partialResults: Bundle?) {
+   131→   131→                    val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+   132→   132→                    voiceText = matches?.firstOrNull() ?: ""
+   133→   133→                }
+   134→   134→                override fun onEvent(eventType: Int, params: Bundle?) {}
+   135→   135→            })
+   136→   136→            speechRecognizer.startListening(intent)
+   137→   137→        } catch (e: ActivityNotFoundException) {
+   138→   138→            isListening = false
+   139→   139→        }
+   140→   140→    }
+   141→   141→
+   142→   142→    fun sendTask(text: String) {
+   143→   143→        val trimmed = text.trim()
+   144→   144→        if (trimmed.isNotBlank()) {
+   145→   145→            if (state.goal.isBlank()) {
+   146→   146→                viewModel.startTask(trimmed)
+   147→   147→            } else {
+   148→   148→                viewModel.continueChat(trimmed)
+   149→   149→            }
+   150→   150→            taskInput = ""
+   151→   151→        }
+   152→   152→    }
+   153→   153→
+   154→   154→    Box(
+   155→   155→        modifier = Modifier
+   156→   156→            .fillMaxSize()
+   157→   157→            .background(AppColors.DarkBackground)
+   158→   158→    ) {
+   159→   159→        Column(modifier = Modifier.fillMaxSize()) {
+   160→   160→            // ── Top Bar ──
+   161→   161→            TopBar(
+   162→   162→                onNewChat = { viewModel.newChat() },
+   163→   163→                onHistory = onNavigateToHistory,
+   164→   164→                onSettings = onNavigateToSettings,
+   165→   165→                onDebug = onNavigateToDebug
+   166→   166→            )
+   167→   167→
+   168→   168→            // ── Status bar (when running) ──
+   169→   169→            if (isRunning) {
+   170→   170→                RunningStatusBar(state = state)
+   171→   171→            }
+   172→   172→
+   173→   173→            // ── Accessibility banner ──
+   174→   174→            if (!isAccessibilityEnabled) {
+   175→   175→                AccessibilityBanner(onEnable = { viewModel.openAccessibilitySettings() })
+   176→   176→            }
+   177→   177→
+   178→   178→            // ── Result banners ──
+   179→   179→            if (state.status == AgentStatus.COMPLETED && !isRunning) {
+   180→   180→                ResultBanner(text = "Done", isSuccess = true)
+   181→   181→            } else if (state.status == AgentStatus.FAILED && !isRunning) {
+   182→   182→                ResultBanner(text = state.lastError ?: "Something went wrong", isSuccess = false)
+   183→   183→            } else if (state.status == AgentStatus.CANCELLED && !isRunning) {
+   184→   184→                ResultBanner(text = "Stopped", isSuccess = false)
+   185→   185→            }
+   186→   186→
+   187→   187→            // ── Chat / Event List ──
+   188→   188→            if (displayItems.isEmpty() && !isRunning) {
+   189→   189→                EmptyState(onSuggestionClick = { sendTask(it) })
+   190→   190→            } else {
+   191→   191→                LazyColumn(
+   192→   192→                    state = listState,
+   193→   193→                    modifier = Modifier
+   194→   194→                        .fillMaxSize()
+   195→   195→                        .padding(horizontal = 16.dp),
+   196→   196→                    verticalArrangement = Arrangement.spacedBy(6.dp),
+   197→   197→                    contentPadding = PaddingValues(vertical = 8.dp)
+   198→   198→                ) {
+   199→   199→                    items(
+   200→   200→                        items = displayItems,
+   201→   201→                        key = { it.timestamp.toString() + it::class.simpleName }
+   202→   202→                    ) { item ->
+   203→   203→                        when (item) {
+   204→   204→                            is DisplayItem.UserMessage -> UserChatBubble(text = item.text)
+   205→   205→                            is DisplayItem.AgentMessage -> AgentChatBubble(text = item.text)
+   206→   206→                            is DisplayItem.ToolAction -> ToolActionCard(item)
+   207→   207→                            is DisplayItem.ErrorItem -> ErrorText(item.message)
+   208→   208→                        }
+   209→   209→                    }
+   210→   210→                    // Bottom padding for input bar
+   211→   211→                    item {
+   212→   212→                        Spacer(modifier = Modifier.height(80.dp))
+   213→   213→                    }
+   214→   214→                }
+   215→   215→            }
+   216→   216→        }
+   217→   217→
+   218→   218→        // ── Bottom Input Bar ──
+   219→   219→        BottomInputBar(
+   220→   220→            input = taskInput,
+   221→   221→            onInputChange = { taskInput = it },
+   222→   222→            onSend = { sendTask(taskInput) },
+   223→   223→            onStop = { viewModel.stopAgent() },
+   224→   224→            isRunning = isRunning,
+   225→   225→            isListening = isListening,
+   226→   226→            onVoiceClick = { startVoiceInput() },
+   227→   227→            canSend = taskInput.isNotBlank() && !isRunning
+   228→   228→        )
+   229→   229→
+   230→   230→        // ── Dialogs ──
+   231→   231→        state.pendingConfirmation?.let { confirmation ->
+   232→   232→            ConfirmationDialog(
+   233→   233→                confirmation = confirmation,
+   234→   234→                onConfirm = { viewModel.respondToConfirmation(true) },
+   235→   235→                onDeny = { viewModel.respondToConfirmation(false) }
+   236→   236→            )
+   237→   237→        }
+   238→   238→
+   239→   239→        state.pendingQuestion?.let { question ->
+   240→   240→            UserQuestionDialog(
+   241→   241→                question = question,
+   242→   242→                onAnswer = { answer -> viewModel.respondToUser(answer) },
+   243→   243→                onDismiss = {}
+   244→   244→            )
+   245→   245→        }
+   246→   246→    }
+   247→   247→}
+   248→   248→
+   249→   249→// ===================================================================
+   250→   250→// Display items
+   251→   251→// ===================================================================
+   252→   252→
+   253→   253→private sealed class DisplayItem {
+   254→   254→    abstract val timestamp: Long
+   255→   255→    data class UserMessage(val text: String, override val timestamp: Long) : DisplayItem()
+   256→   256→    data class AgentMessage(val text: String, override val timestamp: Long) : DisplayItem()
+   257→   257→    data class ToolAction(
+   258→   258→        val name: String,
+   259→   259→        val args: String,
+   260→   260→        val success: Boolean,
+   261→   261→        val error: String?
+   262→   262→    ) : DisplayItem() { override val timestamp: Long = System.currentTimeMillis() }
+   263→   263→    data class ErrorItem(val message: String) : DisplayItem() { override val timestamp: Long = System.currentTimeMillis() }
+   264→   264→}
+   265→   265→
+   266→   266→// ===================================================================
+   267→   267→// Top Bar
+   268→   268→// ===================================================================
+   269→   269→
+   270→   270→@Composable
+   271→   271→private fun TopBar(
+   272→   272→    onNewChat: () -> Unit,
+   273→   273→    onHistory: () -> Unit,
+   274→   274→    onSettings: () -> Unit,
+   275→   275→    onDebug: () -> Unit
+   276→   276→) {
+   277→   277→    Row(
+   278→   278→        modifier = Modifier
+   279→   279→            .fillMaxWidth()
+   280→   280→            .background(AppColors.Surface)
+   281→   281→            .padding(horizontal = 4.dp, vertical = 2.dp)
+   282→   282→            .statusBarsPadding(),
+   283→   283→        verticalAlignment = Alignment.CenterVertically
+   284→   284→    ) {
+   285→   285→        // App logo + name
+   286→   286→        Row(
+   287→   287→            modifier = Modifier.weight(1f).padding(start = 12.dp),
+   288→   288→            verticalAlignment = Alignment.CenterVertically
+   289→   289→        ) {
+   290→   290→            Box(
+   291→   291→                modifier = Modifier
+   292→   292→                    .size(30.dp)
+   293→   293→                    .background(
+   294→   294→                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
+   295→   295→                            colors = listOf(AppColors.Primary, AppColors.Secondary)
+   296→   296→                        ),
+   297→   297→                        shape = RoundedCornerShape(8.dp)
+   298→   298→                    ),
+   299→   299→                contentAlignment = Alignment.Center
+   300→   300→            ) {
+   301→   301→                Icon(
+   302→   302→                    Icons.Default.SmartToy,
+   303→   303→                    contentDescription = null,
+   304→   304→                    tint = Color.White,
+   305→   305→                    modifier = Modifier.size(17.dp)
+   306→   306→                )
+   307→   307→            }
+   308→   308→            Spacer(modifier = Modifier.width(10.dp))
+   309→   309→            Text(
+   310→   310→                "Android-Use",
+   311→   311→                color = AppColors.TextPrimary,
+   312→   312→                fontWeight = FontWeight.SemiBold,
+   313→   313→                fontSize = 18.sp
+   314→   314→            )
+   315→   315→        }
+   316→   316→
+   317→   317→        // Actions: New Chat, History, Debug (long press), Settings
+   318→   318→        IconButton(onClick = onNewChat) {
+   319→   319→            Icon(Icons.Default.EditNote, contentDescription = "New Chat", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
+   320→   320→        }
+   321→   321→        IconButton(onClick = onHistory) {
+   322→   322→            Icon(Icons.Default.History, contentDescription = "History", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
+   323→   323→        }
+   324→   324→        IconButton(onClick = onDebug) {
+   325→   325→            Icon(Icons.Default.BugReport, contentDescription = "Debug", tint = AppColors.TextMuted, modifier = Modifier.size(20.dp))
+   326→   326→        }
+   327→   327→        IconButton(onClick = onSettings) {
+   328→   328→            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
+   329→   329→        }
+   330→   330→    }
+   331→   331→    HorizontalDivider(color = AppColors.SurfaceVariant, thickness = 1.dp)
+   332→   332→}
+   333→   333→
+   334→   334→// ===================================================================
+   335→   335→// Running Status Bar
+   336→   336→// ===================================================================
+   337→   337→
+   338→   338→@Composable
+   339→   339→private fun RunningStatusBar(state: com.androidagent.aiagent.agent.AgentState) {
+   340→   340→    val (label, icon, color) = when (state.status) {
+   341→   341→        AgentStatus.THINKING -> Triple("Analyzing screen", Icons.Default.Psychology, AppColors.Info)
+   342→   342→        AgentStatus.EXECUTING -> Triple("Using mobile...", Icons.Default.TouchApp, AppColors.Success)
+   343→   343→        AgentStatus.WAITING_FOR_USER -> Triple("Waiting for you", Icons.Default.QuestionAnswer, AppColors.Primary)
+   344→   344→        AgentStatus.WAITING_FOR_CONFIRMATION -> Triple("Confirm action", Icons.Default.Security, AppColors.Warning)
+   345→   345→        AgentStatus.VERIFYING -> Triple("Verifying...", Icons.Default.VerifiedUser, AppColors.Info)
+   346→   346→        else -> Triple("Working...", Icons.Default.Autorenew, AppColors.Secondary)
+   347→   347→    }
+   348→   348→
+   349→   349→    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+   350→   350→    val alpha by infiniteTransition.animateFloat(
+   351→   351→        initialValue = 0.3f, targetValue = 1f,
+   352→   352→        animationSpec = infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Reverse),
+   353→   353→        label = "alpha"
+   354→   354→    )
+   355→   355→
+   356→   356→    Row(
+   357→   357→        modifier = Modifier
+   358→   358→            .fillMaxWidth()
+   359→   359→            .background(color.copy(alpha = 0.08f))
+   360→   360→            .padding(horizontal = 16.dp, vertical = 8.dp),
+   361→   361→        verticalAlignment = Alignment.CenterVertically
+   362→   362→    ) {
+   363→   363→        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp).alpha(alpha))
+   364→   364→        Spacer(modifier = Modifier.width(10.dp))
+   365→   365→        Text(label, color = color, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+   366→   366→        Text("${state.durationFormatted}", color = AppColors.TextMuted, fontSize = 11.sp)
+   367→   367→        Spacer(modifier = Modifier.width(12.dp))
+   368→   368→        Text("Step ${state.stepNumber}", color = AppColors.TextMuted, fontSize = 11.sp)
+   369→   369→    }
+   370→   370→}
+   371→   371→
+   372→   372→// ===================================================================
+   373→   373→// Chat Bubbles
+   374→   374→// ===================================================================
+   375→   375→
+   376→   376→@Composable
+   377→   377→private fun UserChatBubble(text: String) {
+   378→   378→    Row(
+   379→   379→        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+   380→   380→        horizontalArrangement = Arrangement.End
+   381→   381→    ) {
+   382→   382→        Surface(
+   383→   383→            color = AppColors.UserBubble,
+   384→   384→            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+   385→   385→            modifier = Modifier.widthIn(max = 320.dp)
+   386→   386→        ) {
+   387→   387→            Text(
+   388→   388→                text,
+   389→   389→                color = Color.White,
+   390→   390→                fontSize = 14.sp,
+   391→   391→                lineHeight = 20.sp,
+   392→   392→                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+   393→   393→            )
+   394→   394→        }
+   395→   395→    }
+   396→   396→}
+   397→   397→
+   398→   398→@Composable
+   399→   399→private fun AgentChatBubble(text: String) {
+   400→   400→    Row(
+   401→   401→        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+   402→   402→        horizontalArrangement = Arrangement.Start
+   403→   403→    ) {
+   404→   404→        // Agent avatar
+   405→   405→        Box(
+   406→   406→            modifier = Modifier
+   407→   407→                .size(28.dp)
+   408→   408→                .background(
+   409→   409→                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
+   410→   410→                        colors = listOf(AppColors.Primary, AppColors.Secondary)
+   411→   411→                    ),
+   412→   412→                    shape = RoundedCornerShape(8.dp)
+   413→   413→                ),
+   414→   414→            contentAlignment = Alignment.Center
+   415→   415→        ) {
+   416→   416→            Icon(
+   417→   417→                Icons.Default.SmartToy,
+   418→   418→                contentDescription = null,
+   419→   419→                tint = Color.White,
+   420→   420→                modifier = Modifier.size(14.dp)
+   421→   421→            )
+   422→   422→        }
+   423→   423→        Spacer(modifier = Modifier.width(8.dp))
+   424→   424→        Surface(
+   425→   425→            color = AppColors.AgentBubble,
+   426→   426→            shape = RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+   427→   427→            border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.AgentBubbleBorder),
+   428→   428→            modifier = Modifier.widthIn(max = 320.dp)
+   429→   429→        ) {
+   430→   430→            Text(
+   431→   431→                text,
+   432→   432→                color = AppColors.TextPrimary,
+   433→   433→                fontSize = 14.sp,
+   434→   434→                lineHeight = 20.sp,
+   435→   435→                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+   436→   436→            )
+   437→   437→        }
+   438→   438→    }
+   439→   439→}
+   440→   440→
+   441→   441→// ===================================================================
+   442→   442→// Tool Action Card (compact)
+   443→   443→// ===================================================================
+   444→   444→
+   445→   445→@Composable
+   446→   446→private fun ToolActionCard(action: DisplayItem.ToolAction) {
+   447→   447→    val desc = describeAction(action.name, action.args)
+   448→   448→    val icon = getActionIcon(action.name)
+   449→   449→    val color = if (action.success) AppColors.TextMuted else AppColors.Error
+   450→   450→
+   451→   451→    Row(
+   452→   452→        modifier = Modifier
+   453→   453→            .fillMaxWidth()
+   454→   454→            .clip(RoundedCornerShape(10.dp))
+   455→   455→            .background(AppColors.SurfaceVariant.copy(alpha = 0.5f))
+   456→   456→            .padding(horizontal = 12.dp, vertical = 6.dp),
+   457→   457→        verticalAlignment = Alignment.CenterVertically
+   458→   458→    ) {
+   459→   459→        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+   460→   460→        Spacer(modifier = Modifier.width(8.dp))
+   461→   461→        Text(
+   462→   462→            desc,
+   463→   463→            color = color,
+   464→   464→            fontSize = 12.sp,
+   465→   465→            maxLines = 1,
+   466→   466→            modifier = Modifier.weight(1f)
+   467→   467→        )
+   468→   468→        if (action.success) {
+   469→   469→            Icon(Icons.Default.Check, contentDescription = null, tint = AppColors.Success, modifier = Modifier.size(14.dp))
+   470→   470→        } else {
+   471→   471→            Icon(Icons.Default.Close, contentDescription = null, tint = AppColors.Error, modifier = Modifier.size(14.dp))
+   472→   472→        }
+   473→   473→    }
+   474→   474→}
+   475→   475→
+   476→   476→@Composable
+   477→   477→private fun ErrorText(message: String) {
+   478→   478→    Text(
+   479→   479→        message.take(120),
+   480→   480→        color = AppColors.Error.copy(alpha = 0.7f),
+   481→   481→        fontSize = 12.sp,
+   482→   482→        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+   483→   483→    )
+   484→   484→}
+   485→   485→
+   486→   486→// ===================================================================
+   487→   487→// Bottom Input Bar
+   488→   488→// ===================================================================
+   489→   489→
+   490→   490→@Composable
+   491→   491→private fun BottomInputBar(
+   492→   492→    input: String,
+   493→   493→    onInputChange: (String) -> Unit,
+   494→   494→    onSend: () -> Unit,
+   495→   495→    onStop: () -> Unit,
+   496→   496→    isRunning: Boolean,
+   497→   497→    isListening: Boolean,
+   498→   498→    onVoiceClick: () -> Unit,
+   499→   499→    canSend: Boolean
+   500→   500→) {
+   501→   501→    Column(
+   502→   502→        modifier = Modifier
+   503→   503→            .fillMaxWidth()
+   504→   504→            .background(AppColors.Surface)
+   505→   505→            .navigationBarsPadding()
+   506→   506→            .padding(horizontal = 12.dp, vertical = 8.dp)
+   507→   507→    ) {
+   508→   508→        // Listening indicator
+   509→   509→        if (isListening) {
+   510→   510→            val infiniteTransition = rememberInfiniteTransition(label = "mic_pulse")
+   511→   511→            val scale by infiniteTransition.animateFloat(
+   512→   512→                initialValue = 0.8f, targetValue = 1.2f,
+   513→   513→                animationSpec = infiniteRepeatable(tween(400), RepeatMode.Reverse),
+   514→   514→                label = "scale"
+   515→   515→            )
+   516→   516→            Row(
+   517→   517→                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+   518→   518→                horizontalArrangement = Arrangement.Center
+   519→   519→            ) {
+   520→   520→                Icon(
+   521→   521→                    Icons.Default.Mic,
+   522→   522→                    contentDescription = "Listening",
+   523→   523→                    tint = AppColors.Error,
+   524→   524→                    modifier = Modifier.size(20.dp * scale)
+   525→   525→                )
+   526→   526→                Spacer(modifier = Modifier.width(8.dp))
+   527→   527→                Text("Listening...", color = AppColors.Error, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+   528→   528→            }
+   529→   529→        }
+   530→   530→
+   531→   531→        // Input row
+   532→   532→        Surface(
+   533→   533→            color = AppColors.SurfaceVariant,
+   534→   534→            shape = RoundedCornerShape(28.dp),
+   535→   535→            modifier = Modifier.fillMaxWidth()
+   536→   536→        ) {
+   537→   537→            Row(
+   538→   538→                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+   539→   539→                verticalAlignment = Alignment.CenterVertically
+   540→   540→            ) {
+   541→   541→                // Voice button
+   542→   542→                IconButton(
+   543→   543→                    onClick = onVoiceClick,
+   544→   544→                    modifier = Modifier.size(40.dp)
+   545→   545→                ) {
+   546→   546→                    Icon(
+   547→   547→                        if (isListening) Icons.Default.Mic else Icons.Default.MicNone,
+   548→   548→                        contentDescription = "Voice input",
+   549→   549→                        tint = if (isListening) AppColors.Error else AppColors.TextSecondary,
+   550→   550→                        modifier = Modifier.size(22.dp)
+   551→   551→                    )
+   552→   552→                }
+   553→   553→
+   554→   554→                // Text field
+   555→   555→                OutlinedTextField(
+   556→   556→                    value = input,
+   557→   557→                    onValueChange = onInputChange,
+   558→   558→                    modifier = Modifier.weight(1f),
+   559→   559→                    placeholder = { Text("Ask Android-Use anything...", color = AppColors.TextMuted, fontSize = 15.sp) },
+   560→   560→                    shape = RoundedCornerShape(20.dp),
+   561→   561→                    colors = OutlinedTextFieldDefaults.colors(
+   562→   562→                        focusedTextColor = AppColors.TextPrimary,
+   563→   563→                        unfocusedTextColor = AppColors.TextPrimary,
+   564→   564→                        focusedBorderColor = AppColors.Primary,
+   565→   565→                        unfocusedBorderColor = Color.Transparent,
+   566→   566→                        cursorColor = AppColors.Primary
+   567→   567→                    )
+   568→   568→                )
+   569→   569→
+   570→   570→                // Send / Stop button
+   571→   571→                if (isRunning) {
+   572→   572→                    IconButton(
+   573→   573→                        onClick = onStop,
+   574→   574→                        modifier = Modifier.size(40.dp)
+   575→   575→                    ) {
+   576→   576→                        Icon(
+   577→   577→                            Icons.Default.StopCircle,
+   578→   578→                            contentDescription = "Stop",
+   579→   579→                            tint = AppColors.Error,
+   580→   580→                            modifier = Modifier.size(24.dp)
+   581→   581→                        )
+   582→   582→                    }
+   583→   583→                } else {
+   584→   584→                    IconButton(
+   585→   585→                        onClick = onSend,
+   586→   586→                        enabled = canSend,
+   587→   587→                        modifier = Modifier.size(40.dp)
+   588→   588→                    ) {
+   589→   589→                        Icon(
+   590→   590→                            Icons.AutoMirrored.Filled.Send,
+   591→   591→                            contentDescription = "Send",
+   592→   592→                            tint = if (canSend) AppColors.Primary else AppColors.TextMuted,
+   593→   593→                            modifier = Modifier.size(22.dp)
+   594→   594→                        )
+   595→   595→                    }
+   596→   596→                }
+   597→   597→            }
+   598→   598→        }
+   599→   599→    }
+   600→   600→}
+   601→   601→
+   602→   602→// ===================================================================
+   603→   603→// Empty State
+   604→   604→// ===================================================================
+   605→   605→
+   606→   606→@Composable
+   607→   607→private fun EmptyState(onSuggestionClick: (String) -> Unit) {
+   608→   608→    Box(
+   609→   609→        modifier = Modifier.fillMaxSize().padding(bottom = 80.dp),
+   610→   610→        contentAlignment = Alignment.Center
+   611→   611→    ) {
+   612→   612→        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+   613→   613→            // Logo
+   614→   614→            Box(
+   615→   615→                modifier = Modifier.size(72.dp).background(
+   616→   616→                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
+   617→   617→                        colors = listOf(AppColors.Primary, AppColors.Secondary)
+   618→   618→                    ),
+   619→   619→                    shape = RoundedCornerShape(20.dp)
+   620→   620→                ),
+   621→   621→                contentAlignment = Alignment.Center
+   622→   622→            ) {
+   623→   623→                Icon(
+   624→   624→                    Icons.Default.SmartToy,
+   625→   625→                    contentDescription = null,
+   626→   626→                    tint = Color.White,
+   627→   627→                    modifier = Modifier.size(36.dp)
+   628→   628→                )
+   629→   629→            }
+   630→   630→            Spacer(modifier = Modifier.height(16.dp))
+   631→   631→            Text(
+   632→   632→                "Android-Use",
+   633→   633→                color = AppColors.TextPrimary,
+   634→   634→                fontSize = 26.sp,
+   635→   635→                fontWeight = FontWeight.Bold
+   636→   636→            )
+   637→   637→            Spacer(modifier = Modifier.height(6.dp))
+   638→   638→            Text(
+   639→   639→                "Your AI phone assistant",
+   640→   640→                color = AppColors.TextSecondary,
+   641→   641→                fontSize = 14.sp
+   642→   642→            )
+   643→   643→            Spacer(modifier = Modifier.height(32.dp))
+   644→   644→
+   645→   645→            // Suggestion chips — NOW CLICKABLE
+   646→   646→            val suggestions = listOf(
+   647→   647→                "Say Hello" to Icons.Default.EmojiEmotions,
+   648→   648→                "Open WhatsApp" to Icons.Default.Chat,
+   649→   649→                "Search YouTube" to Icons.Default.VideoLibrary,
+   650→   650→                "What is 15% of 847?" to Icons.Default.Calculate
+   651→   651→            )
+   652→   652→            suggestions.forEach { (text, icon) ->
+   653→   653→                Surface(
+   654→   654→                    color = AppColors.SurfaceVariant,
+   655→   655→                    shape = RoundedCornerShape(20.dp),
+   656→   656→                    modifier = Modifier
+   657→   657→                        .fillMaxWidth(0.85f)
+   658→   658→                        .padding(vertical = 3.dp)
+   659→   659→                        .clickable { onSuggestionClick(text) }
+   660→   660→                ) {
+   661→   661→                    Row(
+   662→   662→                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+   663→   663→                        verticalAlignment = Alignment.CenterVertically
+   664→   664→                    ) {
+   665→   665→                        Icon(icon, contentDescription = null, tint = AppColors.Primary, modifier = Modifier.size(18.dp))
+   666→   666→                        Spacer(modifier = Modifier.width(12.dp))
+   667→   667→                        Text(text, color = AppColors.TextSecondary, fontSize = 13.sp)
+   668→   668→                    }
+   669→   669→                }
+   670→   670→            }
+   671→   671→        }
+   672→   672→    }
+   673→   673→}
+   674→   674→
+   675→   675→// ===================================================================
+   676→   676→// Accessibility Banner
+   677→   677→// ===================================================================
+   678→   678→
+   679→   679→@Composable
+   680→   680→private fun AccessibilityBanner(onEnable: () -> Unit) {
+   681→   681→    Row(
+   682→   682→        modifier = Modifier
+   683→   683→            .fillMaxWidth()
+   684→   684→            .background(AppColors.Warning.copy(alpha = 0.1f))
+   685→   685→            .padding(horizontal = 16.dp, vertical = 10.dp),
+   686→   686→        verticalAlignment = Alignment.CenterVertically,
+   687→   687→        horizontalArrangement = Arrangement.SpaceBetween
+   688→   688→    ) {
+   689→   689→        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+   690→   690→            Icon(Icons.Default.Warning, contentDescription = null, tint = AppColors.Warning, modifier = Modifier.size(18.dp))
+   691→   691→            Spacer(modifier = Modifier.width(10.dp))
+   692→   692→            Text("Enable accessibility service", color = AppColors.Warning, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+   693→   693→        }
+   694→   694→        FilledTonalButton(
+   695→   695→            onClick = onEnable,
+   696→   696→            colors = ButtonDefaults.filledTonalButtonColors(
+   697→   697→                containerColor = AppColors.Warning.copy(alpha = 0.2f),
+   698→   698→                contentColor = AppColors.Warning
+   699→   699→            ),
+   700→   700→            shape = RoundedCornerShape(8.dp),
+   701→   701→            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+   702→   702→        ) {
+   703→   703→            Text("Enable", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+   704→   704→        }
+   705→   705→    }
+   706→   706→}
+   707→   707→
+   708→   708→// ===================================================================
+   709→   709→// Result Banner
+   710→   710→// ===================================================================
+   711→   711→
+   712→   712→@Composable
+   713→   713→private fun ResultBanner(text: String, isSuccess: Boolean) {
+   714→   714→    val color = if (isSuccess) AppColors.Success else AppColors.Error
+   715→   715→    Row(
+   716→   716→        modifier = Modifier
+   717→   717→            .fillMaxWidth()
+   718→   718→            .background(color.copy(alpha = 0.08f))
+   719→   719→            .padding(horizontal = 16.dp, vertical = 8.dp),
+   720→   720→        verticalAlignment = Alignment.CenterVertically
+   721→   721→    ) {
+   722→   722→        Icon(
+   723→   723→            if (isSuccess) Icons.Default.CheckCircle else Icons.Default.ErrorOutline,
+   724→   724→            contentDescription = null, tint = color, modifier = Modifier.size(16.dp)
+   725→   725→        )
+   726→   726→        Spacer(modifier = Modifier.width(8.dp))
+   727→   727→        Text(text, color = color, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+   728→   728→    }
+   729→   729→}
+   730→   730→
+   731→   731→// ===================================================================
+   732→   732→// Helpers
+   733→   733→// ===================================================================
+   734→   734→
+   735→   735→private fun describeAction(toolName: String, arguments: String): String {
+   736→   736→    val text = extractJsonField(arguments, "text")
+   737→   737→    val appName = extractJsonField(arguments, "app_name")
+   738→   738→    val direction = extractJsonField(arguments, "direction")
+   739→   739→    return when {
+   740→   740→        toolName.contains("launch_app") -> if (!appName.isNullOrBlank()) "Opened $appName" else "Opened app"
+   741→   741→        toolName.contains("click") -> "Tapped element"
+   742→   742→        toolName.contains("long_click") -> "Long pressed"
+   743→   743→        toolName.contains("type_text") -> if (!text.isNullOrBlank()) "Typed: ${text.take(40)}" else "Typed text"
+   744→   744→        toolName.contains("clear_text") -> "Cleared text"
+   745→   745→        toolName.contains("scroll") -> "Scrolled ${direction ?: ""}"
+   746→   746→        toolName.contains("swipe") -> {
+   747→   747→            val d = extractJsonField(arguments, "direction") ?: ""
+   748→   748→            when {
+   749→   749→                d.contains("up", ignoreCase = true) -> "Swiped up"
+   750→   750→                d.contains("down", ignoreCase = true) -> "Swiped down"
+   751→   751→                d.contains("left", ignoreCase = true) -> "Swiped left"
+   752→   752→                d.contains("right", ignoreCase = true) -> "Swiped right"
+   753→   753→                else -> "Swiped"
+   754→   754→            }
+   755→   755→        }
+   756→   756→        toolName.contains("back") -> "Went back"
+   757→   757→        toolName.contains("home") -> "Went home"
+   758→   758→        toolName.contains("recents") -> "Opened recents"
+   759→   759→        toolName.contains("press_key") -> "Pressed key"
+   760→   760→        toolName.contains("wait") -> "Waiting..."
+   761→   761→        toolName.contains("screenshot") -> "Took screenshot"
+   762→   762→        toolName.contains("inspect") -> "Read screen"
+   763→   763→        toolName.contains("find") -> "Searching..."
+   764→   764→        toolName.contains("analyze") -> "Analyzing screen"
+   765→   765→        toolName.contains("visual") -> "Looking for element"
+   766→   766→        toolName.contains("finish") -> "Done"
+   767→   767→        toolName.contains("stop") -> "Stopped"
+   768→   768→        else -> toolName.substringAfterLast(".").replace("_", " ")
+   769→   769→    }
+   770→   770→}
+   771→   771→
+   772→   772→private fun getActionIcon(toolName: String): ImageVector = when {
+   773→   773→    toolName.contains("launch") -> Icons.Default.Launch
+   774→   774→    toolName.contains("click") -> Icons.Default.TouchApp
+   775→   775→    toolName.contains("type") -> Icons.Default.Keyboard
+   776→   776→    toolName.contains("scroll") -> Icons.Default.SwipeVertical
+   777→   777→    toolName.contains("swipe") -> Icons.Default.Swipe
+   778→   778→    toolName.contains("back") -> Icons.Default.ArrowBack
+   779→   779→    toolName.contains("home") -> Icons.Default.Home
+   780→   780→    toolName.contains("press_key") -> Icons.Default.KeyboardAlt
+   781→   781→    toolName.contains("wait") -> Icons.Default.Schedule
+   782→   782→    toolName.contains("screenshot") -> Icons.Default.Screenshot
+   783→   783→    toolName.contains("find") -> Icons.Default.Search
+   784→   784→    toolName.contains("analyze") -> Icons.Default.Visibility
+   785→   785→    toolName.contains("finish") -> Icons.Default.CheckCircle
+   786→   786→    else -> Icons.Default.Build
+   787→   787→}
+   788→   788→
+   789→   789→private fun extractJsonField(json: String, field: String): String? {
+   790→   790→    return Regex(""""$field"\s*:\s*"([^"\x27]*)"""", RegexOption.IGNORE_CASE).find(json)?.groupValues?.getOrNull(1)
+   791→   791→}

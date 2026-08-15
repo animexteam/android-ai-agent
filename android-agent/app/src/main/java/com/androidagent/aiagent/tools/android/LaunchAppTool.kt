@@ -2,6 +2,7 @@ package com.androidagent.aiagent.tools.android
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ResolveInfo
 import android.util.Log
 import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
 import com.androidagent.aiagent.tools.AgentTool
@@ -15,6 +16,15 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
+/**
+ * Launches apps by name or package.
+ *
+ * v4.3: Major fix for app name resolution.
+ * - Added COMMON_APP_ALIASES: maps user-facing names to package names
+ * - Added fuzzy matching with Levenshtein distance
+ * - Searches both app labels and package names
+ * - Reports available apps when nothing matches
+ */
 class LaunchAppTool : ToolHandler {
 
     override suspend fun execute(args: JsonObject): ToolResult {
@@ -73,8 +83,14 @@ class LaunchAppTool : ToolHandler {
     }
 
     private fun launchByPackageName(context: Context, packageName: String): String {
+        // Also try COMMON_APP_ALIASES for package name
+        val resolvedPkg = COMMON_APP_ALIASES.entries.firstOrNull {
+            it.key.equals(packageName, ignoreCase = true) ||
+                it.value.equals(packageName, ignoreCase = true)
+        }?.value ?: packageName
+
         val intent = Intent(Intent.ACTION_MAIN).apply {
-            setPackage(packageName)
+            setPackage(resolvedPkg)
             addCategory(Intent.CATEGORY_LAUNCHER)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
         }
@@ -82,13 +98,13 @@ class LaunchAppTool : ToolHandler {
         val resolveInfo = context.packageManager.resolveActivity(intent, 0)
         if (resolveInfo == null || resolveInfo.activityInfo == null) {
             throw IllegalArgumentException(
-                "Cannot resolve launch intent for package: $packageName. " +
+                "Cannot resolve launch intent for package: $resolvedPkg. " +
                 "Ensure the app is installed and has a launcher activity."
             )
         }
 
         context.startActivity(intent)
-        return packageName
+        return resolvedPkg
     }
 
     private fun launchByAppName(context: Context, appName: String): String {
@@ -99,51 +115,242 @@ class LaunchAppTool : ToolHandler {
 
         val normalizedAppName = appName.lowercase().trim()
 
-        // First try exact match
+        // Strategy 1: Check common app aliases (fast path)
+        val aliasPkg = COMMON_APP_ALIASES.entries.firstOrNull { (alias, _) ->
+            alias.equals(normalizedAppName, ignoreCase = true)
+        }?.value
+        if (aliasPkg != null) {
+            val pkgExists = resolveInfos.any {
+                it.activityInfo.packageName.equals(aliasPkg, ignoreCase = true)
+            }
+            if (pkgExists) {
+                launchPackage(context, aliasPkg)
+                return aliasPkg
+            }
+        }
+
+        // Strategy 2: Exact label match
         val exactMatch = resolveInfos.firstOrNull {
             it.loadLabel(context.packageManager).toString().lowercase() == normalizedAppName
         }
         if (exactMatch != null) {
             val pkg = exactMatch.activityInfo.packageName
-            val launchIntent = Intent(Intent.ACTION_MAIN).apply {
-                setPackage(pkg)
-                addCategory(Intent.CATEGORY_LAUNCHER)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-            }
-            context.startActivity(launchIntent)
+            launchPackage(context, pkg)
             return pkg
         }
 
-        // Then try contains match
+        // Strategy 3: Label contains match
         val containsMatch = resolveInfos.firstOrNull {
             it.loadLabel(context.packageManager).toString().lowercase().contains(normalizedAppName)
         }
         if (containsMatch != null) {
             val pkg = containsMatch.activityInfo.packageName
-            val launchIntent = Intent(Intent.ACTION_MAIN).apply {
-                setPackage(pkg)
-                addCategory(Intent.CATEGORY_LAUNCHER)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-            }
-            context.startActivity(launchIntent)
+            launchPackage(context, pkg)
             return pkg
         }
 
+        // Strategy 4: Package name contains match
+        val pkgContainsMatch = resolveInfos.firstOrNull {
+            it.activityInfo.packageName.lowercase().contains(normalizedAppName)
+        }
+        if (pkgContainsMatch != null) {
+            val pkg = pkgContainsMatch.activityInfo.packageName
+            launchPackage(context, pkg)
+            return pkg
+        }
+
+        // Strategy 5: Fuzzy Levenshtein match on labels (distance <= 3)
+        var bestMatch: ResolveInfo? = null
+        var bestDist = Int.MAX_VALUE
+        for (info in resolveInfos) {
+            val label = info.loadLabel(context.packageManager).toString().lowercase()
+            val dist = levenshtein(normalizedAppName, label)
+            if (dist < bestDist) {
+                bestDist = dist
+                bestMatch = info
+            }
+        }
+        if (bestMatch != null && bestDist <= 3) {
+            val pkg = bestMatch.activityInfo.packageName
+            launchPackage(context, pkg)
+            return pkg
+        }
+
+        // Nothing found — report what IS available
+        val available = resolveInfos
+            .sortedBy { it.loadLabel(context.packageManager).toString().lowercase() }
+            .take(30)
+            .map { "${it.loadLabel(context.packageManager)} (${it.activityInfo.packageName})" }
+
         throw IllegalArgumentException(
-            "No app found with name '$appName'. " +
-            "Available apps: ${resolveInfos.map { it.loadLabel(context.packageManager) }}"
+                "No app found with name '$appName'. " +
+                "Available apps: $available"
         )
+    }
+
+    private fun launchPackage(context: Context, pkg: String) {
+        val launchIntent = Intent(Intent.ACTION_MAIN).apply {
+            setPackage(pkg)
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+        }
+        context.startActivity(launchIntent)
+    }
+
+    /** Simple Levenshtein distance. */
+    private fun levenshtein(a: String, b: String): Int {
+        if (a == b) return 0
+        val la = a.length
+        val lb = b.length
+        if (la == 0) return lb
+        if (lb == 0) return la
+        val (shorter, longer) = if (la <= lb) a to b else b to a
+        val ls = shorter.length
+        val ll = longer.length
+        var prev = IntArray(ls + 1) { it }
+        var curr = IntArray(ls + 1)
+        for (i in 1..ll) {
+            curr[0] = i
+            for (j in 1..ls) {
+                val cost = if (longer[i - 1] == shorter[j - 1]) 0 else 1
+                curr[j] = minOf(
+                    prev[j] + 1,
+                    curr[j - 1] + 1,
+                    prev[j - 1] + cost
+                )
+            }
+            val tmp = prev
+            prev = curr
+            curr = tmp
+        }
+        return prev[ls]
     }
 
     companion object {
         internal const val TOOL_NAME = "android.launch_app"
         private const val TAG = "LaunchAppTool"
 
+        /**
+         * Maps user-facing app names to their Android package names.
+         * This handles the gap between what users call apps and their
+         * actual package identifiers.
+         */
+        private val COMMON_APP_ALIASES = mapOf(
+            // Google apps
+            "youtube" to "com.google.android.youtube",
+            "youtube music" to "com.google.android.apps.youtube.music",
+            "youtube kids" to "com.google.android.apps.youtube.kids",
+            "gmail" to "com.google.android.gm",
+            "google chrome" to "com.android.chrome",
+            "chrome" to "com.android.chrome",
+            "google maps" to "com.google.android.apps.maps",
+            "maps" to "com.google.android.apps.maps",
+            "google drive" to "com.google.android.apps.docs",
+            "google photos" to "com.google.android.apps.photos",
+            "google play store" to "com.android.vending",
+            "play store" to "com.android.vending",
+            "google docs" to "com.google.android.apps.docs",
+            "google sheets" to "com.google.android.apps.docs",
+            "google slides" to "com.google.android.apps.docs",
+            "google keep" to "com.google.android.keep",
+            "google translate" to "com.google.android.apps.translate",
+            "google calendar" to "com.google.android.calendar",
+            "calendar" to "com.google.android.calendar",
+            "google contacts" to "com.google.android.contacts",
+            "contacts" to "com.google.android.contacts",
+            "google clock" to "com.google.android.deskclock",
+            "clock" to "com.google.android.deskclock",
+            "google calculator" to "com.google.android.calculator",
+            "calculator" to "com.google.android.calculator",
+            "google camera" to "com.google.android.GoogleCamera",
+            "camera" to "com.google.android.GoogleCamera",
+            "google files" to "com.google.android.apps.nbu.files",
+            "files" to "com.google.android.apps.nbu.files",
+            "google assistant" to "com.google.android.googlequicksearchbox",
+            "google" to "com.google.android.googlequicksearchbox",
+
+            // Social / Messaging
+            "whatsapp" to "com.whatsapp",
+            "whatsapp business" to "com.whatsapp.w4b",
+            "telegram" to "org.telegram.messenger",
+            "telegram x" to "org.telegram.messenger.web",
+            "instagram" to "com.instagram.android",
+            "facebook" to "com.facebook.katana",
+            "facebook lite" to "com.facebook.lite",
+            "messenger" to "com.facebook.orca",
+            "messenger lite" to "com.facebook.mlite",
+            "snapchat" to "com.snapchat.android",
+            "twitter" to "com.twitter.android",
+            "x" to "com.twitter.android",
+            "reddit" to "com.reddit.frontpage",
+            "linkedin" to "com.linkedin.android",
+            "pinterest" to "com.pinterest",
+            "tiktok" to "com.zhiliaoapp.musically",
+            "discord" to "com.discord",
+            "signal" to "org.thoughtcrime.securesms",
+            "viber" to "com.viber.voip",
+            "skype" to "com.skype.raider",
+            "line" to "jp.naver.line.android",
+            "wechat" to "com.tencent.mm",
+
+            // Streaming / Media
+            "spotify" to "com.spotify.music",
+            "netflix" to "com.netflix.mediaclient",
+            "amazon prime video" to "com.amazon.avod.thirdpartyclient",
+            "prime video" to "com.amazon.avod.thirdpartyclient",
+            "hotstar" to "in.startv.hotstar",
+            "disney hotstar" to "in.startv.hotstar",
+            "jiocinema" to "com.jio.media.jiobeats",
+            "jiotv" to "com.jio.jioplay.tv",
+            "sonyliv" to "com.sonyliv",
+            "zee5" to "com.graymatrix.did",
+            "voot" to "com.tv.v18.voot",
+            "mx player" to "com.mxtech.videoplayer.ad",
+            "vlc" to "org.videolan.vlc",
+
+            // Shopping
+            "amazon" to "in.amazon.mShop.android.shopping",
+            "amazon shopping" to "in.amazon.mShop.android.shopping",
+            "flipkart" to "com.flipkart.android",
+            "myntra" to "com.myntra.android",
+            "meesho" to "com.meesho.app",
+            "swiggy" to "in.swiggy.android",
+            "zomato" to "com.application.zomato",
+            "uber eats" to "com.ubercab.eats",
+
+            // Ride / Maps
+            "uber" to "com.ubercab",
+            "ola" to "com.olacabs.customer",
+            "rapido" to "com.rapido.passenger",
+
+            // Banking / Finance
+            "phonepe" to "com.phonepe.app",
+            "google pay" to "com.google.android.apps.nbu.paisa.user",
+            "gpay" to "com.google.android.apps.nbu.paisa.user",
+            "paytm" to "net.one97.paytm",
+            "bhim upi" to "in.gov.uidai.mAadhaarPay",
+
+            // System
+            "settings" to "com.android.settings",
+            "phone" to "com.android.dialer",
+            "dialer" to "com.android.dialer",
+            "messages" to "com.google.android.apps.messaging",
+            "sms" to "com.google.android.apps.messaging",
+            "gallery" to "com.google.android.apps.photos",
+            "photos" to "com.google.android.apps.photos",
+            "notes" to "com.google.android.keep",
+            "browser" to "com.android.chrome",
+            "file manager" to "com.google.android.apps.nbu.files",
+            "weather" to "com.google.android.apps.weather",
+        )
+
         fun definition(): AgentTool = AgentTool(
             name = TOOL_NAME,
             description = "Launches an Android application by its package name or app name. " +
                 "If 'package' is provided, launches directly. If 'app_name' is provided, " +
-                "searches installed apps for a matching label.",
+                "searches installed apps for a matching label. " +
+                "Common aliases are supported (e.g., 'youtube', 'whatsapp', 'chrome'). " +
+                "Prefer 'package' when you know the exact package name for reliability.",
             inputSchema = buildJsonObject {
                 put("type", "object")
                 put("properties", buildJsonObject {
@@ -153,7 +360,7 @@ class LaunchAppTool : ToolHandler {
                     })
                     put("app_name", buildJsonObject {
                         put("type", "string")
-                        put("description", "Human-readable app name to search for (e.g., Chrome, Settings)")
+                        put("description", "Human-readable app name to search for (e.g., Chrome, Settings, YouTube)")
                     })
                 })
             },

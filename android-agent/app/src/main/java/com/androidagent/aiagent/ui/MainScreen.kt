@@ -156,7 +156,11 @@ fun MainScreen(
             .fillMaxSize()
             .background(AppColors.DarkBackground)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .align(Alignment.TopStart)
+        ) {
             // ── Top Bar ──
             TopBar(
                 onNewChat = { viewModel.newChat() },
@@ -209,23 +213,30 @@ fun MainScreen(
                     }
                     // Bottom padding for input bar
                     item {
-                        Spacer(modifier = Modifier.height(80.dp))
+                        Spacer(modifier = Modifier.height(90.dp))
                     }
                 }
             }
         }
 
-        // ── Bottom Input Bar ──
-        BottomInputBar(
-            input = taskInput,
-            onInputChange = { taskInput = it },
-            onSend = { sendTask(taskInput) },
-            onStop = { viewModel.stopAgent() },
-            isRunning = isRunning,
-            isListening = isListening,
-            onVoiceClick = { startVoiceInput() },
-            canSend = taskInput.isNotBlank() && !isRunning
-        )
+        // ── Bottom Input Bar — ALIGNED TO BOTTOM ──
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(AppColors.DarkBackground)
+        ) {
+            BottomInputBar(
+                input = taskInput,
+                onInputChange = { taskInput = it },
+                onSend = { sendTask(taskInput) },
+                onStop = { viewModel.stopAgent() },
+                isRunning = isRunning,
+                isListening = isListening,
+                onVoiceClick = { startVoiceInput() },
+                canSend = taskInput.isNotBlank() && !isRunning
+            )
+        }
 
         // ── Dialogs ──
         state.pendingConfirmation?.let { confirmation ->
@@ -264,7 +275,7 @@ private sealed class DisplayItem {
 }
 
 // ===================================================================
-// Top Bar
+// Top Bar — TBH-style: logo left, settings right, minimal
 // ===================================================================
 
 @Composable
@@ -278,31 +289,32 @@ private fun TopBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(AppColors.Surface)
-            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
             .statusBarsPadding(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // App logo + name
         Row(
-            modifier = Modifier.weight(1f).padding(start = 12.dp),
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onNewChat() }
+                .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(30.dp)
+                    .size(28.dp)
                     .background(
-                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                            colors = listOf(AppColors.Primary, AppColors.Secondary)
-                        ),
-                        shape = RoundedCornerShape(8.dp)
+                        color = AppColors.SurfaceVariant,
+                        shape = RoundedCornerShape(7.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.SmartToy,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(17.dp)
+                    tint = AppColors.TextPrimary,
+                    modifier = Modifier.size(16.dp)
                 )
             }
             Spacer(modifier = Modifier.width(10.dp))
@@ -310,39 +322,65 @@ private fun TopBar(
                 "Android-Use",
                 color = AppColors.TextPrimary,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 18.sp
+                fontSize = 17.sp
             )
         }
 
-        // Actions: New Chat, History, Debug (long press), Settings
-        IconButton(onClick = onNewChat) {
-            Icon(Icons.Default.EditNote, contentDescription = "New Chat", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
-        }
-        IconButton(onClick = onHistory) {
-            Icon(Icons.Default.History, contentDescription = "History", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
-        }
-        IconButton(onClick = onDebug) {
-            Icon(Icons.Default.BugReport, contentDescription = "Debug", tint = AppColors.TextMuted, modifier = Modifier.size(20.dp))
-        }
+        // Settings icon — ALWAYS VISIBLE
         IconButton(onClick = onSettings) {
-            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
+            Icon(
+                Icons.Default.Settings,
+                contentDescription = "Settings",
+                tint = AppColors.TextSecondary,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        // History
+        IconButton(onClick = onHistory) {
+            Icon(
+                Icons.Default.History,
+                contentDescription = "History",
+                tint = AppColors.TextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        // New chat
+        IconButton(onClick = onNewChat) {
+            Icon(
+                Icons.Default.EditNote,
+                contentDescription = "New Chat",
+                tint = AppColors.TextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        // Debug (subtle, smaller)
+        IconButton(onClick = onDebug) {
+            Icon(
+                Icons.Default.BugReport,
+                contentDescription = "Debug",
+                tint = AppColors.TextMuted,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
-    HorizontalDivider(color = AppColors.SurfaceVariant, thickness = 1.dp)
+    HorizontalDivider(color = AppColors.Line, thickness = 1.dp)
 }
 
 // ===================================================================
-// Running Status Bar
+// Running Status Bar — minimal pulse indicator
 // ===================================================================
 
 @Composable
 private fun RunningStatusBar(state: com.androidagent.aiagent.agent.AgentState) {
     val (label, icon, color) = when (state.status) {
-        AgentStatus.THINKING -> Triple("Analyzing screen", Icons.Default.Psychology, AppColors.Info)
+        AgentStatus.THINKING -> Triple("Analyzing screen", Icons.Default.Psychology, AppColors.TextSecondary)
         AgentStatus.EXECUTING -> Triple("Using mobile...", Icons.Default.TouchApp, AppColors.Success)
         AgentStatus.WAITING_FOR_USER -> Triple("Waiting for you", Icons.Default.QuestionAnswer, AppColors.Primary)
         AgentStatus.WAITING_FOR_CONFIRMATION -> Triple("Confirm action", Icons.Default.Security, AppColors.Warning)
-        AgentStatus.VERIFYING -> Triple("Verifying...", Icons.Default.VerifiedUser, AppColors.Info)
+        AgentStatus.VERIFYING -> Triple("Verifying...", Icons.Default.VerifiedUser, AppColors.TextSecondary)
         else -> Triple("Working...", Icons.Default.Autorenew, AppColors.Secondary)
     }
 
@@ -356,37 +394,40 @@ private fun RunningStatusBar(state: com.androidagent.aiagent.agent.AgentState) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color.copy(alpha = 0.08f))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .background(color.copy(alpha = 0.06f))
+            .padding(horizontal = 16.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp).alpha(alpha))
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(label, color = color, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp).alpha(alpha))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(label, color = color, fontSize = 12.5.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
         Text("${state.durationFormatted}", color = AppColors.TextMuted, fontSize = 11.sp)
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
         Text("Step ${state.stepNumber}", color = AppColors.TextMuted, fontSize = 11.sp)
     }
 }
 
 // ===================================================================
-// Chat Bubbles
+// Chat Bubbles — monochrome style like TBH
 // ===================================================================
 
 @Composable
 private fun UserChatBubble(text: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.End
     ) {
         Surface(
             color = AppColors.UserBubble,
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
-            modifier = Modifier.widthIn(max = 320.dp)
+            shape = RoundedCornerShape(topStart = 14.dp, topEnd = 4.dp, bottomStart = 14.dp, bottomEnd = 14.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Line),
+            modifier = Modifier.widthIn(max = 340.dp)
         ) {
             Text(
                 text,
-                color = Color.White,
+                color = AppColors.TextPrimary,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
@@ -398,34 +439,34 @@ private fun UserChatBubble(text: String) {
 @Composable
 private fun AgentChatBubble(text: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.Start
     ) {
-        // Agent avatar
+        // Agent avatar — monochrome square
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(26.dp)
                 .background(
-                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                        colors = listOf(AppColors.Primary, AppColors.Secondary)
-                    ),
-                    shape = RoundedCornerShape(8.dp)
+                    color = AppColors.TextPrimary,
+                    shape = RoundedCornerShape(7.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 Icons.Default.SmartToy,
                 contentDescription = null,
-                tint = Color.White,
+                tint = AppColors.DarkBackground,
                 modifier = Modifier.size(14.dp)
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
         Surface(
             color = AppColors.AgentBubble,
-            shape = RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.AgentBubbleBorder),
-            modifier = Modifier.widthIn(max = 320.dp)
+            shape = RoundedCornerShape(topStart = 4.dp, topEnd = 14.dp, bottomStart = 14.dp, bottomEnd = 14.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Line),
+            modifier = Modifier.widthIn(max = 340.dp)
         ) {
             Text(
                 text,
@@ -439,7 +480,7 @@ private fun AgentChatBubble(text: String) {
 }
 
 // ===================================================================
-// Tool Action Card (compact)
+// Tool Action Card — compact monochrome card
 // ===================================================================
 
 @Composable
@@ -453,11 +494,22 @@ private fun ToolActionCard(action: DisplayItem.ToolAction) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(AppColors.SurfaceVariant.copy(alpha = 0.5f))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
-        Spacer(modifier = Modifier.width(8.dp))
+        // Icon in small box
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .background(
+                    color = AppColors.Surface,
+                    shape = RoundedCornerShape(6.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(13.dp))
+        }
+        Spacer(modifier = Modifier.width(10.dp))
         Text(
             desc,
             color = color,
@@ -484,7 +536,7 @@ private fun ErrorText(message: String) {
 }
 
 // ===================================================================
-// Bottom Input Bar
+// Bottom Input Bar — TBH-style composer at BOTTOM (FIXED ALIGNMENT)
 // ===================================================================
 
 @Composable
@@ -514,7 +566,9 @@ private fun BottomInputBar(
                 label = "scale"
             )
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
                 Icon(
@@ -528,10 +582,11 @@ private fun BottomInputBar(
             }
         }
 
-        // Input row
+        // Input row — TBH style rounded box
         Surface(
             color = AppColors.SurfaceVariant,
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(24.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Line),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -546,53 +601,62 @@ private fun BottomInputBar(
                     Icon(
                         if (isListening) Icons.Default.Mic else Icons.Default.MicNone,
                         contentDescription = "Voice input",
-                        tint = if (isListening) AppColors.Error else AppColors.TextSecondary,
-                        modifier = Modifier.size(22.dp)
+                        tint = if (isListening) AppColors.Error else AppColors.TextMuted,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                // Text field
-                OutlinedTextField(
+                // Text field — minimal style
+                BasicTextField(
                     value = input,
                     onValueChange = onInputChange,
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Ask Android-Use anything...", color = AppColors.TextMuted, fontSize = 15.sp) },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = AppColors.TextPrimary,
-                        unfocusedTextColor = AppColors.TextPrimary,
-                        focusedBorderColor = AppColors.Primary,
-                        unfocusedBorderColor = Color.Transparent,
-                        cursorColor = AppColors.Primary
-                    )
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        color = AppColors.TextPrimary,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp
+                    ),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.TextPrimary),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier
+                                .padding(vertical = 8.dp)
+                        ) {
+                            if (input.isEmpty()) {
+                                Text(
+                                    "Ask Android-Use anything...",
+                                    color = AppColors.TextMuted,
+                                    fontSize = 15.sp
+                                )
+                            }
+                            innerTextField()
+                        }
+                    }
                 )
 
-                // Send / Stop button
-                if (isRunning) {
-                    IconButton(
-                        onClick = onStop,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.StopCircle,
-                            contentDescription = "Stop",
-                            tint = AppColors.Error,
-                            modifier = Modifier.size(24.dp)
+                // Send / Stop button — monochrome circle
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isRunning) AppColors.Error
+                            else if (canSend) AppColors.TextPrimary
+                            else AppColors.SurfaceHover
                         )
-                    }
-                } else {
-                    IconButton(
-                        onClick = onSend,
-                        enabled = canSend,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Send",
-                            tint = if (canSend) AppColors.Primary else AppColors.TextMuted,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                        .clickable(enabled = canSend || isRunning) {
+                            if (isRunning) onStop() else onSend()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        if (isRunning) Icons.Default.Stop else Icons.AutoMirrored.Filled.Send,
+                        contentDescription = if (isRunning) "Stop" else "Send",
+                        tint = if (isRunning) Color.White
+                        else if (canSend) AppColors.DarkBackground
+                        else AppColors.TextMuted,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }
@@ -600,39 +664,42 @@ private fun BottomInputBar(
 }
 
 // ===================================================================
-// Empty State
+// Empty State — TBH-style welcome with suggestion grid
 // ===================================================================
 
 @Composable
 private fun EmptyState(onSuggestionClick: (String) -> Unit) {
     Box(
-        modifier = Modifier.fillMaxSize().padding(bottom = 80.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 90.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Logo
+            // Logo — monochrome square
             Box(
-                modifier = Modifier.size(72.dp).background(
-                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                        colors = listOf(AppColors.Primary, AppColors.Secondary)
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(
+                        color = AppColors.TextPrimary,
+                        shape = RoundedCornerShape(18.dp)
                     ),
-                    shape = RoundedCornerShape(20.dp)
-                ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.SmartToy,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(36.dp)
+                    tint = AppColors.DarkBackground,
+                    modifier = Modifier.size(32.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
             Text(
                 "Android-Use",
                 color = AppColors.TextPrimary,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 28.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.5).sp
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
@@ -640,31 +707,49 @@ private fun EmptyState(onSuggestionClick: (String) -> Unit) {
                 color = AppColors.TextSecondary,
                 fontSize = 14.sp
             )
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            // Suggestion chips — NOW CLICKABLE
+            // Suggestion grid — 2 columns like TBH
             val suggestions = listOf(
-                "Say Hello" to Icons.Default.EmojiEmotions,
+                "Say hello" to Icons.Default.EmojiEmotions,
                 "Open WhatsApp" to Icons.Default.Chat,
                 "Search YouTube" to Icons.Default.VideoLibrary,
                 "What is 15% of 847?" to Icons.Default.Calculate
             )
-            suggestions.forEach { (text, icon) ->
-                Surface(
-                    color = AppColors.SurfaceVariant,
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .padding(vertical = 3.dp)
-                        .clickable { onSuggestionClick(text) }
+
+            suggestions.chunked(2).forEach { row ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(vertical = 3.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(icon, contentDescription = null, tint = AppColors.Primary, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(text, color = AppColors.TextSecondary, fontSize = 13.sp)
+                    row.forEach { (text, icon) ->
+                        Surface(
+                            color = AppColors.Surface,
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Line),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onSuggestionClick(text) }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    icon,
+                                    contentDescription = null,
+                                    tint = AppColors.TextSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(9.dp))
+                                Text(
+                                    text,
+                                    color = AppColors.TextSecondary,
+                                    fontSize = 12.5.sp,
+                                    maxLines = 1
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -681,26 +766,28 @@ private fun AccessibilityBanner(onEnable: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(AppColors.Warning.copy(alpha = 0.1f))
+            .background(AppColors.Warning.copy(alpha = 0.08f))
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.Warning, contentDescription = null, tint = AppColors.Warning, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(10.dp))
+            Icon(Icons.Default.Warning, contentDescription = null, tint = AppColors.Warning, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text("Enable accessibility service", color = AppColors.Warning, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         }
-        FilledTonalButton(
+        Surface(
             onClick = onEnable,
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = AppColors.Warning.copy(alpha = 0.2f),
-                contentColor = AppColors.Warning
-            ),
-            shape = RoundedCornerShape(8.dp),
-            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+            color = AppColors.Warning.copy(alpha = 0.15f),
+            shape = RoundedCornerShape(8.dp)
         ) {
-            Text("Enable", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(
+                "Enable",
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.5.sp,
+                color = AppColors.Warning,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+            )
         }
     }
 }
@@ -715,13 +802,13 @@ private fun ResultBanner(text: String, isSuccess: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color.copy(alpha = 0.08f))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .background(color.copy(alpha = 0.06f))
+            .padding(horizontal = 16.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             if (isSuccess) Icons.Default.CheckCircle else Icons.Default.ErrorOutline,
-            contentDescription = null, tint = color, modifier = Modifier.size(16.dp)
+            contentDescription = null, tint = color, modifier = Modifier.size(15.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(text, color = color, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
@@ -787,5 +874,7 @@ private fun getActionIcon(toolName: String): ImageVector = when {
 }
 
 private fun extractJsonField(json: String, field: String): String? {
-    return Regex(""""$field"\s*:\s*"([^"\x27]*)"""", RegexOption.IGNORE_CASE).find(json)?.groupValues?.getOrNull(1)
+    return Regex("""$field"\s*:\s*"([^"\x27]*)""", RegexOption.IGNORE_CASE).find(json)?.groupValues?.getOrNull(1)
 }
+
+
