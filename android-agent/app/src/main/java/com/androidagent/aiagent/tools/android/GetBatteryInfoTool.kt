@@ -29,7 +29,7 @@ class GetBatteryInfoTool : ToolHandler {
                 val level = bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
                 val isCharging = bm?.isCharging ?: false
                 val chargeType = when {
-                    bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER) > 0 -> "plugged"
+                    (bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER) ?: 0) > 0 -> "plugged"
                     else -> "unknown"
                 }
                 val batteryIntent = service.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
