@@ -8,76 +8,122 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    defaults:
+      run:
+        working-directory: android-agent
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - uses: android-actions/setup-android@v3
-      - name: Build
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Generate Gradle Wrapper
         working-directory: android-agent
         run: |
-          GRADLE_VERSION=8.11.1
-          mkdir -p gradle/wrapper
-          curl -sL https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
-          curl -sL https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradlew -o gradlew
+          gradle wrapper --gradle-version 8.11.1
           chmod +x gradlew
-          ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
+
+      - name: Generate Release Keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore app/release.keystore \
+            -alias taskflow \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass taskflow2025 -keypass taskflow2025 \
+            -dname "CN=AndroidUse, OU=Dev, O=AndroidUse, L=Unknown, ST=Unknown, C=US"
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --stacktrace --no-daemon 2>&1
+
+      - name: Verify APK
+        run: |
+          APK=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
+          echo "APK_PATH=$APK" >> $GITHUB_ENV
+          echo "APK: $APK"
+          ls -lh "$APK"
+
+      - name: Prepare release assets
+        run: |
           mkdir -p release-assets
-          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v4.2.0.apk
-          cd release-assets && sha256sum *.apk > SHA256SUMS.txt && ls -lh
-      - name: Upload artifacts
+          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v5.0.0.apk
+          cd release-assets
+          sha256sum *.apk > SHA256SUMS.txt
+          ls -lh
+
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: android-use-apk
           path: android-agent/release-assets/*
           if-no-files-found: warn
+
+      - name: Delete old release
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          gh release delete v5.0.0 --yes 2>/dev/null || true
+          git tag -d v5.0.0 2>/dev/null || true
+          git push origin :refs/tags/v5.0.0 2>/dev/null || true
+
       - name: Create GitHub Release
         if: success()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v4.2.0
-          name: Android-Use v4.2.0
+          tag_name: v5.0.0
+          name: Android-Use v5.0.0
           token: ${{ secrets.PAT_TOKEN }}
           body: |
-            # Android-Use v4.2.0 — UI Overhaul & Fixes
-            
-            ## What's New
-            - **Complete UI redesign** — Polished mobile-first design with proper spacing, colors, and components
-            - **App icon** — New AI robot icon (raster + adaptive, works on all devices)
-            - **Default assistant overlay** — Appears on current display (not full screen), Gemini-style bottom panel
-            - **Clickable suggestions** — Empty state chips now actually send tasks
-            - **Agent chat avatar** — Agent messages show robot avatar icon
-            - **Better Settings UI** — Section headers with icons, proper grouping, styled components
-            - **Accessibility banner** — Proper FilledTonalButton for enable action
-            - **Number typing retry** — If text verification fails, auto-clears and retries via clipboard
-            - **Stronger prompt** — Better number accuracy instructions for the AI model
-            
-            ## Bug Fixes
-            - Fixed: White square icon (broken vector drawable replaced with proper icon)
-            - Fixed: Default assistant opening full screen (now bottom overlay panel)
-            - Fixed: Suggestion chips not clickable
-            - Fixed: Wrong regex in extractJsonField
-            - Fixed: TypeTextTool 'val val' compile error
-            - Removed: Incorrect meta-data from AssistActivity manifest
-            
-            ## Installation
-            1. Download Android-Use-v4.2.0.apk
-            2. Settings > Security > Enable install from browser/source
+            # Android-Use v5.0.0
+
+            The complete Android AI agent with 66 tools, OpenAI-compatible API support, and full device control.
+
+            ## What's New in v5.0.0
+            - **28 New Tools** (66 total) — Full Android API coverage
+            - **Device Info**: get_device_info, get_battery_info, get_network_info, get_storage_info, get_location
+            - **File Operations**: read_file, write_file, list_files, delete_file
+            - **Contacts**: get_contacts, create_contact
+            - **Notifications**: get_notifications, dismiss_notification, send_notification
+            - **App Management**: get_running_apps, uninstall_app, clear_app_data, open_settings
+            - **Media**: media_control (play/pause/next/prev)
+            - **Utility**: toast, vibrate, set_alarm, set_timer, open_camera, shell
+            - **OpenAI API Support**: Works with OpenAI, Groq, OpenRouter, Together AI, DeepInfra, Fireworks, Cerebras
+            - **Stability Fix**: Singleton OkHttpClient — no more ANR/thread exhaustion
+            - **10 New Permissions**: Location, Bluetooth, WiFi, Vibrate, Camera, Write Settings
+            - **Auto-detect API format** — Ollama vs OpenAI response parsing
+            - **Fuzzy alias matching** — 100+ tool name aliases
+
+            ## Install
+            1. Download `Android-Use-v5.0.0.apk`
+            2. Enable "Install unknown apps" for your browser
             3. Install the APK
-            4. Open app > Enable Accessibility > Enter your API details
-            5. (Optional) Set as default assistant: Settings > Apps > Default Digital Assistant > Android-Use
-            6. (Optional) Enable floating ball: Settings > Apps > Android-Use > Special access > Display over other apps
-            
+            4. Open app > Settings > Configure your AI provider, API key, model
+            5. Enable Accessibility Service & Overlay Permission
+            6. Give any task — the agent controls your entire phone
+
             ## Compatibility
-            - Android 9+ (minSdk 28), optimized for Android 15 (targetSdk 35)
+            - Android 9+ (minSdk 28), targetSdk 35
+            - Works with any Ollama or OpenAI-compatible API
           files: android-agent/release-assets/*
           draft: false
           prerelease: false
-      - name: Upload logs on failure
+
+      - name: Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
