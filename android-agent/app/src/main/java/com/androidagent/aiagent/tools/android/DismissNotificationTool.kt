@@ -23,7 +23,7 @@ class DismissNotificationTool : ToolHandler {
         val service = AndroidAgentAccessibilityService.instance ?: return noService()
         val key = args["key"]?.jsonPrimitive?.content
             ?: return ToolResult(success = false, toolName = TOOL_NAME,
-                error = ToolError(code = "INVALID_INPUT", message = "'key' (notification key) is required")
+                error = ToolError(code = "INVALID_INPUT", message = "'key' (notification key) is required"))
         return try {
             withContext(Dispatchers.IO) {
                 val nm = service.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
