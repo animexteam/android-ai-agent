@@ -73,9 +73,7 @@ private fun AssistOverlayScreen(
     ) {
  // Gemini-style bottom panel
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = false) {}, indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() })
+            modifier = Modifier.fillMaxWidth(),
             color = AppColors.Surface,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             tonalElevation = 8.dp,
