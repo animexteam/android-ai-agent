@@ -158,7 +158,29 @@ class ToolExecutor(
             "android.text_message"   to "android.send_sms",
             "android.send_message"  to "android.send_sms",
             "android.send"           to "android.share",
-            "android.share_text"     to "android.share"
+            "android.share_text"     to "android.share",
+            // App management
+            "android.list_apps"      to "android.get_app_list",
+            "android.apps"           to "android.get_app_list",
+            "android.installed_apps" to "android.get_app_list",
+            "android.get_apps"       to "android.get_app_list",
+            "android.force_stop"     to "android.force_stop_app",
+            "android.kill_app"       to "android.force_stop_app",
+            "android.app_info"       to "android.open_app_info",
+            "android.app_details"    to "android.open_app_info",
+            "android.app_settings"   to "android.open_app_info",
+            // Connectivity
+            "android.wifi"           to "android.toggle_wifi",
+            "android.wifi_on"        to "android.toggle_wifi",
+            "android.wifi_off"       to "android.toggle_wifi",
+            "android.bluetooth"      to "android.toggle_bluetooth",
+            "android.bt"             to "android.toggle_bluetooth",
+            // Display
+            "android.brightness"     to "android.set_brightness",
+            "android.screen_brightness" to "android.set_brightness",
+            // Screenshot save
+            "android.save_screenshot" to "android.screenshot_save",
+            "android.download_screenshot" to "android.screenshot_save"
         )
     }
 

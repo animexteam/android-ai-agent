@@ -158,8 +158,18 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
             MakeCallTool.definition(),
             SendSmsTool.definition(),
             ShareContentTool.definition(),
+            // App management
+            GetAppListTool.definition(),
+            ForceStopAppTool.definition(),
+            OpenAppInfoTool.definition(),
+            // Connectivity
+            ToggleWifiTool.definition(),
+            ToggleBluetoothTool.definition(),
+            // Display
+            SetBrightnessTool.definition(),
             // Screen
             ScreenshotTool.definition(),
+            ScreenshotAndSaveTool.definition(),
             InspectScreenTool.definition(),
             AnalyzeScreenTool.definition(),
             FindVisualTargetTool.definition(),
@@ -209,8 +219,18 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         MakeCallTool.TOOL_NAME to MakeCallTool(),
         SendSmsTool.TOOL_NAME to SendSmsTool(),
         ShareContentTool.TOOL_NAME to ShareContentTool(),
+        // App management
+        GetAppListTool.TOOL_NAME to GetAppListTool(),
+        ForceStopAppTool.TOOL_NAME to ForceStopAppTool(),
+        OpenAppInfoTool.TOOL_NAME to OpenAppInfoTool(),
+        // Connectivity
+        ToggleWifiTool.TOOL_NAME to ToggleWifiTool(),
+        ToggleBluetoothTool.TOOL_NAME to ToggleBluetoothTool(),
+        // Display
+        SetBrightnessTool.TOOL_NAME to SetBrightnessTool(),
         // Screen
         ScreenshotTool.TOOL_NAME to ScreenshotTool(),
+        ScreenshotAndSaveTool.TOOL_NAME to ScreenshotAndSaveTool(),
         InspectScreenTool.TOOL_NAME to InspectScreenTool(),
         AnalyzeScreenTool.TOOL_NAME to AnalyzeScreenTool(visionAnalyzer),
         FindVisualTargetTool.TOOL_NAME to FindVisualTargetTool(visionAnalyzer),

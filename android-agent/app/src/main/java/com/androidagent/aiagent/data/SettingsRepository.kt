@@ -19,6 +19,7 @@ class SettingsRepository(
     private val secureStorage: SecureStorage
 ) {
     companion object {
+        private val PROVIDER_KEY = stringPreferencesKey("provider")
         private val ENDPOINT_KEY = stringPreferencesKey("endpoint")
         private val MODEL_KEY = stringPreferencesKey("model")
         private val TEMPERATURE_KEY = floatPreferencesKey("temperature")
@@ -30,6 +31,7 @@ class SettingsRepository(
         private val DEBUG_LOGGING_KEY = booleanPreferencesKey("debug_logging")
         private val SCREENSHOT_RESOLUTION_KEY = intPreferencesKey("screenshot_resolution")
 
+        const val DEFAULT_PROVIDER = "Ollama Cloud"
         const val DEFAULT_ENDPOINT = "https://ollama.com/api/chat"
         const val DEFAULT_MODEL = "gemma4:31b"
         const val DEFAULT_TEMPERATURE = 0.3f
@@ -40,6 +42,18 @@ class SettingsRepository(
         const val DEFAULT_SAVE_SCREENSHOTS = false
         const val DEFAULT_DEBUG_LOGGING = false
         const val DEFAULT_SCREENSHOT_RESOLUTION = 1024
+    }
+
+    // ---- Provider ----
+
+    suspend fun provider(): String {
+        return context.dataStore.data.first()[PROVIDER_KEY] ?: DEFAULT_PROVIDER
+    }
+
+    suspend fun setProvider(value: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PROVIDER_KEY] = value
+        }
     }
 
     // ---- API Key (stored in SecureStorage) ----
