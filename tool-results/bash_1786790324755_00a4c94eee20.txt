@@ -1,0 +1,1920 @@
+package com.androidagent.aiagent.tools.android
+
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class PasteTextTool : ToolHandler {
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance ?: return noService()
+        val root = service.safeGetRootInActiveWindow()
+            ?: return ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "NO_ROOT", message = "No root node"))
+        val focused = findFocusedEditable(root)
+            ?: return ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "NO_EDITABLE", message = "No editable field focused"))
+        val ok = service.performPaste(focused)
+        return if (ok) ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("action", "pasted") })
+        else ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "PASTE_FAILED", message = "Could not paste"))
+    }
+    private fun noService() = ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service not connected"))
+    private fun findFocusedEditable(n: android.view.accessibility.AccessibilityNodeInfo?): android.view.accessibility.AccessibilityNodeInfo? {
+        if (n == null) return null
+        if (n.isFocused && n.isEditable) return n
+        if (n.isEditable && n.isFocusable) return n
+        for (i in 0 until n.childCount) { val c = n.getChild(i); if (c != null) { val f = findFocusedEditable(c); if (f != null) return f } }
+        return null
+    }
+    companion object {
+        internal const val TOOL_NAME = "android.paste_text"
+        fun definition() = AgentTool(name = TOOL_NAME,
+            description = "Paste text from clipboard into the focused editable field.",
+            inputSchema = buildJsonObject { put("type", "object"); put("properties", buildJsonObject {}) },
+            riskLevel = RiskLevel.SAFE, requiresConfirmation = false)
+    }
+}
+package com.androidagent.aiagent.tools.android
+
+import android.os.Build
+import android.util.Log
+import com.androidagent.aiagent.accessibility.GestureController
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class PinchZoomTool : ToolHandler {
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance ?: return noService()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "UNSUPPORTED", message = "Pinch zoom requires Android 11+"))
+        }
+        return try {
+            val cx = args["center_x"]?.toString()?.removeSurrounding("\"")?.toFloatOrNull()
+            val cy = args["center_y"]?.toString()?.removeSurrounding("\"")?.toFloatOrNull()
+            val scale = args["scale"]?.toString()?.removeSurrounding("\"")?.toFloatOrNull() ?: 0.5f
+            val dur = args["duration_ms"]?.toString()?.removeSurrounding("\"")?.toLongOrNull() ?: 400L
+            if (cx == null || cy == null) {
+                return ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "INVALID_INPUT", message = "center_x, center_y required"))
+            }
+            val ok = GestureController.performPinchZoom(service, cx, cy, scale, dur)
+            if (ok) ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("scale", scale) })
+            else ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "PINCH_FAILED", message = "Pinch gesture failed"))
+        } catch (e: Exception) {
+            ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "PINCH_FAILED", message = e.message ?: "Pinch failed"))
+        }
+    }
+    private fun noService() = ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service not connected"))
+    companion object {
+        internal const val TOOL_NAME = "android.pinch_zoom"
+        fun definition() = AgentTool(name = TOOL_NAME,
+            description = "Pinch to zoom in/out on screen. Provide center_x, center_y (floats). scale: >1 = zoom in, <1 = zoom out (default 0.5). Optional duration_ms.",
+            inputSchema = buildJsonObject { put("type", "object"); put("properties", buildJsonObject {
+                put("center_x", buildJsonObject { put("type", "number"); put("description", "Center X") })
+                put("center_y", buildJsonObject { put("type", "number"); put("description", "Center Y") })
+                put("scale", buildJsonObject { put("type", "number"); put("description", "Zoom factor: >1 zoom in, <1 zoom out") })
+                put("duration_ms", buildJsonObject { put("type", "integer"); put("description", "Duration (default 400)") })
+            })}, riskLevel = RiskLevel.SAFE, requiresConfirmation = false)
+    }
+}package com.androidagent.aiagent.tools.android
+
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.coroutines.delay
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class PowerMenuTool : ToolHandler {
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance ?: return noService()
+        val ok = service.showPowerMenu()
+        delay(300)
+        return if (ok) ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("action", "power_menu") })
+        else ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "POWER_FAILED", message = "Could not show power menu"))
+    }
+    private fun noService() = ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service not connected"))
+    companion object {
+        internal const val TOOL_NAME = "android.power_menu"
+        fun definition() = AgentTool(name = TOOL_NAME,
+            description = "Show the power menu (restart, shutdown, screenshot, etc.).",
+            inputSchema = buildJsonObject { put("type", "object"); put("properties", buildJsonObject {}) },
+            riskLevel = RiskLevel.SAFE, requiresConfirmation = false)
+    }
+}package com.androidagent.aiagent.tools.android
+
+import android.util.Log
+import android.view.KeyEvent
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class PressKeyTool : ToolHandler {
+
+    override suspend fun execute(args: JsonObject): ToolResult {
+        return try {
+            val service = AndroidAgentAccessibilityService.instance
+                ?: return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(
+                        code = "SERVICE_NOT_CONNECTED",
+                        message = "Accessibility service is not connected"
+                    )
+                )
+
+            val keyName = args["key"]?.toString()?.removeSurrounding("\"")
+            if (keyName.isNullOrBlank()) {
+                return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(
+                        code = "INVALID_INPUT",
+                        message = "'key' parameter is required. Must be one of: ${KEY_MAP.keys.joinToString(", ")}"
+                    )
+                )
+            }
+
+            val upperKeyName = keyName.uppercase()
+            val keyCode = KEY_MAP[upperKeyName]
+            if (keyCode == null) {
+                return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(
+                        code = "INVALID_KEY",
+                        message = "Unsupported key: '$keyName'. Supported keys: ${KEY_MAP.keys.joinToString(", ")}"
+                    )
+                )
+            }
+
+            val success = if (keyCode == KeyEvent.KEYCODE_BACK) {
+                service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+            } else {
+                try {
+                    val proc = Runtime.getRuntime().exec(arrayOf("sh", "-c", "input keyevent $keyCode"))
+                    proc.waitFor() == 0
+                } catch (e: Exception) { false }
+            }
+
+            if (!success) {
+                return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(code = "PRESS_KEY_FAILED", message = "Failed to press key: $upperKeyName")
+                )
+            }
+
+            ToolResult(
+                success = true,
+                toolName = TOOL_NAME,
+                result = buildJsonObject {
+                    put("key", upperKeyName)
+                    put("keyCode", keyCode)
+                }
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to press key", e)
+            ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(
+                    code = "PRESS_KEY_FAILED",
+                    message = "Failed to press key: ${e.message}"
+                )
+            )
+        }
+    }
+
+    companion object {
+        internal const val TOOL_NAME = "android.press_key"
+        private const val TAG = "PressKeyTool"
+
+        private val KEY_MAP = mapOf(
+            "ENTER" to KeyEvent.KEYCODE_ENTER,
+            "BACK" to KeyEvent.KEYCODE_BACK,
+            "TAB" to KeyEvent.KEYCODE_TAB,
+            "ESCAPE" to KeyEvent.KEYCODE_ESCAPE,
+            "SPACE" to KeyEvent.KEYCODE_SPACE
+        )
+
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME,
+            description = "Presses a system or character key. Supported keys: ENTER, BACK, TAB, ESCAPE, SPACE.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    put("key", buildJsonObject {
+                        put("type", "string")
+                        put("enum", buildJsonArray {
+                            add("ENTER")
+                            add("BACK")
+                            add("TAB")
+                            add("ESCAPE")
+                            add("SPACE")
+                        })
+                        put("description", "The key to press")
+                    })
+                })
+            },
+            riskLevel = RiskLevel.SAFE,
+            requiresConfirmation = false
+        )
+    }
+}
+package com.androidagent.aiagent.tools.android
+
+import android.util.Log
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class RecentsTool : ToolHandler {
+
+    override suspend fun execute(args: JsonObject): ToolResult {
+        return try {
+            val service = AndroidAgentAccessibilityService.instance
+                ?: return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(
+                        code = "SERVICE_NOT_CONNECTED",
+                        message = "Accessibility service is not connected"
+                    )
+                )
+
+            service.pressRecents()
+
+            ToolResult(
+                success = true,
+                toolName = TOOL_NAME,
+                result = buildJsonObject {
+                    put("action", "press_recents")
+                }
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to press recents", e)
+            ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(
+                    code = "RECENTS_FAILED",
+                    message = "Failed to press recents: ${e.message}"
+                )
+            )
+        }
+    }
+
+    companion object {
+        internal const val TOOL_NAME = "android.recents"
+        private const val TAG = "RecentsTool"
+
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME,
+            description = "Presses the recents (overview/task switcher) button to show recently used apps.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    // No inputs required
+                })
+            },
+            riskLevel = RiskLevel.SAFE,
+            requiresConfirmation = false
+        )
+    }
+}
+package com.androidagent.aiagent.tools.android
+
+import android.graphics.Bitmap
+import android.util.Base64
+import android.util.Log
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import java.io.ByteArrayOutputStream
+
+@Suppress("DEPRECATION")
+class ScreenshotTool : ToolHandler {
+
+    override suspend fun execute(args: JsonObject): ToolResult {
+        return try {
+            val service = AndroidAgentAccessibilityService.instance
+                ?: return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(
+                        code = "SERVICE_NOT_CONNECTED",
+                        message = "Accessibility service is not connected"
+                    )
+                )
+
+            val screenshot = withContext(Dispatchers.IO) {
+                service.takeScreenshot()
+            } ?: return ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(
+                    code = "SCREENSHOT_FAILED",
+                    message = "takeScreenshot() returned null. The device may not support this API."
+                )
+            )
+
+            val base64String = withContext(Dispatchers.IO) {
+                bitmapToBase64Jpeg(screenshot, QUALITY, MAX_WIDTH)
+            }
+
+            ToolResult(
+                success = true,
+                toolName = TOOL_NAME,
+                result = buildJsonObject {
+                    put("base64", base64String)
+                    put("format", "image/jpeg")
+                    put("quality", QUALITY)
+                },
+                observationRequired = false
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to take screenshot", e)
+            ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(
+                    code = "SCREENSHOT_FAILED",
+                    message = "Failed to take screenshot: ${e.message}"
+                )
+            )
+        }
+    }
+
+    private fun bitmapToBase64Jpeg(bitmap: Bitmap, quality: Int, maxWidth: Int): String {
+        val scaledBitmap = if (bitmap.width > maxWidth) {
+            val scale = maxWidth.toFloat() / bitmap.width.toFloat()
+            val newHeight = (bitmap.height * scale).toInt()
+            Bitmap.createScaledBitmap(bitmap, maxWidth, newHeight, true)
+        } else {
+            bitmap
+        }
+
+        val outputStream = ByteArrayOutputStream()
+        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+        val bytes = outputStream.toByteArray()
+        return Base64.encodeToString(bytes, Base64.NO_WRAP)
+    }
+
+    companion object {
+        internal const val TOOL_NAME = "android.screenshot"
+        private const val TAG = "ScreenshotTool"
+        private const val QUALITY = 50
+        private const val MAX_WIDTH = 1024
+
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME,
+            description = "Takes a screenshot of the current screen and returns it as a base64-encoded " +
+                "JPEG image. The image is resized to a maximum width of 1024px and compressed " +
+                "at 50% quality to reduce size.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    // No required inputs
+                })
+            },
+            riskLevel = RiskLevel.SAFE,
+            requiresConfirmation = false
+        )
+    }
+}
+package com.androidagent.aiagent.tools.android
+
+import android.os.Environment
+import android.util.Log
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+class ScreenshotAndSaveTool : ToolHandler {
+
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance
+            ?: return noService()
+
+        return try {
+            val bitmap = withContext(Dispatchers.IO) {
+                service.takeScreenshot()
+            } ?: return ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(code = "SCREENSHOT_FAILED", message = "Failed to capture screenshot")
+            )
+
+            withContext(Dispatchers.IO) {
+                val dir = File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+                    "AndroidAgent"
+                )
+                if (!dir.exists()) dir.mkdirs()
+
+                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                val filename = args["filename"]?.jsonPrimitive?.content ?: "screenshot_$timestamp"
+                val safeName = if (filename.endsWith(".png", ignoreCase = true)) filename else "$filename.png"
+                val file = File(dir, safeName)
+
+                file.outputStream().use { out ->
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+                }
+                bitmap.recycle()
+
+                ToolResult(
+                    success = true,
+                    toolName = TOOL_NAME,
+                    result = buildJsonObject {
+                        put("path", file.absolutePath)
+                        put("filename", safeName)
+                        put("size_bytes", file.length())
+                    },
+                    observationRequired = false
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save screenshot", e)
+            ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(code = "SAVE_FAILED", message = "Failed to save screenshot: ${e.message}")
+            )
+        }
+    }
+
+    private fun noService() = ToolResult(
+        success = false,
+        toolName = TOOL_NAME,
+        error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service is not connected")
+    )
+
+    companion object {
+        internal const val TOOL_NAME = "android.screenshot_save"
+        private const val TAG = "ScreenshotAndSaveTool"
+
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME,
+            description = "Take a screenshot and save it to device storage (Pictures/AndroidAgent/). Optionally specify a filename.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    put("filename", buildJsonObject {
+                        put("type", "string")
+                        put("description", "Optional filename (without extension). Auto-generates timestamped name if omitted.")
+                    })
+                })
+            },
+            riskLevel = RiskLevel.SAFE,
+            requiresConfirmation = false
+        )
+    }
+}
+package com.androidagent.aiagent.tools.android
+
+import android.util.Log
+import android.view.accessibility.AccessibilityNodeInfo
+import com.androidagent.aiagent.accessibility.AccessibilityObserver
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.accessibility.GestureController
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.coroutines.delay
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.jsonPrimitive
+
+class ScrollTool : ToolHandler {
+
+    override suspend fun execute(args: JsonObject): ToolResult {
+        return try {
+            val service = AndroidAgentAccessibilityService.instance
+                ?: return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(
+                        code = "SERVICE_NOT_CONNECTED",
+                        message = "Accessibility service is not connected"
+                    )
+                )
+
+            val direction = args["direction"]?.toString()?.removeSurrounding("\"") ?: "down"
+            if (direction != "down" && direction != "up") {
+                return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(
+                        code = "INVALID_INPUT",
+                        message = "Direction must be 'up' or 'down', got: $direction"
+                    )
+                )
+            }
+
+            val amount = args["amount"]?.jsonPrimitive?.content?.toFloatOrNull() ?: DEFAULT_AMOUNT
+            val clampedAmount = amount.coerceIn(0.1f, 1.0f)
+
+            val nodeId = args["node_id"]?.toString()?.removeSurrounding("\"")
+
+            if (!nodeId.isNullOrBlank()) {
+                val observer = AccessibilityObserver.instance
+                    ?: return ToolResult(
+                        success = false,
+                        toolName = TOOL_NAME,
+                        error = ToolError(
+                            code = "OBSERVER_NOT_AVAILABLE",
+                            message = "Accessibility observer is not available"
+                        )
+                    )
+
+                val observation = observer.observe()
+                val node = observation.uiTree.find { it.nodeId == nodeId }
+
+                if (node == null) {
+                    return ToolResult(
+                        success = false,
+                        toolName = TOOL_NAME,
+                        error = ToolError(
+                            code = "NODE_NOT_FOUND",
+                            message = "Node with id '$nodeId' not found in current UI tree"
+                        )
+                    )
+                }
+
+                val rootNode = service.rootInActiveWindow
+                val targetNode = findNodeByHashId(rootNode, node.nodeId)
+
+                if (targetNode != null && targetNode.isScrollable) {
+                    val scrollAction = if (direction == "down") {
+                        AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+                    } else {
+                        AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+                    }
+
+                    val scrollResult = targetNode.performAction(scrollAction)
+
+                    if (scrollResult) {
+                        delay(SCROLL_SETTLE_DELAY_MS)
+                        return ToolResult(
+                            success = true,
+                            toolName = TOOL_NAME,
+                            result = buildJsonObject {
+                                put("nodeId", node.nodeId)
+                                put("direction", direction)
+                                put("method", "accessibility_scroll")
+                            }
+                        )
+                    }
+                    // If accessibility scroll failed, fall through to gesture
+                }
+            }
+
+            // Fallback: use gesture-based swipe
+            val metrics = service.resources?.displayMetrics
+                ?: return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(
+                        code = "DISPLAY_METRICS_UNAVAILABLE",
+                        message = "Unable to get display metrics"
+                    )
+                )
+
+            val screenWidth = metrics.widthPixels
+            val screenHeight = metrics.heightPixels
+            val centerX = screenWidth / 2f
+            val scrollDistance = screenHeight * clampedAmount
+
+            val startY = if (direction == "down") {
+                screenHeight * 0.7f
+            } else {
+                screenHeight * 0.3f
+            }
+            val endY = if (direction == "down") {
+                screenHeight * 0.3f
+            } else {
+                screenHeight * 0.7f
+            }
+
+            GestureController.performSwipe(
+                centerX, startY,
+                centerX, endY,
+                SWIPE_DURATION_MS
+            )
+
+            delay(SCROLL_SETTLE_DELAY_MS)
+
+            ToolResult(
+                success = true,
+                toolName = TOOL_NAME,
+                result = buildJsonObject {
+                    put("direction", direction)
+                    put("amount", clampedAmount)
+                    put("method", "gesture_swipe")
+                }
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to scroll", e)
+            ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(
+                    code = "SCROLL_FAILED",
+                    message = "Failed to scroll: ${e.message}"
+                )
+            )
+        }
+    }
+
+    private fun findNodeByHashId(node: AccessibilityNodeInfo?, nodeId: String): AccessibilityNodeInfo? {
+        if (node == null) return null
+        val hashStr = nodeId.removePrefix("node_")
+        val targetHash = hashStr.toIntOrNull()
+        return if (targetHash != null) {
+            findByHashCode(node, targetHash)
+        } else {
+            findByViewId(node, nodeId)
+        }
+    }
+
+    private fun findByHashCode(node: AccessibilityNodeInfo, targetHash: Int): AccessibilityNodeInfo? {
+        if (node.hashCode() == targetHash) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findByHashCode(child, targetHash)
+            if (found != null) return found
+        }
+        return null
+    }
+
+    private fun findByViewId(node: AccessibilityNodeInfo, viewId: String): AccessibilityNodeInfo? {
+        if (node.viewIdResourceName == viewId) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findByViewId(child, viewId)
+            if (found != null) return found
+        }
+        return null
+    }
+
+    companion object {
+        internal const val TOOL_NAME = "android.scroll"
+        private const val TAG = "ScrollTool"
+        private const val DEFAULT_AMOUNT = 0.7f
+        private const val SWIPE_DURATION_MS = 300L
+        private const val SCROLL_SETTLE_DELAY_MS = 300L
+
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME,
+            description = "Scrolls a scrollable container or the screen in the specified direction. " +
+                "If node_id is provided, attempts to use accessibility scroll on that node. " +
+                "Otherwise performs a gesture-based swipe on the screen center.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    put("direction", buildJsonObject {
+                        put("type", "string")
+                        put("enum", buildJsonArray {
+                            add("down")
+                            add("up")
+                        })
+                        put("description", "Scroll direction")
+                    })
+                    put("amount", buildJsonObject {
+                        put("type", "number")
+                        put("description", "Scroll amount as fraction of screen height (0.0-1.0, default 0.7)")
+                    })
+                    put("node_id", buildJsonObject {
+                        put("type", "string")
+                        put("description", "Optional node ID of the scrollable container")
+                    })
+                })
+            },
+            riskLevel = RiskLevel.SAFE,
+            requiresConfirmation = false
+        )
+    }
+}
+package com.androidagent.aiagent.tools.android
+
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class SelectAllTool : ToolHandler {
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance ?: return noService()
+        val root = service.safeGetRootInActiveWindow()
+            ?: return ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "NO_ROOT", message = "No root node"))
+        val focused = findFocusedEditable(root) ?: findFirstEditable(root)
+            ?: return ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "NO_EDITABLE", message = "No editable field focused"))
+        val ok = service.performSelectAll(focused)
+        return if (ok) ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("action", "select_all") })
+        else ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SELECT_ALL_FAILED", message = "Could not select all"))
+    }
+    private fun noService() = ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service not connected"))
+    private fun findFocusedEditable(n: android.view.accessibility.AccessibilityNodeInfo?): android.view.accessibility.AccessibilityNodeInfo? {
+        if (n == null) return null
+        if (n.isFocused && n.isEditable) return n
+        if (n.isEditable && n.isFocusable) return n
+        for (i in 0 until n.childCount) { val c = n.getChild(i); if (c != null) { val f = findFocusedEditable(c); if (f != null) return f } }
+        return null
+    }
+    private fun findFirstEditable(n: android.view.accessibility.AccessibilityNodeInfo?): android.view.accessibility.AccessibilityNodeInfo? {
+        if (n == null) return null
+        if (n.isEditable) return n
+        for (i in 0 until n.childCount) { val c = n.getChild(i); if (c != null) { val f = findFirstEditable(c); if (f != null) return f } }
+        return null
+    }
+    companion object {
+        internal const val TOOL_NAME = "android.select_all"
+        fun definition() = AgentTool(name = TOOL_NAME,
+            description = "Select all text in the currently focused editable field.",
+            inputSchema = buildJsonObject { put("type", "object"); put("properties", buildJsonObject {}) },
+            riskLevel = RiskLevel.SAFE, requiresConfirmation = false)
+    }
+}package com.androidagent.aiagent.tools.android
+
+import android.content.Intent
+import android.net.Uri
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class SendSmsTool : ToolHandler {
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance ?: return noService()
+        val number = args["number"]?.toString()?.removeSurrounding("\"")
+        val message = args["message"]?.toString()?.removeSurrounding("\"")
+        if (number.isNullOrBlank()) return ToolResult(success = false, toolName = TOOL_NAME,
+            error = ToolError(code = "INVALID_INPUT", message = "'number' is required"))
+        return try {
+            val uri = Uri.parse("smsto:$number")
+            val intent = Intent(Intent.ACTION_SENDTO, uri).apply {
+                putExtra("sms_body", message ?: "")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            service.startActivity(intent)
+            ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("number", number) })
+        } catch (e: Exception) {
+            ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SMS_FAILED", message = e.message ?: "Could not send SMS"))
+        }
+    }
+    private fun noService() = ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service not connected"))
+    companion object {
+        internal const val TOOL_NAME = "android.send_sms"
+        fun definition() = AgentTool(name = TOOL_NAME,
+            description = "Open SMS app with a pre-filled message. Provide 'number' (string), optional 'message' (string).",
+            inputSchema = buildJsonObject { put("type", "object"); put("properties", buildJsonObject {
+                put("number", buildJsonObject { put("type", "string"); put("description", "Phone number") })
+                put("message", buildJsonObject { put("type", "string"); put("description", "SMS body text") })
+            })}, riskLevel = RiskLevel.CONFIRM, requiresConfirmation = true)
+    }
+}package com.androidagent.aiagent.tools.android
+
+import android.provider.Settings
+import android.util.Log
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+
+class SetBrightnessTool : ToolHandler {
+
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance
+            ?: return noService()
+
+        val brightness = args["brightness"]?.jsonPrimitive?.intOrNull
+            ?: return ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(code = "INVALID_INPUT", message = "'brightness' (0-255) is required")
+            )
+
+        return try {
+            Settings.System.putInt(service.contentResolver, Settings.System.SCREEN_BRIGHTNESS, brightness.coerceIn(0, 255))
+            ToolResult(
+                success = true,
+                toolName = TOOL_NAME,
+                result = buildJsonObject { put("brightness", brightness) }
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set brightness", e)
+            ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(code = "BRIGHTNESS_FAILED", message = "Failed: ${e.message}")
+            )
+        }
+    }
+
+    private fun noService() = ToolResult(
+        success = false,
+        toolName = TOOL_NAME,
+        error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service is not connected")
+    )
+
+    companion object {
+        internal const val TOOL_NAME = "android.set_brightness"
+        private const val TAG = "SetBrightnessTool"
+
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME,
+            description = "Set screen brightness (0-255). 0=darkest, 255=brightest.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    put("brightness", buildJsonObject {
+                        put("type", "integer")
+                        put("description", "Brightness level 0-255")
+                    })
+                })
+                put("required", buildJsonArray { add(JsonPrimitive("brightness")) })
+            },
+            riskLevel = RiskLevel.SAFE,
+            requiresConfirmation = false
+        )
+    }
+}
+package com.androidagent.aiagent.tools.android
+
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class SetClipboardTool : ToolHandler {
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance ?: return noService()
+        val text = args["text"]?.toString()?.removeSurrounding("\"")
+        if (text.isNullOrBlank()) return ToolResult(success = false, toolName = TOOL_NAME,
+            error = ToolError(code = "INVALID_INPUT", message = "'text' is required"))
+        val clipboard = service.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            ?: return ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "NO_CLIPBOARD", message = "Clipboard not available"))
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("agent", text))
+        return ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("text", text); put("action", "clipboard_set") })
+    }
+    private fun noService() = ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service not connected"))
+    companion object {
+        internal const val TOOL_NAME = "android.set_clipboard"
+        fun definition() = AgentTool(name = TOOL_NAME,
+            description = "Set clipboard content directly without needing a field. Provide 'text' (string).",
+            inputSchema = buildJsonObject { put("type", "object"); put("properties", buildJsonObject {
+                put("text", buildJsonObject { put("type", "string"); put("description", "Text to put on clipboard") })
+            })}, riskLevel = RiskLevel.SAFE, requiresConfirmation = false)
+    }
+}package com.androidagent.aiagent.tools.android
+
+import android.content.Intent
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class ShareContentTool : ToolHandler {
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance ?: return noService()
+        val text = args["text"]?.toString()?.removeSurrounding("\"")
+        if (text.isNullOrBlank()) return ToolResult(success = false, toolName = TOOL_NAME,
+            error = ToolError(code = "INVALID_INPUT", message = "'text' is required"))
+        return try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            service.startActivity(Intent.createChooser(intent, "Share via").apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+            ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("text", text.take(100)) })
+        } catch (e: Exception) {
+            ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SHARE_FAILED", message = e.message ?: "Could not share"))
+        }
+    }
+    private fun noService() = ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service not connected"))
+    companion object {
+        internal const val TOOL_NAME = "android.share"
+        fun definition() = AgentTool(name = TOOL_NAME,
+            description = "Share text via Android share sheet. Provide 'text' (string).",
+            inputSchema = buildJsonObject { put("type", "object"); put("properties", buildJsonObject {
+                put("text", buildJsonObject { put("type", "string"); put("description", "Text to share") })
+            })}, riskLevel = RiskLevel.SAFE, requiresConfirmation = false)
+    }
+}package com.androidagent.aiagent.tools.android
+
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class SplitScreenTool : ToolHandler {
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance ?: return noService()
+        val ok = service.toggleSplitScreen()
+        return if (ok) ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("action", "split_screen") })
+        else ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SPLIT_FAILED", message = "Could not toggle split screen"))
+    }
+    private fun noService() = ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service not connected"))
+    companion object {
+        internal const val TOOL_NAME = "android.split_screen"
+        fun definition() = AgentTool(name = TOOL_NAME,
+            description = "Toggle split-screen mode.",
+            inputSchema = buildJsonObject { put("type", "object"); put("properties", buildJsonObject {}) },
+            riskLevel = RiskLevel.SAFE, requiresConfirmation = false)
+    }
+}package com.androidagent.aiagent.tools.android
+
+import android.util.Log
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.accessibility.GestureController
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.intOrNull
+
+class SwipeTool : ToolHandler {
+
+    override suspend fun execute(args: JsonObject): ToolResult {
+        return try {
+            val service = AndroidAgentAccessibilityService.instance
+                ?: return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(
+                        code = "SERVICE_NOT_CONNECTED",
+                        message = "Accessibility service is not connected"
+                    )
+                )
+
+            val direction = args["direction"]?.toString()?.removeSurrounding("\"") ?: "up"
+            if (direction !in VALID_DIRECTIONS) {
+                return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(
+                        code = "INVALID_INPUT",
+                        message = "Direction must be one of $VALID_DIRECTIONS, got: $direction"
+                    )
+                )
+            }
+
+            val durationMs = args["duration_ms"]?.jsonPrimitive?.intOrNull ?: DEFAULT_DURATION_MS
+            val clampedDuration = durationMs.coerceIn(50, 2000)
+
+            val explicitStartX = args["startX"]?.jsonPrimitive?.intOrNull
+            val explicitStartY = args["startY"]?.jsonPrimitive?.intOrNull
+            val explicitEndX = args["endX"]?.jsonPrimitive?.intOrNull
+            val explicitEndY = args["endY"]?.jsonPrimitive?.intOrNull
+
+            val metrics = service.resources?.displayMetrics
+                ?: return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(
+                        code = "DISPLAY_METRICS_UNAVAILABLE",
+                        message = "Unable to get display metrics"
+                    )
+                )
+
+            val screenWidth = metrics.widthPixels
+            val screenHeight = metrics.heightPixels
+            val centerX = screenWidth / 2f
+            val centerY = screenHeight / 2f
+            val edgeMargin = screenWidth * 0.1f
+            val verticalMargin = screenHeight * 0.1f
+
+            val (startX, startY, endX, endY) = when {
+                explicitStartX != null && explicitStartY != null &&
+                    explicitEndX != null && explicitEndY != null -> {
+                    Quad(
+                        explicitStartX.toFloat(), explicitStartY.toFloat(),
+                        explicitEndX.toFloat(), explicitEndY.toFloat()
+                    )
+                }
+                else -> computeSwipeCoords(
+                    direction, screenWidth, screenHeight,
+                    edgeMargin, verticalMargin
+                )
+            }
+
+            GestureController.performSwipe(
+                startX, startY,
+                endX, endY,
+                clampedDuration.toLong()
+            )
+
+            ToolResult(
+                success = true,
+                toolName = TOOL_NAME,
+                result = buildJsonObject {
+                    put("direction", direction)
+                    put("startX", startX)
+                    put("startY", startY)
+                    put("endX", endX)
+                    put("endY", endY)
+                    put("duration_ms", clampedDuration)
+                }
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to perform swipe", e)
+            ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(
+                    code = "SWIPE_FAILED",
+                    message = "Failed to perform swipe: ${e.message}"
+                )
+            )
+        }
+    }
+
+    private fun computeSwipeCoords(
+        direction: String,
+        screenWidth: Int,
+        screenHeight: Int,
+        edgeMargin: Float,
+        verticalMargin: Float
+    ): Quad {
+        val centerX = screenWidth / 2f
+        val centerY = screenHeight / 2f
+
+        return when (direction) {
+            "up" -> Quad(
+                centerX, screenHeight - verticalMargin,
+                centerX, verticalMargin
+            )
+            "down" -> Quad(
+                centerX, verticalMargin,
+                centerX, screenHeight - verticalMargin
+            )
+            "left" -> Quad(
+                screenWidth - edgeMargin, centerY,
+                edgeMargin, centerY
+            )
+            "right" -> Quad(
+                edgeMargin, centerY,
+                screenWidth - edgeMargin, centerY
+            )
+            else -> Quad(
+                centerX, screenHeight - verticalMargin,
+                centerX, verticalMargin
+            )
+        }
+    }
+
+    private data class Quad(
+        val startX: Float,
+        val startY: Float,
+        val endX: Float,
+        val endY: Float
+    )
+
+    companion object {
+        internal const val TOOL_NAME = "android.swipe"
+        private const val TAG = "SwipeTool"
+        private const val DEFAULT_DURATION_MS = 300
+        private val VALID_DIRECTIONS = listOf("up", "down", "left", "right")
+
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME,
+            description = "Performs a swipe gesture on the screen in the specified direction. " +
+                "Can use predefined directions (up/down/left/right) with automatic coordinate " +
+                "calculation, or explicit startX/startY/endX/endY pixel coordinates.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    put("direction", buildJsonObject {
+                        put("type", "string")
+                        put("enum", buildJsonArray {
+                            add("up")
+                            add("down")
+                            add("left")
+                            add("right")
+                        })
+                        put("description", "Swipe direction")
+                    })
+                    put("startX", buildJsonObject {
+                        put("type", "integer")
+                        put("description", "Start X coordinate (optional, overrides direction)")
+                    })
+                    put("startY", buildJsonObject {
+                        put("type", "integer")
+                        put("description", "Start Y coordinate (optional, overrides direction)")
+                    })
+                    put("endX", buildJsonObject {
+                        put("type", "integer")
+                        put("description", "End X coordinate (optional, overrides direction)")
+                    })
+                    put("endY", buildJsonObject {
+                        put("type", "integer")
+                        put("description", "End Y coordinate (optional, overrides direction)")
+                    })
+                    put("duration_ms", buildJsonObject {
+                        put("type", "integer")
+                        put("description", "Swipe duration in milliseconds (default 300)")
+                    })
+                })
+            },
+            riskLevel = RiskLevel.SAFE,
+            requiresConfirmation = false
+        )
+    }
+}
+package com.androidagent.aiagent.tools.android
+
+import android.bluetooth.BluetoothAdapter
+import android.util.Log
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+
+class ToggleBluetoothTool : ToolHandler {
+
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val enable = args["enable"]?.jsonPrimitive?.content?.toBooleanStrictOrNull()
+
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+            ?: return ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(code = "NO_BLUETOOTH", message = "Device does not support Bluetooth")
+            )
+
+        return if (enable != null) {
+            try {
+                val wasEnabled = adapter.isEnabled
+                if (enable) adapter.enable() else adapter.disable()
+                ToolResult(
+                    success = true,
+                    toolName = TOOL_NAME,
+                    result = buildJsonObject {
+                        put("was_enabled", wasEnabled)
+                        put("now_enabled", enable)
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to toggle Bluetooth", e)
+                ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(code = "BT_TOGGLE_FAILED", message = "Failed to toggle Bluetooth: ${e.message}")
+                )
+            }
+        } else {
+            ToolResult(
+                success = true,
+                toolName = TOOL_NAME,
+                result = buildJsonObject { put("bluetooth_enabled", adapter.isEnabled) },
+                observationRequired = false
+            )
+        }
+    }
+
+    companion object {
+        internal const val TOOL_NAME = "android.toggle_bluetooth"
+        private const val TAG = "ToggleBluetoothTool"
+
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME,
+            description = "Toggle Bluetooth on/off or check current state. Pass enable=true/false, or omit to check state.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    put("enable", buildJsonObject {
+                        put("type", "boolean")
+                        put("description", "true to enable, false to disable. Omit to check state.")
+                    })
+                })
+            },
+            riskLevel = RiskLevel.CONFIRM,
+            requiresConfirmation = true
+        )
+    }
+}
+package com.androidagent.aiagent.tools.android
+
+import android.net.wifi.WifiManager
+import android.util.Log
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+
+class ToggleWifiTool : ToolHandler {
+
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance
+            ?: return noService()
+
+        val enable = args["enable"]?.jsonPrimitive?.content?.toBooleanStrictOrNull()
+            ?: args["enable"]?.jsonPrimitive?.toString()?.removeSurrounding("\"")?.toBooleanStrictOrNull()
+
+        return if (enable != null) {
+            try {
+                val wm = service.applicationContext.getSystemService(WifiManager::class.java)
+                val isCurrentlyEnabled = wm.isWifiEnabled
+                // WifiManager.setWifiEnabled is deprecated but still works for automation agents
+                @Suppress("DEPRECATION")
+                wm.isWifiEnabled = enable
+                ToolResult(
+                    success = true,
+                    toolName = TOOL_NAME,
+                    result = buildJsonObject {
+                        put("was_enabled", isCurrentlyEnabled)
+                        put("now_enabled", enable)
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to toggle WiFi", e)
+                ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(code = "WIFI_TOGGLE_FAILED", message = "Failed to toggle WiFi: ${e.message}")
+                )
+            }
+        } else {
+            // Just return current state
+            try {
+                val wm = service.applicationContext.getSystemService(WifiManager::class.java)
+                ToolResult(
+                    success = true,
+                    toolName = TOOL_NAME,
+                    result = buildJsonObject {
+                        put("wifi_enabled", wm.isWifiEnabled)
+                    },
+                    observationRequired = false
+                )
+            } catch (e: Exception) {
+                ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(code = "WIFI_CHECK_FAILED", message = "Failed to check WiFi: ${e.message}")
+                )
+            }
+        }
+    }
+
+    private fun noService() = ToolResult(
+        success = false,
+        toolName = TOOL_NAME,
+        error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service is not connected")
+    )
+
+    companion object {
+        internal const val TOOL_NAME = "android.toggle_wifi"
+        private const val TAG = "ToggleWifiTool"
+
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME,
+            description = "Toggle WiFi on/off or check current WiFi state. Pass enable=true to turn on, enable=false to turn off, or omit to check state.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    put("enable", buildJsonObject {
+                        put("type", "boolean")
+                        put("description", "true to enable WiFi, false to disable. Omit to just check current state.")
+                    })
+                })
+            },
+            riskLevel = RiskLevel.CONFIRM,
+            requiresConfirmation = true
+        )
+    }
+}package com.androidagent.aiagent.tools.android
+
+import android.os.Bundle
+import android.util.Log
+import android.view.accessibility.AccessibilityNodeInfo
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.accessibility.GestureController
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.coroutines.delay
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class TypeTextTool : ToolHandler {
+
+    override suspend fun execute(args: JsonObject): ToolResult {
+        return try {
+            val service = AndroidAgentAccessibilityService.instance
+                ?: return noService()
+
+            val text = args["text"]?.toString()?.removeSurrounding("\"")
+            if (text.isNullOrBlank()) {
+                return ToolResult(
+                    success = false,
+                    toolName = TOOL_NAME,
+                    error = ToolError(code = "INVALID_INPUT", message = "'text' parameter is required")
+                )
+            }
+
+            val nodeId = args["node_id"]?.toString()?.removeSurrounding("\"")
+
+            // Strategy 1: If node_id provided, find the real node and use ACTION_SET_TEXT
+            if (!nodeId.isNullOrBlank()) {
+                val rootNode = service.safeGetRootInActiveWindow()
+                val targetNode = findNodeByHashId(rootNode, nodeId)
+
+                if (targetNode != null) {
+                    val result = setTextViaSetAction(targetNode, text)
+                    if (result != null) {
+                        delay(150)
+                        // Verify and retry with clipboard if mismatch
+                        if (!verifyText(service, text)) {
+                            Log.w(TAG, "Verification failed after ACTION_SET_TEXT, trying clipboard for exact text")
+                            val retryResult = retryWithClipboard(service, text)
+                            if (retryResult != null) return retryResult
+                        }
+                        return result
+                    }
+                    // Click to focus for fallback strategies
+                    targetNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    delay(100)
+                }
+            }
+
+            // Strategy 2: Use AccessibilityService performAction with SET_TEXT on focused node
+            val focusedSet = setTextOnFocusedField(service, text)
+            if (focusedSet) {
+                delay(150)
+                if (verifyText(service, text)) {
+                    return ToolResult(
+                        success = true,
+                        toolName = TOOL_NAME,
+                        result = buildJsonObject {
+                            put("text", text)
+                            put("method", "focused_set_text")
+                            put("characters", text.length)
+                        }
+                    )
+                }
+                Log.w(TAG, "Verification failed after focused set, trying clipboard")
+                // Verification failed — try clipboard as retry
+                val retryResult = retryWithClipboard(service, text)
+                if (retryResult != null) return retryResult
+            }
+
+            // Strategy 3: Paste via clipboard + gesture tap on EditText
+            val clipboardResult = setTextViaClipboard(service, text)
+            if (clipboardResult) {
+                delay(200)
+                if (verifyText(service, text)) {
+                    return ToolResult(
+                        success = true,
+                        toolName = TOOL_NAME,
+                        result = buildJsonObject {
+                            put("text", text)
+                            put("method", "clipboard_paste")
+                            put("characters", text.length)
+                        }
+                    )
+                }
+                // Clipboard was the last resort — return success even if verify fails
+                // (some apps don't expose text via accessibility after paste)
+                return ToolResult(
+                    success = true,
+                    toolName = TOOL_NAME,
+                    result = buildJsonObject {
+                        put("text", text)
+                        put("method", "clipboard_paste_unverified")
+                        put("characters", text.length)
+                    }
+                )
+            }
+
+            ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(code = "TYPE_FAILED", message = "All text input methods failed")
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to type text", e)
+            ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = ToolError(code = "TYPE_FAILED", message = "Failed to type text: ${e.message}")
+            )
+        }
+    }
+
+    /**
+     * When verification fails, clear the field and retry with clipboard paste.
+     * This is the MOST RELIABLE method for exact text (especially numbers).
+     */
+    private suspend fun retryWithClipboard(service: AndroidAgentAccessibilityService, text: String): ToolResult? {
+        return try {
+            // First clear the field
+            val rootNode = service.safeGetRootInActiveWindow() ?: return null
+            val editNode = findFocusedEditable(rootNode) ?: findFirstEditable(rootNode)
+            if (editNode != null) {
+                // Clear existing wrong text
+                editNode.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+                val clearArgs = Bundle().apply {
+                    putCharSequence(
+                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                        ""
+                    )
+                }
+                editNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, clearArgs)
+                delay(100)
+            }
+
+            // Now paste via clipboard
+            val clipboardOk = setTextViaClipboard(service, text)
+            if (clipboardOk) {
+                delay(200)
+                ToolResult(
+                    success = true,
+                    toolName = TOOL_NAME,
+                    result = buildJsonObject {
+                        put("text", text)
+                        put("method", "clipboard_retry_after_verify_fail")
+                        put("characters", text.length)
+                    }
+                )
+            } else null
+        } catch (e: Exception) {
+            Log.w(TAG, "Clipboard retry failed", e)
+            null
+        }
+    }
+
+    /**
+     * Set text using ACTION_SET_TEXT on a specific node.
+     */
+    private fun setTextViaSetAction(
+        node: AccessibilityNodeInfo,
+        text: String
+    ): ToolResult? {
+        node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+        val args = Bundle().apply {
+            putCharSequence(
+                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                text
+            )
+        }
+        val setResult = node.performAction(
+            AccessibilityNodeInfo.ACTION_SET_TEXT, args
+        )
+        return if (setResult) {
+            ToolResult(
+                success = true,
+                toolName = TOOL_NAME,
+                result = buildJsonObject {
+                    put("method", "ACTION_SET_TEXT")
+                    put("characters", text.length)
+                }
+            )
+        } else null
+    }
+
+    /**
+     * Verify that the text in the focused editable field matches what we set.
+     */
+    private fun verifyText(service: AndroidAgentAccessibilityService, expected: String): Boolean {
+        return try {
+            val rootNode = service.safeGetRootInActiveWindow() ?: return true
+            val focusedNode = findFocusedEditable(rootNode) ?: return true
+            val actual = focusedNode.text?.toString() ?: return true
+            val match = actual.trim() == expected.trim()
+            if (!match) {
+                Log.w(TAG, "Text mismatch! Expected: '$expected', Got: '$actual'")
+            }
+            match
+        } catch (e: Exception) {
+            true
+        }
+    }
+
+    /**
+     * Find a node in the live tree by its hashed node_id.
+     */
+    private fun findNodeByHashId(
+        root: AccessibilityNodeInfo?,
+        nodeId: String
+    ): AccessibilityNodeInfo? {
+        if (root == null) return null
+
+        val hashStr = nodeId.removePrefix("node_")
+        val targetHash = hashStr.toIntOrNull()
+
+        return if (targetHash != null) {
+            findByHashCode(root, targetHash)
+        } else {
+            findByViewId(root, nodeId)
+        }
+    }
+
+    private fun findByHashCode(
+        node: AccessibilityNodeInfo,
+        targetHash: Int
+    ): AccessibilityNodeInfo? {
+        if (node.hashCode() == targetHash) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findByHashCode(child, targetHash)
+            if (found != null) return found
+        }
+        return null
+    }
+
+    private fun findByViewId(
+        node: AccessibilityNodeInfo,
+        viewId: String
+    ): AccessibilityNodeInfo? {
+        if (node.viewIdResourceName == viewId) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findByViewId(child, viewId)
+            if (found != null) return found
+        }
+        return null
+    }
+
+    private suspend fun setTextOnFocusedField(
+        service: AndroidAgentAccessibilityService,
+        text: String
+    ): Boolean {
+        val rootNode = service.safeGetRootInActiveWindow() ?: return false
+
+        val focusedNode = findFocusedEditable(rootNode)
+        if (focusedNode != null) {
+            focusedNode.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+            val args = Bundle().apply {
+                putCharSequence(
+                    AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                    text
+                )
+            }
+            return focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+        }
+        return false
+    }
+
+    private fun findFocusedEditable(
+        node: AccessibilityNodeInfo?
+    ): AccessibilityNodeInfo? {
+        if (node == null) return null
+        if (node.isFocused && node.isEditable) return node
+        if (node.isEditable && node.isFocusable) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findFocusedEditable(child)
+            if (found != null) return found
+        }
+        return null
+    }
+
+    /**
+     * Set text via clipboard: copy text to clipboard, then long-press the
+     * editable field and tap "Paste".
+     */
+    private suspend fun setTextViaClipboard(
+        service: AndroidAgentAccessibilityService,
+        text: String
+    ): Boolean {
+        return try {
+            val clipboard = service.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                as? android.content.ClipboardManager ?: return false
+
+            val clip = android.content.ClipData.newPlainText("agent_input", text)
+            clipboard.setPrimaryClip(clip)
+            delay(100)
+
+            val rootNode = service.safeGetRootInActiveWindow() ?: return false
+            val editNode = findFocusedEditable(rootNode) ?: findFirstEditable(rootNode)
+            if (editNode != null) {
+                val b = android.graphics.Rect()
+                editNode.getBoundsInScreen(b)
+                val cx = (b.left + b.right) / 2f
+                val cy = (b.top + b.bottom) / 2f
+
+                // Long press to show context menu
+                GestureController.performLongPress(cx, cy)
+                delay(500)
+
+                // Look for "Paste" in the tree
+                val newRoot = service.safeGetRootInActiveWindow()
+                val pasteNode = findNodeByText(newRoot, "Paste")
+
+                if (pasteNode != null) {
+                    val pb = android.graphics.Rect()
+                    pasteNode.getBoundsInScreen(pb)
+                    GestureController.performTap(
+                        ((pb.left + pb.right) / 2f),
+                        ((pb.top + pb.bottom) / 2f)
+                    )
+                    delay(200)
+                    return true
+                }
+            }
+            false
+        } catch (e: Exception) {
+            Log.w(TAG, "Clipboard paste failed", e)
+            false
+        }
+    }
+
+    private fun findFirstEditable(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+        if (node == null) return null
+        if (node.isEditable) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findFirstEditable(child)
+            if (found != null) return found
+        }
+        return null
+    }
+
+    private fun findNodeByText(
+        node: AccessibilityNodeInfo?,
+        text: String
+    ): AccessibilityNodeInfo? {
+        if (node == null) return null
+        if (node.text?.toString()?.equals(text, ignoreCase = true) == true) return node
+        if (node.contentDescription?.toString()?.equals(text, ignoreCase = true) == true) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findNodeByText(child, text)
+            if (found != null) return found
+        }
+        return null
+    }
+
+    private fun noService(): ToolResult = ToolResult(
+        success = false,
+        toolName = TOOL_NAME,
+        error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service is not connected")
+    )
+
+    companion object {
+        internal const val TOOL_NAME = "android.type_text"
+        private const val TAG = "TypeTextTool"
+
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME,
+            description = "Type text into a field. Provide 'text' (required) — type EXACTLY what the user said, character by character. No auto-correct, no modifications. If user said '786687', type exactly '786687'. Optionally provide 'node_id' of the target editable field.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    put("text", buildJsonObject {
+                        put("type", "string")
+                        put("description", "The EXACT text to type — character-perfect, no modifications")
+                    })
+                    put("node_id", buildJsonObject {
+                        put("type", "string")
+                        put("description", "Optional node ID of the editable field")
+                    })
+                })
+            },
+            riskLevel = RiskLevel.SAFE,
+            requiresConfirmation = false
+        )
+    }
+}
+package com.androidagent.aiagent.tools.android
+
+import android.content.Context
+import android.media.AudioManager
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+class VolumeControlTool : ToolHandler {
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance ?: return noService()
+        val stream = args["stream"]?.toString()?.removeSurrounding("\"")?.lowercase() ?: "music"
+        val level = args["level"]?.toString()?.removeSurrounding("\"")?.toIntOrNull()
+        val direction = args["direction"]?.toString()?.removeSurrounding("\"")?.lowercase()
+        val am = service.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            ?: return ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "NO_AM", message = "AudioManager not available"))
+        val streamType = when {
+            stream.contains("alarm") -> AudioManager.STREAM_ALARM
+            stream.contains("ring") || stream.contains("call") -> AudioManager.STREAM_RING
+            stream.contains("notif") -> AudioManager.STREAM_NOTIFICATION
+            stream.contains("system") -> AudioManager.STREAM_SYSTEM
+            stream.contains("voice") -> AudioManager.STREAM_VOICE_CALL
+            else -> AudioManager.STREAM_MUSIC
+        }
+        return when {
+            level != null -> {
+                am.setStreamVolume(streamType, level.coerceIn(0, am.getStreamMaxVolume(streamType)), 0)
+                ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("level", level); put("stream", stream) })
+            }
+            direction == "up" -> {
+                am.adjustStreamVolume(streamType, AudioManager.ADJUST_RAISE, 0)
+                ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("direction", "up") })
+            }
+            direction == "down" -> {
+                am.adjustStreamVolume(streamType, AudioManager.ADJUST_LOWER, 0)
+                ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("direction", "down") })
+            }
+            direction == "mute" || direction == "silence" -> {
+                am.adjustStreamVolume(streamType, AudioManager.ADJUST_MUTE, 0)
+                ToolResult(success = true, toolName = TOOL_NAME, result = buildJsonObject { put("action", "muted") })
+            }
+            else -> ToolResult(success = false, toolName = TOOL_NAME,
+                error = ToolError(code = "INVALID_INPUT", message = "Provide 'level' (int) or 'direction' (up/down/mute)"))
+        }
+    }
+    private fun noService() = ToolResult(success = false, toolName = TOOL_NAME, error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service not connected"))
+    companion object {
+        internal const val TOOL_NAME = "android.volume"
+        fun definition() = AgentTool(name = TOOL_NAME,
+            description = "Control volume. Provide 'direction' (up/down/mute) OR 'level' (0-max). Optional 'stream' (music/ring/alarm/notification/system, default music).",
+            inputSchema = buildJsonObject { put("type", "object"); put("properties", buildJsonObject {
+                put("direction", buildJsonObject { put("type", "string"); put("description", "up, down, or mute") })
+                put("level", buildJsonObject { put("type", "integer"); put("description", "Absolute volume level") })
+                put("stream", buildJsonObject { put("type", "string"); put("description", "music, ring, alarm, notification, system") })
+            })}, riskLevel = RiskLevel.SAFE, requiresConfirmation = false)
+    }
+}
+package com.androidagent.aiagent.tools.android
+
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.put
+
+class WaitTool : ToolHandler {
+
+    override suspend fun execute(args: JsonObject): ToolResult {
+        return try {
+            val milliseconds = args["milliseconds"]?.jsonPrimitive?.intOrNull ?: DEFAULT_WAIT_MS
+            val clampedMs = milliseconds.coerceIn(0, MAX_WAIT_MS)
+
+            withContext(Dispatchers.IO) {
+                delay(clampedMs.toLong())
+            }
+
+            ToolResult(
+                success = true,
+                toolName = TOOL_NAME,
+                result = buildJsonObject {
+                    put("waited_ms", clampedMs)
+                },
+                observationRequired = true
+            )
+        } catch (e: Exception) {
+            ToolResult(
+                success = false,
+                toolName = TOOL_NAME,
+                error = com.androidagent.aiagent.tools.ToolError(
+                    code = "WAIT_FAILED",
+                    message = "Failed to wait: ${e.message}"
+                )
+            )
+        }
+    }
+
+    companion object {
+        internal const val TOOL_NAME = "android.wait"
+        private const val DEFAULT_WAIT_MS = 1000
+        private const val MAX_WAIT_MS = 30000
+
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME,
+            description = "Waits for the specified number of milliseconds before continuing. " +
+                "Useful for waiting for animations, loading, or transitions to complete.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    put("milliseconds", buildJsonObject {
+                        put("type", "integer")
+                        put("description", "Time to wait in milliseconds (default 1000)")
+                    })
+                })
+            },
+            riskLevel = RiskLevel.SAFE,
+            requiresConfirmation = false
+        )
+    }
+}

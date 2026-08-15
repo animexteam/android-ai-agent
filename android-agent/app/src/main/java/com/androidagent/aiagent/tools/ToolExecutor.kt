@@ -180,7 +180,73 @@ class ToolExecutor(
             "android.screen_brightness" to "android.set_brightness",
             // Screenshot save
             "android.save_screenshot" to "android.screenshot_save",
-            "android.download_screenshot" to "android.screenshot_save"
+            "android.download_screenshot" to "android.screenshot_save",
+            // Device info
+            "android.device_info" to "android.get_device_info",
+            "android.battery" to "android.get_battery_info",
+            "android.battery_info" to "android.get_battery_info",
+            "android.network_info" to "android.get_network_info",
+            "android.wifi_info" to "android.get_network_info",
+            "android.storage_info" to "android.get_storage_info",
+            "android.disk" to "android.get_storage_info",
+            "android.location" to "android.get_location",
+            "android.gps" to "android.get_location",
+            "android.clipboard" to "android.get_clipboard",
+            "android.read_clipboard" to "android.get_clipboard",
+            // Media
+            "android.play" to "android.media_control",
+            "android.pause" to "android.media_control",
+            "android.next_track" to "android.media_control",
+            "android.prev_track" to "android.media_control",
+            "android.media" to "android.media_control",
+            // Settings
+            "android.settings" to "android.open_settings",
+            "android.open_wifi_settings" to "android.open_settings",
+            "android.open_bluetooth_settings" to "android.open_settings",
+            "android.open_display_settings" to "android.open_settings",
+            // Files
+            "android.read" to "android.read_file",
+            "android.write" to "android.write_file",
+            "android.ls" to "android.list_files",
+            "android.dir" to "android.list_files",
+            "android.rm" to "android.delete_file",
+            "android.remove" to "android.delete_file",
+            // Contacts
+            "android.contacts" to "android.get_contacts",
+            "android.search_contacts" to "android.get_contacts",
+            "android.add_contact" to "android.create_contact",
+            "android.new_contact" to "android.create_contact",
+            // Notifications
+            "android.read_notifications" to "android.get_notifications",
+            "android.notifications_list" to "android.get_notifications",
+            "android.dismiss" to "android.dismiss_notification",
+            "android.clear_notification" to "android.dismiss_notification",
+            "android.notify" to "android.send_notification",
+            "android.post_notification" to "android.send_notification",
+            // App management
+            "android.uninstall" to "android.uninstall_app",
+            "android.remove_app" to "android.uninstall_app",
+            "android.clear_data" to "android.clear_app_data",
+            "android.app_data" to "android.clear_app_data",
+            "android.running_apps" to "android.get_running_apps",
+            "android.processes" to "android.get_running_apps",
+            // Utility
+            "android.show_toast" to "android.toast",
+            "android.show" to "android.toast",
+            "android.vibration" to "android.vibrate",
+            "android.alarm" to "android.set_alarm",
+            "android.timer" to "android.set_timer",
+            "android.camera" to "android.open_camera",
+            "android.photo" to "android.open_camera",
+            // Shell
+            "android.sh" to "android.shell",
+            "android.run" to "android.shell",
+            "android.execute" to "android.shell",
+            "android.cmd" to "android.shell",
+            "android.command" to "android.shell",
+            // Display
+            "android.auto_rotate" to "android.toggle_auto_rotate",
+            "android.rotation" to "android.toggle_auto_rotate"
         )
     }
 

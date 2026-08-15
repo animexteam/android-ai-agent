@@ -15,8 +15,8 @@ android {
         applicationId = "com.androidagent.aiagent"
         minSdk = 28
         targetSdk = 35
-        versionCode = 12
-        versionName = "4.4.0"
+        versionCode = 13
+        versionName = "5.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

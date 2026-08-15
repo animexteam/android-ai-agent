@@ -100,7 +100,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
                         AgentStatus.EXECUTING -> {
                             AgentForegroundService.updateNotification(context, state.status, state.goal)
                             val statusText = when (state.status) {
-                                AgentStatus.EXECUTING -> "Android-Use is using mobile..."
+                                AgentStatus.EXECUTING -> "Android-Use is working..."
                                 AgentStatus.THINKING -> "Analyzing screen..."
                                 else -> "Working..."
                             }
@@ -122,7 +122,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun registerAllTools() {
         val tools = listOf(
-            // Touch gestures
+            // ---- Touch Gestures ----
             LaunchAppTool.definition(),
             FindTool.definition(),
             ClickTool.definition(),
@@ -135,45 +135,80 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
             DragTool.definition(),
             PinchZoomTool.definition(),
             FlingTool.definition(),
-            // Navigation
+            // ---- Navigation ----
             BackTool.definition(),
             HomeTool.definition(),
             RecentsTool.definition(),
             PressKeyTool.definition(),
             WaitTool.definition(),
-            // System controls
+            // ---- System Controls ----
             OpenNotificationsTool.definition(),
             OpenQuickSettingsTool.definition(),
             PowerMenuTool.definition(),
             LockScreenTool.definition(),
             SplitScreenTool.definition(),
             VolumeControlTool.definition(),
-            // Text operations
+            ToggleAutoRotateTool.definition(),
+            // ---- Text Operations ----
             SelectAllTool.definition(),
             CopyTextTool.definition(),
             PasteTextTool.definition(),
             SetClipboardTool.definition(),
-            // Intents
+            GetClipboardTool.definition(),
+            // ---- Intents ----
             OpenUrlTool.definition(),
             MakeCallTool.definition(),
             SendSmsTool.definition(),
             ShareContentTool.definition(),
-            // App management
+            SendEmailTool.definition(),
+            // ---- App Management ----
             GetAppListTool.definition(),
+            GetRunningAppsTool.definition(),
             ForceStopAppTool.definition(),
             OpenAppInfoTool.definition(),
-            // Connectivity
+            UninstallAppTool.definition(),
+            ClearAppDataTool.definition(),
+            OpenSettingsTool.definition(),
+            // ---- Connectivity ----
             ToggleWifiTool.definition(),
             ToggleBluetoothTool.definition(),
-            // Display
+            // ---- Display ----
             SetBrightnessTool.definition(),
-            // Screen
+            // ---- Screen ----
             ScreenshotTool.definition(),
             ScreenshotAndSaveTool.definition(),
             InspectScreenTool.definition(),
             AnalyzeScreenTool.definition(),
             FindVisualTargetTool.definition(),
-            // Agent
+            // ---- Device Info ----
+            GetDeviceInfoTool.definition(),
+            GetBatteryInfoTool.definition(),
+            GetNetworkInfoTool.definition(),
+            GetStorageInfoTool.definition(),
+            GetLocationTool.definition(),
+            // ---- Files ----
+            ReadFileTool.definition(),
+            WriteFileTool.definition(),
+            ListFilesTool.definition(),
+            DeleteFileTool.definition(),
+            // ---- Contacts ----
+            GetContactsTool.definition(),
+            CreateContactTool.definition(),
+            // ---- Notifications ----
+            GetNotificationsTool.definition(),
+            DismissNotificationTool.definition(),
+            SendNotificationTool.definition(),
+            // ---- Media ----
+            MediaControlTool.definition(),
+            // ---- Utility ----
+            ToastTool.definition(),
+            VibrateTool.definition(),
+            SetAlarmTool.definition(),
+            SetTimerTool.definition(),
+            OpenCameraTool.definition(),
+            // ---- Shell ----
+            ShellCommandTool.definition(),
+            // ---- Agent ----
             AskUserTool.definition(),
             ConfirmTool.definition(),
             FinishTool.definition(),
@@ -183,7 +218,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun buildToolHandlers(): Map<String, ToolHandler> = mapOf(
-        // Touch gestures
+        // ---- Touch Gestures ----
         LaunchAppTool.TOOL_NAME to LaunchAppTool(),
         FindTool.TOOL_NAME to FindTool(),
         ClickTool.TOOL_NAME to ClickTool(),
@@ -196,45 +231,80 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         DragTool.TOOL_NAME to DragTool(),
         PinchZoomTool.TOOL_NAME to PinchZoomTool(),
         FlingTool.TOOL_NAME to FlingTool(),
-        // Navigation
+        // ---- Navigation ----
         BackTool.TOOL_NAME to BackTool(),
         HomeTool.TOOL_NAME to HomeTool(),
         RecentsTool.TOOL_NAME to RecentsTool(),
         PressKeyTool.TOOL_NAME to PressKeyTool(),
         WaitTool.TOOL_NAME to WaitTool(),
-        // System controls
+        // ---- System Controls ----
         OpenNotificationsTool.TOOL_NAME to OpenNotificationsTool(),
         OpenQuickSettingsTool.TOOL_NAME to OpenQuickSettingsTool(),
         PowerMenuTool.TOOL_NAME to PowerMenuTool(),
         LockScreenTool.TOOL_NAME to LockScreenTool(),
         SplitScreenTool.TOOL_NAME to SplitScreenTool(),
         VolumeControlTool.TOOL_NAME to VolumeControlTool(),
-        // Text operations
+        ToggleAutoRotateTool.TOOL_NAME to ToggleAutoRotateTool(),
+        // ---- Text Operations ----
         SelectAllTool.TOOL_NAME to SelectAllTool(),
         CopyTextTool.TOOL_NAME to CopyTextTool(),
         PasteTextTool.TOOL_NAME to PasteTextTool(),
         SetClipboardTool.TOOL_NAME to SetClipboardTool(),
-        // Intents
+        GetClipboardTool.TOOL_NAME to GetClipboardTool(),
+        // ---- Intents ----
         OpenUrlTool.TOOL_NAME to OpenUrlTool(),
         MakeCallTool.TOOL_NAME to MakeCallTool(),
         SendSmsTool.TOOL_NAME to SendSmsTool(),
         ShareContentTool.TOOL_NAME to ShareContentTool(),
-        // App management
+        SendEmailTool.TOOL_NAME to SendEmailTool(),
+        // ---- App Management ----
         GetAppListTool.TOOL_NAME to GetAppListTool(),
+        GetRunningAppsTool.TOOL_NAME to GetRunningAppsTool(),
         ForceStopAppTool.TOOL_NAME to ForceStopAppTool(),
         OpenAppInfoTool.TOOL_NAME to OpenAppInfoTool(),
-        // Connectivity
+        UninstallAppTool.TOOL_NAME to UninstallAppTool(),
+        ClearAppDataTool.TOOL_NAME to ClearAppDataTool(),
+        OpenSettingsTool.TOOL_NAME to OpenSettingsTool(),
+        // ---- Connectivity ----
         ToggleWifiTool.TOOL_NAME to ToggleWifiTool(),
         ToggleBluetoothTool.TOOL_NAME to ToggleBluetoothTool(),
-        // Display
+        // ---- Display ----
         SetBrightnessTool.TOOL_NAME to SetBrightnessTool(),
-        // Screen
+        // ---- Screen ----
         ScreenshotTool.TOOL_NAME to ScreenshotTool(),
         ScreenshotAndSaveTool.TOOL_NAME to ScreenshotAndSaveTool(),
         InspectScreenTool.TOOL_NAME to InspectScreenTool(),
         AnalyzeScreenTool.TOOL_NAME to AnalyzeScreenTool(visionAnalyzer),
         FindVisualTargetTool.TOOL_NAME to FindVisualTargetTool(visionAnalyzer),
-        // Agent
+        // ---- Device Info ----
+        GetDeviceInfoTool.TOOL_NAME to GetDeviceInfoTool(),
+        GetBatteryInfoTool.TOOL_NAME to GetBatteryInfoTool(),
+        GetNetworkInfoTool.TOOL_NAME to GetNetworkInfoTool(),
+        GetStorageInfoTool.TOOL_NAME to GetStorageInfoTool(),
+        GetLocationTool.TOOL_NAME to GetLocationTool(),
+        // ---- Files ----
+        ReadFileTool.TOOL_NAME to ReadFileTool(),
+        WriteFileTool.TOOL_NAME to WriteFileTool(),
+        ListFilesTool.TOOL_NAME to ListFilesTool(),
+        DeleteFileTool.TOOL_NAME to DeleteFileTool(),
+        // ---- Contacts ----
+        GetContactsTool.TOOL_NAME to GetContactsTool(),
+        CreateContactTool.TOOL_NAME to CreateContactTool(),
+        // ---- Notifications ----
+        GetNotificationsTool.TOOL_NAME to GetNotificationsTool(),
+        DismissNotificationTool.TOOL_NAME to DismissNotificationTool(),
+        SendNotificationTool.TOOL_NAME to SendNotificationTool(),
+        // ---- Media ----
+        MediaControlTool.TOOL_NAME to MediaControlTool(),
+        // ---- Utility ----
+        ToastTool.TOOL_NAME to ToastTool(),
+        VibrateTool.TOOL_NAME to VibrateTool(),
+        SetAlarmTool.TOOL_NAME to SetAlarmTool(),
+        SetTimerTool.TOOL_NAME to SetTimerTool(),
+        OpenCameraTool.TOOL_NAME to OpenCameraTool(),
+        // ---- Shell ----
+        ShellCommandTool.TOOL_NAME to ShellCommandTool(),
+        // ---- Agent ----
         AskUserTool.TOOL_NAME to AskUserTool(),
         ConfirmTool.TOOL_NAME to ConfirmTool(),
         FinishTool.TOOL_NAME to FinishTool(),

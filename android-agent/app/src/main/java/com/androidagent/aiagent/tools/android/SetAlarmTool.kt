@@ -1,0 +1,80 @@
+package com.androidagent.aiagent.tools.android
+
+import android.util.Log
+import com.androidagent.aiagent.accessibility.AndroidAgentAccessibilityService
+import com.androidagent.aiagent.tools.AgentTool
+import com.androidagent.aiagent.tools.RiskLevel
+import com.androidagent.aiagent.tools.ToolError
+import com.androidagent.aiagent.tools.ToolHandler
+import com.androidagent.aiagent.tools.ToolResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+
+import android.content.Intent
+import android.provider.AlarmClock
+
+class SetAlarmTool : ToolHandler {
+    override suspend fun execute(args: JsonObject): ToolResult {
+        val service = AndroidAgentAccessibilityService.instance ?: return noService()
+        val hour = args["hour"]?.jsonPrimitive?.content?.toIntOrNull()
+        val minute = args["minute"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+        val message = args["message"]?.jsonPrimitive?.content
+        if (hour == null || hour !in 0..23)
+            return ToolResult(success = false, toolName = TOOL_NAME,
+                error = ToolError(code = "INVALID_INPUT", message = "'hour' (0-23) is required"))
+        return try {
+            val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+                putExtra(AlarmClock.EXTRA_HOUR, hour)
+                putExtra(AlarmClock.EXTRA_MINUTES, minute)
+                message?.let { putExtra(AlarmClock.EXTRA_MESSAGE, it) }
+                putExtra(AlarmClock.EXTRA_SKIP_UI, false)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            service.startActivity(intent)
+            ToolResult(
+                success = true, toolName = TOOL_NAME,
+                result = buildJsonObject {
+                    put("hour", hour); put("minute", minute)
+                    put("message", message ?: ""); put("action", "alarm_set")
+                },
+                observationRequired = true
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set alarm", e)
+            errorResult(e)
+        }
+    }
+    companion object {
+        internal const val TOOL_NAME = "android.set_alarm"
+        private const val TAG = "SetAlarmTool"
+        fun definition(): AgentTool = AgentTool(
+            name = TOOL_NAME, description = "Set an alarm via the system Alarm app. Provide hour (0-23) and optionally minute and message.",
+            inputSchema = buildJsonObject {
+                put("type", "object")
+                put("properties", buildJsonObject {
+                    put("hour", buildJsonObject { put("type", "integer"); put("description", "Hour (0-23)") })
+                    put("minute", buildJsonObject { put("type", "integer"); put("description", "Minute (0-59), default 0") })
+                    put("message", buildJsonObject { put("type", "string"); put("description", "Optional alarm label") })
+                })
+                put("required", buildJsonArray { add(JsonPrimitive("hour")) })
+            },
+            riskLevel = RiskLevel.CONFIRM, requiresConfirmation = true
+        )
+    }
+        private fun noService() = ToolResult(
+        success = false,
+        toolName = TOOL_NAME,
+        error = ToolError(code = "SERVICE_NOT_CONNECTED", message = "Accessibility service is not connected")
+    )
+
+    private fun errorResult(e: Exception) = ToolResult(
+        success = false, toolName = TOOL_NAME,
+        error = ToolError(code = "SET_ALARM_FAILED", message = e.message ?: "Unknown error")
+    )
+}

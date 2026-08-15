@@ -57,7 +57,7 @@ jobs:
       - name: Prepare release assets
         run: |
           mkdir -p release-assets
-          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v4.4.0.apk
+          cp app/build/outputs/apk/release/*.apk release-assets/Android-Use-v5.0.0.apk
           cd release-assets
           sha256sum *.apk > SHA256SUMS.txt
           ls -lh
@@ -74,36 +74,48 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          gh release delete v4.4.0 --yes 2>/dev/null || true
-          git tag -d v4.4.0 2>/dev/null || true
-          git push origin :refs/tags/v4.4.0 2>/dev/null || true
+          gh release delete v5.0.0 --yes 2>/dev/null || true
+          git tag -d v5.0.0 2>/dev/null || true
+          git push origin :refs/tags/v5.0.0 2>/dev/null || true
 
       - name: Create GitHub Release
         if: success()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v4.4.0
-          name: Android-Use v4.4.0
+          tag_name: v5.0.0
+          name: Android-Use v5.0.0
           token: ${{ secrets.PAT_TOKEN }}
           body: |
-            # Android-Use v4.4.0
+            # Android-Use v5.0.0
 
-            AI-powered Android automation agent with 44 tools, provider settings, monochrome UI.
+            The complete Android AI agent with 66 tools, OpenAI-compatible API support, and full device control.
 
-            ## What's New
-            - **Settings: Cloud Model Provider dropdown** — Ollama, OpenAI, Groq, OpenRouter, Together AI, DeepInfra, Fireworks, Cerebras, Custom
-            - **6 New Tools** (44 total): GetAppList, ForceStopApp, OpenAppInfo, ToggleWifi, ToggleBluetooth, SetBrightness, ScreenshotSave
-            - **TBH-style dark monochrome UI** — polished settings, provider auto-fill
+            ## What's New in v5.0.0
+            - **28 New Tools** (66 total) — Full Android API coverage
+            - **Device Info**: get_device_info, get_battery_info, get_network_info, get_storage_info, get_location
+            - **File Operations**: read_file, write_file, list_files, delete_file
+            - **Contacts**: get_contacts, create_contact
+            - **Notifications**: get_notifications, dismiss_notification, send_notification
+            - **App Management**: get_running_apps, uninstall_app, clear_app_data, open_settings
+            - **Media**: media_control (play/pause/next/prev)
+            - **Utility**: toast, vibrate, set_alarm, set_timer, open_camera, shell
+            - **OpenAI API Support**: Works with OpenAI, Groq, OpenRouter, Together AI, DeepInfra, Fireworks, Cerebras
+            - **Stability Fix**: Singleton OkHttpClient — no more ANR/thread exhaustion
+            - **10 New Permissions**: Location, Bluetooth, WiFi, Vibrate, Camera, Write Settings
+            - **Auto-detect API format** — Ollama vs OpenAI response parsing
+            - **Fuzzy alias matching** — 100+ tool name aliases
 
             ## Install
-            1. Download `Android-Use-v4.4.0.apk`
+            1. Download `Android-Use-v5.0.0.apk`
             2. Enable "Install unknown apps" for your browser
             3. Install the APK
-            4. Open app > Settings > Configure provider, API key, model
-            5. Enable Accessibility Service
+            4. Open app > Settings > Configure your AI provider, API key, model
+            5. Enable Accessibility Service & Overlay Permission
+            6. Give any task — the agent controls your entire phone
 
             ## Compatibility
             - Android 9+ (minSdk 28), targetSdk 35
+            - Works with any Ollama or OpenAI-compatible API
           files: android-agent/release-assets/*
           draft: false
           prerelease: false
